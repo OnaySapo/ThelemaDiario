@@ -36,7 +36,7 @@ export function EntryEditorModal({
   initialEntry,
   allEntries,
 }: EntryEditorModalProps) {
-  const [type, setType] = useState<"ritual" | "oracle" | "dream" | "vision" | "study">("ritual");
+  const [type, setType] = useState<string>("Prática");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 16));

@@ -1,6 +1,8 @@
+export type CategoryName = "Estudo" | "Visão Astral" | "Sonho" | "Oráculo" | "Prática";
+
 export interface MagickEntry {
   id: string;
-  type: "ritual" | "oracle" | "dream" | "vision" | "study";
+  type: string; // "Estudo" | "Visão Astral" | "Sonho" | "Oráculo" | "Prática" (or legacy keys)
   title: string;
   content: string;
   date: string;
@@ -28,6 +30,15 @@ export interface MagickEntry {
   };
   created_at?: string;
   updated_at?: string;
+}
+
+export function normalizeCategory(rawType: string): CategoryName {
+  const lower = (rawType || "").toLowerCase();
+  if (lower.includes("estudo") || lower === "study") return "Estudo";
+  if (lower.includes("visão") || lower.includes("visao") || lower === "vision") return "Visão Astral";
+  if (lower.includes("sonho") || lower === "dream") return "Sonho";
+  if (lower.includes("oráculo") || lower.includes("oraculo") || lower === "oracle") return "Oráculo";
+  return "Prática"; // default / ritual / practice
 }
 
 export interface AnalyticalSummary {

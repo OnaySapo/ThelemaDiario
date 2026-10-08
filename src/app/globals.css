@@ -1,42 +1,108 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --background: #1e2326;
-  --foreground: #d3c6aa;
+  --background: #121212;
+  --foreground: #f2f2f2;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  overflow-x: hidden;
+  overflow: hidden;
+  height: 100vh;
 }
 
-/* Custom Occult Scrollbar */
+/* Medium Reading Typography */
+.medium-article-content {
+  font-family: 'Newsreader', 'Georgia', serif;
+  font-size: 1.15rem;
+  line-height: 1.85;
+  color: #d6d6d6;
+  letter-spacing: -0.003em;
+}
+
+.medium-article-content p {
+  margin-bottom: 1.5rem;
+}
+
+.medium-article-content h1 {
+  font-family: 'Inter', sans-serif;
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.medium-article-content h2 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: #f0f0f0;
+  letter-spacing: -0.015em;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.medium-article-content h3 {
+  font-family: 'Inter', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #e5e5e5;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.medium-article-content blockquote {
+  border-left: 3px solid #ffffff;
+  padding-left: 1.25rem;
+  font-style: italic;
+  color: #a3a3a3;
+  margin: 1.5rem 0;
+}
+
+.medium-article-content u {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.medium-article-content strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.medium-article-content img {
+  border-radius: 8px;
+  margin: 1.75rem 0;
+  max-width: 100%;
+  border: 1px solid #2a2a2a;
+}
+
+/* Clean Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #14181a;
+  background: #121212;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2d353b;
-  border-radius: 4px;
-  border: 1px solid #343f44;
+  background: #282828;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475239;
+  background: #3e3e3e;
 }
 
-/* Hide scrollbar utility */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

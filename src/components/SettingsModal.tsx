@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Key, Database, Download, ShieldCheck, Check, Sparkles } from "lucide-react";
+import { X, Key, Database, Download, ShieldCheck, Check } from "lucide-react";
 import { MagickEntry } from "@/lib/types";
 
 interface SettingsModalProps {
@@ -85,58 +85,58 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-forest-950/80 backdrop-blur-sm">
-      <div className="bg-forest-900 border border-forest-700 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div className="bg-medium-900 border border-medium-700 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-forest-700 bg-forest-850 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-medium-700 bg-medium-850 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-moss-400" />
-            <h2 className="text-base font-serif font-bold text-parchment-100">
+            <ShieldCheck className="w-5 h-5 text-white" />
+            <h2 className="text-sm font-sans font-bold text-white uppercase tracking-wide">
               Configurações & Soberania dos Dados
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-parchment-400 hover:text-parchment-100 hover:bg-forest-700 rounded-lg transition-colors"
+            className="p-1.5 text-medium-400 hover:text-white rounded hover:bg-medium-800 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6 text-xs text-parchment-200">
+        <div className="p-6 space-y-6 text-xs text-medium-200">
           {/* Database Info */}
-          <div className="bg-forest-850 p-4 rounded-xl border border-forest-750 space-y-2">
-            <div className="flex items-center gap-2 text-gold-400 font-semibold font-mono text-xs">
-              <Database className="w-4 h-4" />
-              <span>Banco de Dados Local (SQLite Próprio)</span>
+          <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-2">
+            <div className="flex items-center gap-2 text-white font-semibold font-mono text-xs">
+              <Database className="w-4 h-4 text-white" />
+              <span>Banco de Dados Local Próprio (SQLite)</span>
             </div>
-            <p className="text-parchment-300 leading-relaxed">
-              Todos os seus registros, oráculos, sonhos e conexões estão salvos localmente no arquivo único:
+            <p className="text-medium-300 leading-relaxed font-sans">
+              Todos os seus registros, oráculos de Thoth, sonhos e conexões estão salvos localmente na sua máquina:
             </p>
-            <code className="block bg-forest-900 p-2 rounded border border-forest-700 text-moss-400 font-mono text-[11px] select-all">
+            <code className="block bg-medium-900 p-2.5 rounded border border-medium-750 text-white font-mono text-[11px] select-all">
               data/magick_diary.db
             </code>
-            <p className="text-parchment-400 text-[11px]">
-              Seus dados nunca saem da sua máquina sem o seu consentimento.
+            <p className="text-medium-400 text-[11px]">
+              Privacidade absoluta: nenhum dado sai do seu computador sem o seu consentimento.
             </p>
           </div>
 
           {/* Gemini API Key */}
-          <div className="bg-forest-850 p-4 rounded-xl border border-forest-750 space-y-3">
+          <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-moss-400 font-semibold font-mono text-xs">
-                <Key className="w-4 h-4" />
-                <span>Chave Gemini API (Opcional para IA Avançada)</span>
+              <div className="flex items-center gap-2 text-white font-semibold font-mono text-xs">
+                <Key className="w-4 h-4 text-white" />
+                <span>Chave Gemini API (Opcional)</span>
               </div>
               {hasKey && (
-                <span className="px-2 py-0.5 rounded bg-moss-500/20 text-moss-400 border border-moss-500/40 text-[10px] font-mono">
+                <span className="px-2 py-0.5 rounded bg-medium-800 text-white border border-medium-700 text-[10px] font-mono">
                   Ativa: {maskedKey}
                 </span>
               )}
             </div>
-            <p className="text-parchment-300 leading-relaxed">
-              O Diário Mágicko já possui inteligência analítica offline embutida. Caso deseje que o <strong>Frater Auxiliar</strong> gere sínteses místicas e filosóficas profundas via Google Gemini, insira sua chave de API abaixo:
+            <p className="text-medium-300 leading-relaxed font-sans">
+              O Diário Mágicko possui inteligência analítica offline nativa. Caso deseje análises herméticas profundas e conversação fluida via Google Gemini, insira sua chave de API abaixo:
             </p>
 
             <div className="flex gap-2">
@@ -145,19 +145,19 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="Insira sua chave do Google Gemini..."
-                className="flex-1 bg-forest-900 border border-forest-700 rounded-lg px-3 py-2 text-xs text-parchment-100 placeholder-parchment-500 focus:outline-none focus:border-moss-500 font-mono"
+                className="flex-1 bg-medium-900 border border-medium-700 rounded px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-white font-mono"
               />
               <button
                 type="button"
                 onClick={handleSaveApiKey}
-                className="px-4 py-2 bg-moss-600 hover:bg-moss-500 text-forest-950 font-semibold rounded-lg text-xs transition-all shadow-arcane"
+                className="px-4 py-2 bg-white hover:bg-medium-200 text-black font-semibold rounded text-xs transition-colors"
               >
                 Salvar
               </button>
             </div>
 
             {saveStatus && (
-              <div className="flex items-center gap-1.5 text-moss-400 text-xs font-mono">
+              <div className="flex items-center gap-1.5 text-white text-xs font-mono">
                 <Check className="w-3.5 h-3.5" />
                 <span>{saveStatus}</span>
               </div>
@@ -166,34 +166,34 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
 
           {/* Export / Backup */}
           <div className="space-y-2">
-            <span className="block text-xs font-semibold text-parchment-300 uppercase tracking-wider font-mono">
-              Exportação & Backup dos Registros
+            <span className="block text-xs font-semibold text-medium-300 uppercase tracking-wider font-mono">
+              Exportação & Backup
             </span>
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={handleExportJSON}
-                className="flex items-center gap-2 px-3.5 py-2 bg-forest-800 hover:bg-forest-750 text-parchment-200 hover:text-parchment-100 rounded-lg border border-forest-700 text-xs font-medium transition-all"
+                className="flex items-center gap-2 px-3.5 py-2 bg-medium-850 hover:bg-medium-800 text-white rounded border border-medium-700 text-xs font-medium transition-colors"
               >
-                <Download className="w-4 h-4 text-moss-400" />
+                <Download className="w-4 h-4 text-white" />
                 <span>Exportar Tudo em JSON</span>
               </button>
 
               <button
                 onClick={handleExportMarkdown}
-                className="flex items-center gap-2 px-3.5 py-2 bg-forest-800 hover:bg-forest-750 text-parchment-200 hover:text-parchment-100 rounded-lg border border-forest-700 text-xs font-medium transition-all"
+                className="flex items-center gap-2 px-3.5 py-2 bg-medium-850 hover:bg-medium-800 text-white rounded border border-medium-700 text-xs font-medium transition-colors"
               >
-                <Download className="w-4 h-4 text-gold-400" />
-                <span>Exportar Caderno em Markdown</span>
+                <Download className="w-4 h-4 text-white" />
+                <span>Exportar Notas em Markdown</span>
               </button>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-forest-700 bg-forest-850 flex justify-end">
+        <div className="px-6 py-3 border-t border-medium-700 bg-medium-850 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 bg-forest-750 hover:bg-forest-700 text-parchment-200 rounded-lg text-xs font-medium"
+            className="px-4 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-xs font-medium"
           >
             Fechar
           </button>
