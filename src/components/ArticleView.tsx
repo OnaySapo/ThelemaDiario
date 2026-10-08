@@ -4,6 +4,8 @@ import React, { useState, useRef } from "react";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { THOTH_TAROT_DECK, TAROT_SPREADS } from "@/lib/thothTarot";
 import { getCategoryThelemicIcon } from "@/components/ThelemicIcons";
+import { OracleTable, CardOnTable } from "@/components/OracleTable";
+import { getDefaultTemplateForCategory } from "@/lib/templates";
 import {
   Edit3,
   Trash2,
@@ -67,11 +69,9 @@ export function ArticleView({
   const [newConnRel, setNewConnRel] = useState("result_of");
 
   // Oracle edit state
-  const [editSpread, setEditSpread] = useState("three_time");
+  const [editSpread, setEditSpread] = useState("Tiragem Livre");
   const [editQuery, setEditQuery] = useState("");
-  const [editCards, setEditCards] = useState<
-    Array<{ position: string; cardId: string; cardName: string; notes?: string }>
-  >([]);
+  const [editCards, setEditCards] = useState<CardOnTable[]>([]);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -89,10 +89,12 @@ export function ArticleView({
 
     if (entry.oracle_data) {
       setEditQuery(entry.oracle_data.query || "");
-      setEditCards(entry.oracle_data.cards || []);
+      setEditCards((entry.oracle_data.cards as CardOnTable[]) || []);
+      setEditSpread(entry.oracle_data.spread_name || "Tiragem Livre");
     } else {
       setEditQuery("");
       setEditCards([]);
+      setEditSpread("Tiragem Livre");
     }
 
     setIsEditing(true);
@@ -114,7 +116,7 @@ export function ArticleView({
         editCategory === "Oráculo"
           ? {
               system: "thoth_tarot",
-              spread_name: TAROT_SPREADS.find((s) => s.id === editSpread)?.name || "Tiragem",
+              spread_name: editSpread.trim() || "Mesa Oracular",
               query: editQuery.trim(),
               cards: editCards,
             }
@@ -365,44 +367,30 @@ export function ArticleView({
               </div>
             )}
 
-            {/* Oracle Cards Row (If Oracle) */}
-            {entry.oracle_data && entry.oracle_data.cards && entry.oracle_data.cards.length > 0 && (
-              <div className="p-5 rounded-xl bg-medium-850 border border-medium-700 my-6 space-y-3">
+            {/* Oracle Cards Altar Cloth & Details (If Oracle) */}
+            {entry.oracle_data && (
+              <div className="p-5 rounded-xl bg-medium-850 border border-medium-700 my-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-white" />
-                    <span>Lâminas do Livro de Thoth — {entry.oracle_data.spread_name}</span>
+                    <span>Mesa Oracular do Altar — {entry.oracle_data.spread_name || "Disposição das Lâminas"}</span>
                   </h3>
                 </div>
 
                 {entry.oracle_data.query && (
-                  <p className="text-xs text-medium-300 italic font-serif">
+                  <p className="text-sm text-medium-200 italic font-serif border-l-2 border-white pl-3 py-1">
                     "{entry.oracle_data.query}"
                   </p>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                  {entry.oracle_data.cards.map((c, i) => (
-                    <div
-                      key={i}
-                      className="p-3 rounded-lg bg-medium-900 border border-medium-700 text-xs"
-                    >
-                      <div className="text-[11px] font-mono font-semibold text-medium-400 mb-0.5">
-                        {c.position}
-                      </div>
-                      <div className="text-sm font-sans font-bold text-white mb-1">
-                        {c.cardName}
-                      </div>
-                      {c.notes && (
-                        <div className="text-xs text-medium-300 italic font-serif">{c.notes}</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                {/* Mesa com as cartas espalhadas exatamente como no altar */}
+                {entry.oracle_data.cards && entry.oracle_data.cards.length > 0 && (
+                  <OracleTable cards={entry.oracle_data.cards as CardOnTable[]} isEditable={false} />
+                )}
 
                 {entry.oracle_data.confirmation_notes && (
                   <div className="text-xs text-medium-300 pt-2 border-t border-medium-800">
-                    <strong className="text-white font-mono">Confirmação:</strong>{" "}
+                    <strong className="text-white font-mono">Confirmação Fenomênica:</strong>{" "}
                     {entry.oracle_data.confirmation_notes}
                   </div>
                 )}
@@ -494,7 +482,13 @@ export function ArticleView({
                 </label>
                 <select
                   value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value as any)}
+                  onChange={(e) => {
+                    const newCat = e.target.value as CategoryName;
+                    setEditCategory(newCat);
+                    if (!editContent.trim() || editContent.includes("Descreva aqui os detalhes da operação")) {
+                      setEditContent(getDefaultTemplateForCategory(newCat));
+                    }
+                  }}
                   className="w-full bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-white font-sans"
                 >
                   <option value="Estudo">Estudo</option>
@@ -531,6 +525,55 @@ export function ArticleView({
                 />
               </div>
             </div>
+
+            {/* Oracle Spread & Table Cloth Editor (quando categoria for Oráculo) */}
+            {editCategory === "Oráculo" && (
+              <div className="p-5 rounded-xl bg-medium-850 border border-medium-700 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-medium-750 pb-2">
+                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-white" />
+                    <span>Mesa Oracular do Altar (Lâminas & Disposição)</span>
+                  </h3>
+                  <span className="text-[10px] font-mono text-medium-400">
+                    Posicione as cartas livremente pela mesa, carregue imagens e gire conforme a tiragem
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-mono text-medium-400 mb-1">
+                      PERGUNTA / PROPÓSITO DA CONSULTA
+                    </label>
+                    <input
+                      type="text"
+                      value={editQuery}
+                      onChange={(e) => setEditQuery(e.target.value)}
+                      placeholder="Ex: Qual a força em ação sobre esta operação?..."
+                      className="w-full bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-white font-serif"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono text-medium-400 mb-1">
+                      NOME DA TIRAGEM
+                    </label>
+                    <input
+                      type="text"
+                      value={editSpread}
+                      onChange={(e) => setEditSpread(e.target.value)}
+                      placeholder="Ex: Tiragem Livre, Cruz Céltica, Hexagrama..."
+                      className="w-full bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-white font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* The Interactive Table */}
+                <OracleTable
+                  cards={editCards}
+                  onChange={setEditCards}
+                  isEditable={true}
+                />
+              </div>
+            )}
 
             {/* Rich Formatting Toolbar */}
             <div className="sticky top-14 z-20 bg-medium-850 p-2 rounded-lg border border-medium-700 flex flex-wrap items-center gap-1 shadow-sm">
@@ -613,6 +656,25 @@ export function ArticleView({
                 title="Inserir Tabela de Correspondências"
               >
                 <Table className="w-4 h-4" />
+              </button>
+
+              <div className="flex-1" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (editContent.trim()) {
+                    if (!confirm(`Deseja carregar a estrutura canônica para "${editCategory}"? O texto atual será substituído pelo template.`)) {
+                      return;
+                    }
+                  }
+                  setEditContent(getDefaultTemplateForCategory(editCategory));
+                }}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-mono text-medium-300 hover:text-white hover:bg-medium-750 rounded border border-medium-700 transition-colors"
+                title="Carregar Estrutura Canônica desta Categoria"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Carregar Estrutura ({editCategory})</span>
               </button>
             </div>
 

@@ -25,7 +25,16 @@ export interface MagickEntry {
     system: string;
     spread_name: string;
     query: string;
-    cards: Array<{ position: string; cardId: string; cardName: string; notes?: string }>;
+    cards: Array<{
+      position: string;
+      cardId: string;
+      cardName: string;
+      imageUrl?: string;
+      x?: number; // 0 a 100% da largura da mesa
+      y?: number; // 0 a 100% da altura da mesa
+      rotation?: number; // graus (0, 90, 180, 270)
+      notes?: string;
+    }>;
     confirmation_notes?: string;
   };
   created_at?: string;

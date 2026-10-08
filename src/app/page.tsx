@@ -5,7 +5,8 @@ import { Sidebar } from "@/components/Sidebar";
 import { ArticleView } from "@/components/ArticleView";
 import { RightSidebar } from "@/components/RightSidebar";
 import { SettingsModal } from "@/components/SettingsModal";
-import { MagickEntry, normalizeCategory } from "@/lib/types";
+import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
+import { getDefaultTemplateForCategory } from "@/lib/templates";
 
 export default function Home() {
   const [entries, setEntries] = useState<MagickEntry[]>([]);
@@ -51,10 +52,61 @@ export default function Home() {
       const astroRes = await fetch("/api/astronomy");
       const astro = await astroRes.json();
 
+      const targetCategory = (selectedCategory !== "all" ? normalizeCategory(selectedCategory) : "Prática") as CategoryName;
+      const defaultContent = getDefaultTemplateForCategory(targetCategory);
+      const defaultTitle =
+        targetCategory === "Oráculo"
+          ? "Consulta Oracular"
+          : targetCategory === "Sonho"
+          ? "Registro de Sonho Lúcido"
+          : targetCategory === "Visão Astral"
+          ? "Exploração do Plano Astral"
+          : targetCategory === "Estudo"
+          ? "Estudo & Correspondências"
+          : "Operação Mágicka";
+
+      const defaultOracleData =
+        targetCategory === "Oráculo"
+          ? {
+              system: "thoth_tarot",
+              spread_name: "Tiragem Livre",
+              query: "",
+              cards: [
+                {
+                  position: "1. Vontade / Situação",
+                  cardId: "fool",
+                  cardName: "0. O Louco",
+                  x: 22,
+                  y: 35,
+                  rotation: 0,
+                  notes: "Início puro, potencial infinito da Verdadeira Vontade",
+                },
+                {
+                  position: "2. Oposição / Influência",
+                  cardId: "magus",
+                  cardName: "I. O Mago",
+                  x: 46,
+                  y: 35,
+                  rotation: 0,
+                  notes: "Canalização e articulação dos poderes elementares",
+                },
+                {
+                  position: "3. Síntese / Resolução",
+                  cardId: "priestess",
+                  cardName: "II. A Sacerdotisa",
+                  x: 70,
+                  y: 35,
+                  rotation: 0,
+                  notes: "Conexão com a intuição e a sabedoria velada",
+                },
+              ],
+            }
+          : undefined;
+
       const newDraft: Partial<MagickEntry> = {
-        title: "Nova Operação Mágicka",
-        content: "Descreva aqui os detalhes da operação, palavras entoadas, sensações astrais e resultados fenomênicos...",
-        type: selectedCategory !== "all" ? selectedCategory : "Prática",
+        title: defaultTitle,
+        content: defaultContent,
+        type: targetCategory,
         success_rating: 8,
         date: new Date().toISOString(),
         thelemic_date: astro.success ? astro.thelemicDate : "",
@@ -69,6 +121,7 @@ export default function Home() {
         tags: [],
         influences: [],
         connections: [],
+        oracle_data: defaultOracleData,
       };
 
       const res = await fetch("/api/entries", {
