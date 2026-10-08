@@ -4,6 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Diário Mágicko Thelêmico — O Método da Ciência, o Alvo da Religião",
   description: "Registro científico e hermético de rituais, oráculos de Thoth, visões astrais e sonhos lúcidos com banco de dados próprio, grafo de conexões e inteligência analítica.",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

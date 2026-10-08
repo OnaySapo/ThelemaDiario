@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Key, Database, Download, ShieldCheck, Check } from "lucide-react";
+import { X, Key, Database, Download, ShieldCheck, Check, Sparkles, Cpu } from "lucide-react";
 import { MagickEntry } from "@/lib/types";
+import { EstrelaDeThelema } from "@/components/ThelemicIcons";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -14,11 +15,13 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
   const [apiKey, setApiKey] = useState("");
   const [hasKey, setHasKey] = useState(false);
   const [maskedKey, setMaskedKey] = useState("");
+  const [selectedModel, setSelectedModel] = useState("google/gemini-2.5-flash");
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      fetch("/api/settings?key=gemini_api_key")
+      // Fetch OpenRouter Key
+      fetch("/api/settings?key=openrouter_api_key")
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
@@ -26,27 +29,43 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
             setMaskedKey(data.masked || "");
           }
         })
-        .catch((err) => console.error("Erro ao carregar settings:", err));
+        .catch((err) => console.error("Erro ao carregar key:", err));
+
+      // Fetch OpenRouter Model
+      fetch("/api/settings?key=openrouter_model")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.hasKey) {
+            setSelectedModel(data.masked ? data.masked : "google/gemini-2.5-flash");
+          }
+        })
+        .catch((err) => console.error("Erro ao carregar modelo:", err));
     }
   }, [isOpen]);
 
-  const handleSaveApiKey = async () => {
+  const handleSaveSettings = async () => {
     try {
-      const res = await fetch("/api/settings", {
+      if (apiKey.trim()) {
+        await fetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "openrouter_api_key", value: apiKey.trim() }),
+        });
+        setHasKey(true);
+        setMaskedKey(`${apiKey.trim().slice(0, 8)}...${apiKey.trim().slice(-4)}`);
+        setApiKey("");
+      }
+
+      await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "gemini_api_key", value: apiKey.trim() }),
+        body: JSON.stringify({ key: "openrouter_model", value: selectedModel.trim() }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setSaveStatus("Chave salva com sucesso!");
-        setHasKey(Boolean(apiKey.trim()));
-        setMaskedKey(apiKey.trim() ? `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}` : "");
-        setApiKey("");
-        setTimeout(() => setSaveStatus(null), 3000);
-      }
+
+      setSaveStatus("Configurações do OpenRouter salvas com sucesso!");
+      setTimeout(() => setSaveStatus(null), 3000);
     } catch (err) {
-      alert("Erro ao salvar chave.");
+      alert("Erro ao salvar configurações.");
     }
   };
 
@@ -61,7 +80,7 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
   };
 
   const handleExportMarkdown = () => {
-    let mdContent = `# 📜 Diário Mágicko Thelêmico — Exportação\n\n`;
+    let mdContent = `# 📜 Diário Mágicko Thelêmico — Exportação Completa\n\n`;
     for (const e of entries) {
       mdContent += `## [${e.type.toUpperCase()}] ${e.title}\n`;
       mdContent += `* **Data**: ${e.date}\n`;
@@ -90,9 +109,9 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
         {/* Header */}
         <div className="px-6 py-4 border-b border-medium-700 bg-medium-850 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <ShieldCheck className="w-5 h-5 text-white" />
+            <EstrelaDeThelema className="w-5 h-5 text-white" />
             <h2 className="text-sm font-sans font-bold text-white uppercase tracking-wide">
-              Configurações & Soberania dos Dados
+              Configurações & IA (OpenRouter)
             </h2>
           </div>
           <button
@@ -104,7 +123,7 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6 text-xs text-medium-200">
+        <div className="p-6 space-y-5 text-xs text-medium-200 overflow-y-auto max-h-[80vh]">
           {/* Database Info */}
           <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-2">
             <div className="flex items-center gap-2 text-white font-semibold font-mono text-xs">
@@ -112,22 +131,22 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
               <span>Banco de Dados Local Próprio (SQLite)</span>
             </div>
             <p className="text-medium-300 leading-relaxed font-sans">
-              Todos os seus registros, oráculos de Thoth, sonhos e conexões estão salvos localmente na sua máquina:
+              Todos os seus rituais, oráculos, sonhos e conexões residem localmente em:
             </p>
             <code className="block bg-medium-900 p-2.5 rounded border border-medium-750 text-white font-mono text-[11px] select-all">
               data/magick_diary.db
             </code>
             <p className="text-medium-400 text-[11px]">
-              Privacidade absoluta: nenhum dado sai do seu computador sem o seu consentimento.
+              Soberania total: zero servidores de terceiros armazenando suas anotações.
             </p>
           </div>
 
-          {/* Gemini API Key */}
+          {/* OpenRouter Configuration */}
           <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-white font-semibold font-mono text-xs">
-                <Key className="w-4 h-4 text-white" />
-                <span>Chave Gemini API (Opcional)</span>
+                <Cpu className="w-4 h-4 text-white" />
+                <span>IA do Frater Auxiliar (OpenRouter)</span>
               </div>
               {hasKey && (
                 <span className="px-2 py-0.5 rounded bg-medium-800 text-white border border-medium-700 text-[10px] font-mono">
@@ -135,24 +154,50 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
                 </span>
               )}
             </div>
+
             <p className="text-medium-300 leading-relaxed font-sans">
-              O Diário Mágicko possui inteligência analítica offline nativa. Caso deseje análises herméticas profundas e conversação fluida via Google Gemini, insira sua chave de API abaixo:
+              O Frater Auxiliar utiliza sua chave do <strong>OpenRouter</strong> para responder consultas e correlacionar dados do diário com alta inteligência hermética.
             </p>
 
-            <div className="flex gap-2">
+            <div>
+              <label className="block text-[11px] font-mono text-medium-400 mb-1">
+                CHAVE DE API OPENROUTER
+              </label>
               <input
                 type="password"
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
-                placeholder="Insira sua chave do Google Gemini..."
-                className="flex-1 bg-medium-900 border border-medium-700 rounded px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-white font-mono"
+                placeholder={hasKey ? "Chave configurada (digite para substituir)..." : "sk-or-v1-..."}
+                className="w-full bg-medium-900 border border-medium-700 rounded px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-white font-mono"
               />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-mono text-medium-400 mb-1">
+                MODELO DE IA DO OPENROUTER
+              </label>
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="w-full bg-medium-900 border border-medium-700 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-white font-mono"
+              >
+                <option value="google/gemini-2.5-flash">google/gemini-2.5-flash (Recomendado: Rápido & Econômico)</option>
+                <option value="anthropic/claude-3.5-sonnet">anthropic/claude-3.5-sonnet (Máxima Erudição & Profundidade)</option>
+                <option value="deepseek/deepseek-chat">deepseek/deepseek-chat (Alta Eficiência)</option>
+                <option value="meta-llama/llama-3.3-70b-instruct">meta-llama/llama-3.3-70b-instruct (Open Source)</option>
+              </select>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[10px] text-medium-400 font-mono">
+                Tokens limitados automaticamente para economia de créditos.
+              </span>
               <button
                 type="button"
-                onClick={handleSaveApiKey}
+                onClick={handleSaveSettings}
                 className="px-4 py-2 bg-white hover:bg-medium-200 text-black font-semibold rounded text-xs transition-colors"
               >
-                Salvar
+                Salvar Configurações
               </button>
             </div>
 
@@ -183,7 +228,7 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
                 className="flex items-center gap-2 px-3.5 py-2 bg-medium-850 hover:bg-medium-800 text-white rounded border border-medium-700 text-xs font-medium transition-colors"
               >
                 <Download className="w-4 h-4 text-white" />
-                <span>Exportar Notas em Markdown</span>
+                <span>Exportar Caderno em Markdown</span>
               </button>
             </div>
           </div>

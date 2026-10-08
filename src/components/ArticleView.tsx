@@ -3,6 +3,7 @@
 import React, { useState, useRef } from "react";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { THOTH_TAROT_DECK, TAROT_SPREADS } from "@/lib/thothTarot";
+import { getCategoryThelemicIcon } from "@/components/ThelemicIcons";
 import {
   Edit3,
   Trash2,
@@ -257,8 +258,9 @@ export function ArticleView({
       {/* Top Reading Navigation Bar */}
       <div className="sticky top-0 z-30 bg-medium-900/95 backdrop-blur-md border-b border-medium-700/80 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="px-2.5 py-0.5 rounded-full bg-medium-800 border border-medium-700 text-xs font-mono text-medium-300 uppercase tracking-wider font-semibold">
-            {normalizeCategory(entry.type)}
+          <span className="px-2.5 py-0.5 rounded-full bg-medium-800 border border-medium-700 text-xs font-mono text-medium-300 uppercase tracking-wider font-semibold flex items-center gap-1.5">
+            {getCategoryThelemicIcon(entry.type, "w-3.5 h-3.5 text-medium-300")}
+            <span>{normalizeCategory(entry.type)}</span>
           </span>
           <span className="text-xs text-medium-400 font-mono">
             {new Date(entry.date).toLocaleDateString("pt-BR", {

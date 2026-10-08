@@ -15,6 +15,7 @@ import {
   Calendar,
   Star,
 } from "lucide-react";
+import { EstrelaDeThelema, getCategoryThelemicIcon } from "@/components/ThelemicIcons";
 
 interface SidebarProps {
   entries: MagickEntry[];
@@ -41,11 +42,11 @@ export function Sidebar({
 }: SidebarProps) {
   const categories: { name: string; label: string; icon: React.ReactNode }[] = [
     { name: "all", label: "Todas", icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
-    { name: "Estudo", label: "Estudo", icon: <BookOpen className="w-3.5 h-3.5" /> },
-    { name: "Visão Astral", label: "Visão Astral", icon: <Eye className="w-3.5 h-3.5" /> },
-    { name: "Sonho", label: "Sonho", icon: <Moon className="w-3.5 h-3.5" /> },
-    { name: "Oráculo", label: "Oráculo", icon: <Sparkles className="w-3.5 h-3.5" /> },
-    { name: "Prática", label: "Prática", icon: <Sword className="w-3.5 h-3.5" /> },
+    { name: "Estudo", label: "Estudo", icon: getCategoryThelemicIcon("Estudo", "w-3.5 h-3.5") },
+    { name: "Visão Astral", label: "Visão Astral", icon: getCategoryThelemicIcon("Visão Astral", "w-3.5 h-3.5") },
+    { name: "Sonho", label: "Sonho", icon: getCategoryThelemicIcon("Sonho", "w-3.5 h-3.5") },
+    { name: "Oráculo", label: "Oráculo", icon: getCategoryThelemicIcon("Oráculo", "w-3.5 h-3.5") },
+    { name: "Prática", label: "Prática", icon: getCategoryThelemicIcon("Prática", "w-3.5 h-3.5") },
   ];
 
   const filteredEntries = entries.filter((e) => {
@@ -66,12 +67,12 @@ export function Sidebar({
       {/* Brand Header */}
       <div className="p-4 border-b border-medium-700 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-white text-black flex items-center justify-center font-serif font-black text-sm">
-            M
+          <div className="w-7 h-7 rounded-md bg-medium-850 border border-medium-700 flex items-center justify-center text-white">
+            <EstrelaDeThelema className="w-4 h-4 text-white" />
           </div>
           <div>
-            <h1 className="text-sm font-sans font-bold tracking-tight text-white uppercase">
-              Diário Mágicko
+            <h1 className="text-sm font-sans font-bold tracking-tight text-white uppercase flex items-center gap-1.5">
+              <span>Diário Mágicko</span>
             </h1>
             <span className="text-[10px] text-medium-400 font-mono tracking-wider block">
               THELEMA · OBSIDIAN EDITION
@@ -169,8 +170,9 @@ export function Sidebar({
               >
                 {/* Meta Line: Category & Date */}
                 <div className="flex items-center justify-between text-[10px] font-mono mb-1 text-medium-400">
-                  <span className="uppercase tracking-wider font-semibold text-medium-300">
-                    {category}
+                  <span className="uppercase tracking-wider font-semibold text-medium-300 flex items-center gap-1">
+                    {getCategoryThelemicIcon(category, "w-3 h-3 text-medium-300")}
+                    <span>{category}</span>
                   </span>
                   <span>{dateStr}</span>
                 </div>

@@ -124,82 +124,87 @@ export function generateLocalAnalyticalResponse(userQuery: string, entries: Magi
 
 export async function processChatRequest(userQuery: string): Promise<string> {
   const entries = getAllEntries();
-  const apiKey = getAppSetting("gemini_api_key") || process.env.GEMINI_API_KEY;
+  const openRouterKey =
+    getAppSetting("openrouter_api_key") ||
+    process.env.OPENROUTER_API_KEY ||
+    getAppSetting("gemini_api_key") ||
+    process.env.GEMINI_API_KEY;
 
-  if (!apiKey) {
+  if (!openRouterKey) {
     // Return offline analytical engine
     return generateLocalAnalyticalResponse(userQuery, entries);
   }
 
-  // If Gemini API Key is available, use Gemini with deep context!
+  const modelName = getAppSetting("openrouter_model") || "google/gemini-2.5-flash";
+
   try {
     const astro = getFullAstrologicalData();
     const insights = computeStatisticalInsights(entries);
 
     // Format concise entries for prompt context
-    const entriesSummary = entries.slice(0, 15).map((e) => ({
+    const entriesSummary = entries.slice(0, 20).map((e) => ({
       id: e.id,
-      type: e.type,
-      title: e.title,
-      date: e.date,
-      thelemicDate: e.thelemic_date,
-      successRating: e.success_rating,
-      moonPhase: e.moon_phase,
-      moonSign: e.moon_sign,
-      influences: e.influences,
-      oracle: e.oracle_data ? { query: e.oracle_data.query, cards: e.oracle_data.cards } : undefined,
-      contentExcerpt: e.content.slice(0, 300),
+      categoria: e.type,
+      titulo: e.title,
+      data: e.date,
+      dataThelemica: e.thelemic_date,
+      sucessoRating: e.success_rating,
+      faseLunar: e.moon_phase,
+      signoLunar: e.moon_sign,
+      influencias: e.influences,
+      oraculo: e.oracle_data ? { pergunta: e.oracle_data.query, laminas: e.oracle_data.cards } : undefined,
+      trecho: e.content.slice(0, 300),
     }));
 
-    const systemPrompt = `Você é o Secretário e Guia Hermético do magista em um Diário Mágicko Thelêmico de alta precisão.
-Sua postura é erudita, atenciosa, científica e profundamente versada no Thelema (Aleister Crowley, Liber AL vel Legis, Liber 777, Livro de Thoth, Magick in Theory and Practice) e no Método da Ciência com o Alvo da Religião.
-Cumprimente e finalize sempre com as saudações tradicionais thelêmicas em português ("Faze o que tu queres há de ser tudo da Lei." e "Amor é a lei, amor sob vontade.").
+    const systemPrompt = `Você é o Frater Auxiliar, Secretário Hermético e Guia do Magista no Diário Mágicko Thelêmico.
+Sua postura é erudita, atenciosa, científica e profundamente versada no Thelema (Aleister Crowley, Liber AL vel Legis, Liber 777, O Livro de Thoth, Magick in Theory and Practice) e no lema: "O Método da Ciência -- O Alvo da Religião".
+Sempre cumprimente e encerre com as saudações tradicionais thelêmicas ("Faze o que tu queres há de ser tudo da Lei." e "Amor é a lei, amor sob vontade.").
 
-Contexto Atual dos Astros:
+Contexto Astrológico Vigente:
 ${astro.thelemicDate}
 
 Resumo Estatístico do Diário do Magista:
 ${JSON.stringify(insights, null, 2)}
 
-Amostra Recente de Entradas do Diário:
+Amostra de Entradas Recentes do Diário:
 ${JSON.stringify(entriesSummary, null, 2)}
 
 Instruções:
-- Responda à pergunta do magista com rigor analítico cruzando os dados do diário.
-- Quando perguntado sobre sucessos e influências em comum, aponte correlações empíricas explícitas (signos, luas, velas, incensos, entidades).
-- Ofereça sugestões práticas e fundamentadas na Cabala Hermética e no Liber 777 quando cabível.
-- Seja formatado em Markdown impecável.`;
+- Responda diretamente e com rigor empírico cruzando os dados do diário.
+- Se perguntado sobre quais processos tiveram mais sucesso e influências em comum, aponte correlações explícitas (signos, luas, velas, incensos, entidades).
+- Forneça recomendações práticas e fundamentadas na Cabala Hermética e no Liber 777.
+- Utilize formatação Markdown limpa e moderna.`;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const payload = {
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: `${systemPrompt}\n\nPergunta do Magista:\n${userQuery}` }],
-        },
-      ],
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 1500,
-      },
-    };
-
-    const res = await fetch(url, {
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: {
+        "Authorization": `Bearer ${openRouterKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:3000",
+        "X-Title": "Diario Magicko Thelemico",
+      },
+      body: JSON.stringify({
+        model: modelName,
+        max_tokens: 1500,
+        temperature: 0.7,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userQuery },
+        ],
+      }),
     });
 
     if (!res.ok) {
-      console.warn("Falha na chamada ao Gemini API, recorrendo ao motor local:", await res.text());
+      console.warn("Falha na chamada OpenRouter:", await res.text());
       return generateLocalAnalyticalResponse(userQuery, entries);
     }
 
     const data = await res.json();
-    const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    return candidateText || generateLocalAnalyticalResponse(userQuery, entries);
+    const reply = data.choices?.[0]?.message?.content;
+    return reply || generateLocalAnalyticalResponse(userQuery, entries);
   } catch (err) {
-    console.error("Erro ao chamar Gemini API:", err);
+    console.error("Erro ao chamar OpenRouter API:", err);
     return generateLocalAnalyticalResponse(userQuery, entries);
   }
 }
+
