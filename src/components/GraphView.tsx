@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { MagickEntry, normalizeCategory } from "@/lib/types";
-import { Filter, ZoomIn, ZoomOut, RotateCcw, Sparkles, X, Network } from "lucide-react";
+import { Filter, ZoomIn, ZoomOut, RotateCcw, Sparkles, X } from "lucide-react";
 
 interface GraphNode {
   id: string;
@@ -33,9 +33,15 @@ interface GraphViewProps {
 }
 
 export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [nodes, setNodes] = useState<GraphNode[]>([]);
-  const [edges, setEdges] = useState<GraphEdge[]>([]);
+
+  // Simulation references (mutable & stable across frames)
+  const nodesRef = useRef<GraphNode[]>([]);
+  const edgesRef = useRef<GraphEdge[]>([]);
+  const alphaRef = useRef<number>(1.0); // Simulation energy/temperature
+  const animIdRef = useRef<number | null>(null);
+
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
   const [showInfluences, setShowInfluences] = useState(true);
@@ -46,18 +52,36 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
   const dragNodeRef = useRef<GraphNode | null>(null);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
 
+  // Update Canvas Dimensions reliably
+  const updateCanvasDimensions = () => {
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return { width: 800, height: 600 };
+
+    const w = Math.max(container.clientWidth, 600);
+    const h = Math.max(container.clientHeight, 450);
+
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    return { width: w, height: h };
+  };
+
   // Load Graph Data
   useEffect(() => {
     fetch("/api/graph")
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) {
-          const width = 800;
-          const height = 600;
+        if (data.success && Array.isArray(data.nodes)) {
+          const { width, height } = updateCanvasDimensions();
+          const cx = width / 2;
+          const cy = height / 2;
 
+          // Golden Angle Fermat's Spiral positioning (organic celestial distribution)
           const initializedNodes: GraphNode[] = data.nodes.map((n: any, i: number) => {
-            const angle = (i / data.nodes.length) * Math.PI * 2;
-            const dist = 100 + Math.random() * 200;
+            const angle = i * 2.39996; // Golden angle ~137.5°
+            const dist = 35 + Math.sqrt(i + 1) * 55;
             let color = "#ffffff";
             let radius = 14;
 
@@ -66,7 +90,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
               const cat = normalizeCategory(n.type);
               switch (cat) {
                 case "Prática":
-                  color = "#ffffff"; // Pure White
+                  color = "#ffffff"; // White Star
                   break;
                 case "Oráculo":
                   color = "#e5e5e5"; // Bright Silver
@@ -75,7 +99,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
                   color = "#cccccc"; // Astral Silver
                   break;
                 case "Sonho":
-                  color = "#999999"; // Moon Twilight Gray
+                  color = "#999999"; // Twilight Gray
                   break;
                 case "Estudo":
                   color = "#777777"; // Slate Gray
@@ -90,8 +114,8 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
 
             return {
               ...n,
-              x: width / 2 + Math.cos(angle) * dist,
-              y: height / 2 + Math.sin(angle) * dist,
+              x: cx + Math.cos(angle) * dist,
+              y: cy + Math.sin(angle) * dist,
               vx: 0,
               vy: 0,
               radius,
@@ -99,107 +123,47 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
             };
           });
 
-          setNodes(initializedNodes);
-          setEdges(data.edges);
+          nodesRef.current = initializedNodes;
+          edgesRef.current = data.edges || [];
+          alphaRef.current = 1.0; // Start simulation with full energy
         }
       })
       .catch((err) => console.error("Erro ao carregar dados do grafo:", err));
   }, []);
 
-  // Force simulation loop
+  // ResizeObserver to track container resizing
   useEffect(() => {
-    let animId: number;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => {
+      updateCanvasDimensions();
+    });
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Physics Simulation & Render Loop
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const runSimulation = () => {
-      // Repulsion between nodes
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const n1 = nodes[i];
-          const n2 = nodes[j];
-          const dx = n2.x - n1.x;
-          const dy = n2.y - n1.y;
-          const distSq = dx * dx + dy * dy || 1;
-          const dist = Math.sqrt(distSq);
+    let isRunning = true;
 
-          if (dist < 320) {
-            const force = (n1.radius * n2.radius * 45) / distSq;
-            const fx = (dx / dist) * force;
-            const fy = (dy / dist) * force;
+    const tick = () => {
+      if (!isRunning) return;
 
-            if (dragNodeRef.current !== n1) {
-              n1.vx -= fx;
-              n1.vy -= fy;
-            }
-            if (dragNodeRef.current !== n2) {
-              n2.vx += fx;
-              n2.vy += fy;
-            }
-          }
-        }
-      }
+      const nodes = nodesRef.current;
+      const edges = edgesRef.current;
+      const width = canvas.width || 800;
+      const height = canvas.height || 600;
+      const cx = width / 2;
+      const cy = height / 2;
 
-      // Spring attraction along edges
-      const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-      for (const edge of edges) {
-        const sNode = nodeMap.get(edge.source);
-        const tNode = nodeMap.get(edge.target);
-        if (sNode && tNode) {
-          const dx = tNode.x - sNode.x;
-          const dy = tNode.y - sNode.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const desiredDist = 110;
-          const springForce = (dist - desiredDist) * 0.04;
-
-          const fx = (dx / dist) * springForce;
-          const fy = (dy / dist) * springForce;
-
-          if (dragNodeRef.current !== sNode) {
-            sNode.vx += fx;
-            sNode.vy += fy;
-          }
-          if (dragNodeRef.current !== tNode) {
-            tNode.vx -= fx;
-            tNode.vy += fy;
-          }
-        }
-      }
-
-      // Center gravity & velocity dampening
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      for (const node of nodes) {
-        if (dragNodeRef.current === node) continue;
-
-        node.vx += (cx - node.x) * 0.002;
-        node.vy += (cy - node.y) * 0.002;
-
-        node.vx *= 0.88;
-        node.vy *= 0.88;
-
-        node.x += node.vx;
-        node.y += node.vy;
-      }
-
-      // RENDER
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-      ctx.translate(transformRef.current.x, transformRef.current.y);
-      ctx.scale(transformRef.current.scale, transformRef.current.scale);
-
-      // Celestial concentric circles
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 140, 0, Math.PI * 2);
-      ctx.arc(cx, cy, 280, 0, Math.PI * 2);
-      ctx.arc(cx, cy, 420, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Filter nodes based on state
+      // Filter visible nodes based on active state
       const visibleNodes = nodes.filter((n) => {
         if (!showInfluences && !n.isEntry) return false;
         if (filterType !== "all" && n.isEntry) {
@@ -209,6 +173,135 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
         return true;
       });
       const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
+      const nodeMap = new Map(visibleNodes.map((n) => [n.id, n]));
+
+      // Cool down simulation alpha smoothly
+      if (alphaRef.current > 0.005) {
+        alphaRef.current *= 0.985;
+      }
+      const alpha = alphaRef.current;
+
+      // Run Physics ONLY while alpha has energy
+      if (alpha > 0.005 && visibleNodes.length > 0) {
+        // 1. Repulsion between nodes (Coulomb with softening to prevent explosion)
+        const kRepulsion = 1400 * alpha;
+        for (let i = 0; i < visibleNodes.length; i++) {
+          for (let j = i + 1; j < visibleNodes.length; j++) {
+            const n1 = visibleNodes[i];
+            const n2 = visibleNodes[j];
+
+            let dx = n2.x - n1.x;
+            let dy = n2.y - n1.y;
+
+            // Small jiggle if perfectly overlapping
+            if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
+              dx = (Math.random() - 0.5) * 4;
+              dy = (Math.random() - 0.5) * 4;
+            }
+
+            const distSq = dx * dx + dy * dy;
+            const dist = Math.sqrt(distSq);
+
+            if (dist < 320) {
+              // Softened distance threshold prevents division by near-zero!
+              const softenedDist = Math.max(dist, 30);
+              const force = Math.min(kRepulsion / (softenedDist * softenedDist), 8);
+              const fx = (dx / dist) * force;
+              const fy = (dy / dist) * force;
+
+              if (dragNodeRef.current !== n1) {
+                n1.vx -= fx;
+                n1.vy -= fy;
+              }
+              if (dragNodeRef.current !== n2) {
+                n2.vx += fx;
+                n2.vy += fy;
+              }
+            }
+          }
+        }
+
+        // 2. Spring attraction along connected edges
+        const kSpring = 0.025 * alpha;
+        const desiredDist = 110;
+        for (const edge of edges) {
+          if (!visibleNodeIds.has(edge.source) || !visibleNodeIds.has(edge.target)) continue;
+
+          const sNode = nodeMap.get(edge.source);
+          const tNode = nodeMap.get(edge.target);
+          if (sNode && tNode) {
+            let dx = tNode.x - sNode.x;
+            let dy = tNode.y - sNode.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const displacement = dist - desiredDist;
+            const force = Math.min(Math.max(displacement * kSpring, -6), 6);
+
+            const fx = (dx / dist) * force;
+            const fy = (dy / dist) * force;
+
+            if (dragNodeRef.current !== sNode) {
+              sNode.vx += fx;
+              sNode.vy += fy;
+            }
+            if (dragNodeRef.current !== tNode) {
+              tNode.vx -= fx;
+              tNode.vy += fy;
+            }
+          }
+        }
+
+        // 3. Gentle center gravity, friction damping & velocity clamp
+        const kCenter = 0.0025 * alpha;
+        const maxSpeed = 8; // Hard velocity ceiling prevents supersonic oscillation!
+
+        for (const node of visibleNodes) {
+          if (dragNodeRef.current === node) continue;
+
+          // Pull gently to center
+          node.vx += (cx - node.x) * kCenter;
+          node.vy += (cy - node.y) * kCenter;
+
+          // Friction damping
+          node.vx *= 0.84;
+          node.vy *= 0.84;
+
+          // Strict speed clamp
+          const speed = Math.sqrt(node.vx * node.vx + node.vy * node.vy);
+          if (speed > maxSpeed) {
+            node.vx = (node.vx / speed) * maxSpeed;
+            node.vy = (node.vy / speed) * maxSpeed;
+          }
+
+          // Apply displacement
+          node.x += node.vx;
+          node.y += node.vy;
+
+          // NaN & Boundary safety protection
+          if (isNaN(node.x) || isNaN(node.y)) {
+            node.x = cx + (Math.random() - 0.5) * 80;
+            node.y = cy + (Math.random() - 0.5) * 80;
+            node.vx = 0;
+            node.vy = 0;
+          }
+        }
+      }
+
+      // ==========================================
+      // RENDER CANVAS
+      // ==========================================
+      ctx.clearRect(0, 0, width, height);
+      ctx.save();
+      ctx.translate(transformRef.current.x, transformRef.current.y);
+      ctx.scale(transformRef.current.scale, transformRef.current.scale);
+
+      // Celestial concentric circles
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 120, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 260, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 400, 0, Math.PI * 2);
+      ctx.stroke();
 
       // Draw Edges
       for (const edge of edges) {
@@ -275,27 +368,19 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       }
 
       ctx.restore();
-      animId = requestAnimationFrame(runSimulation);
+
+      animIdRef.current = requestAnimationFrame(tick);
     };
 
-    animId = requestAnimationFrame(runSimulation);
-    return () => cancelAnimationFrame(animId);
-  }, [nodes, edges, hoveredNode, filterType, showInfluences]);
+    animIdRef.current = requestAnimationFrame(tick);
 
-  // Handle Resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (canvasRef.current && canvasRef.current.parentElement) {
-        canvasRef.current.width = canvasRef.current.parentElement.clientWidth;
-        canvasRef.current.height = canvasRef.current.parentElement.clientHeight || 650;
-      }
+    return () => {
+      isRunning = false;
+      if (animIdRef.current) cancelAnimationFrame(animIdRef.current);
     };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [hoveredNode, filterType, showInfluences]);
 
-  // Mouse Coordinates to Graph Space
+  // Coordinates translation
   const getGraphCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -311,7 +396,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const coords = getGraphCoords(e);
-    const clickedNode = nodes.find((n) => {
+    const clickedNode = nodesRef.current.find((n) => {
       const dx = n.x - coords.x;
       const dy = n.y - coords.y;
       return Math.sqrt(dx * dx + dy * dy) <= n.radius + 6;
@@ -319,6 +404,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
 
     if (clickedNode) {
       dragNodeRef.current = clickedNode;
+      alphaRef.current = 0.3; // Wake up simulation gently
     } else {
       isDraggingRef.current = true;
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
@@ -333,6 +419,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       dragNodeRef.current.y = coords.y;
       dragNodeRef.current.vx = 0;
       dragNodeRef.current.vy = 0;
+      alphaRef.current = 0.3; // Keep moving connected nodes
     } else if (isDraggingRef.current) {
       const dx = e.clientX - lastMousePosRef.current.x;
       const dy = e.clientY - lastMousePosRef.current.y;
@@ -341,7 +428,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
     } else {
       // Check Hover
-      const hovered = nodes.find((n) => {
+      const hovered = nodesRef.current.find((n) => {
         const dx = n.x - coords.x;
         const dy = n.y - coords.y;
         return Math.sqrt(dx * dx + dy * dy) <= n.radius + 6;
@@ -357,7 +444,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const coords = getGraphCoords(e);
-    const clickedNode = nodes.find((n) => {
+    const clickedNode = nodesRef.current.find((n) => {
       const dx = n.x - coords.x;
       const dy = n.y - coords.y;
       return Math.sqrt(dx * dx + dy * dy) <= n.radius + 6;
@@ -380,10 +467,14 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
 
   const resetView = () => {
     transformRef.current = { x: 0, y: 0, scale: 1 };
+    alphaRef.current = 0.5; // Re-energize slightly to center
   };
 
   return (
-    <div className="relative w-full h-full min-h-[500px] bg-medium-900 rounded-xl border border-medium-700 overflow-hidden shadow-2xl flex flex-col select-none">
+    <div
+      ref={containerRef}
+      className="relative w-full h-full min-h-[480px] bg-medium-900 rounded-xl border border-medium-700 overflow-hidden shadow-2xl flex flex-col select-none"
+    >
       {/* Top Toolbar */}
       <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Filter Pills */}
@@ -399,7 +490,10 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
           ].map((f) => (
             <button
               key={f.id}
-              onClick={() => setFilterType(f.id)}
+              onClick={() => {
+                setFilterType(f.id);
+                alphaRef.current = 0.3; // Re-energize gently
+              }}
               className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
                 filterType === f.id
                   ? "bg-white text-black font-semibold shadow-sm"
@@ -411,7 +505,10 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
           ))}
 
           <button
-            onClick={() => setShowInfluences(!showInfluences)}
+            onClick={() => {
+              setShowInfluences(!showInfluences);
+              alphaRef.current = 0.3;
+            }}
             className={`px-2 py-0.5 rounded text-xs font-medium border transition-all ${
               showInfluences
                 ? "bg-medium-800 border-white/40 text-white font-medium"
@@ -475,7 +572,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       {/* Bottom Hint */}
       <div className="absolute bottom-3 left-3 z-20 pointer-events-none flex items-center gap-2 text-xs font-mono text-medium-300 bg-medium-850/90 px-3 py-1.5 rounded-lg border border-medium-700 backdrop-blur-sm">
         <Sparkles className="w-3.5 h-3.5 text-white" />
-        <span>Arraste os nós, role para zoom ou clique em uma nota para abri-la.</span>
+        <span>Arraste os nós, role para zoom ou clique em qualquer nota para abri-la.</span>
       </div>
 
       {/* Hover Card */}
