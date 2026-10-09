@@ -5,8 +5,10 @@ import { Sidebar } from "@/components/Sidebar";
 import { ArticleView } from "@/components/ArticleView";
 import { RightSidebar } from "@/components/RightSidebar";
 import { SettingsModal } from "@/components/SettingsModal";
+import { GraphView } from "@/components/GraphView";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { getDefaultTemplateForCategory } from "@/lib/templates";
+import { Network } from "lucide-react";
 
 export default function Home() {
   const [entries, setEntries] = useState<MagickEntry[]>([]);
@@ -16,18 +18,22 @@ export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isZenMode, setIsZenMode] = useState(false);
+  const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
 
-  // Global keyboard shortcut for Zen/Focus mode (Ctrl+\ or Cmd+\)
+  // Global keyboard shortcuts (Ctrl+\ for Zen Mode, Escape for Graph Modal)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
         e.preventDefault();
         setIsZenMode((prev) => !prev);
       }
+      if (e.key === "Escape" && isGraphModalOpen) {
+        setIsGraphModalOpen(false);
+      }
     };
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, []);
+  }, [isGraphModalOpen]);
 
   // Load entries
   const loadEntries = async (preferSelectedId?: string) => {
@@ -242,6 +248,7 @@ export default function Home() {
           currentEntry={selectedEntry}
           allEntries={entries}
           onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
+          onOpenFullGraph={() => setIsGraphModalOpen(true)}
         />
       </div>
 
@@ -251,6 +258,46 @@ export default function Home() {
         onClose={() => setIsSettingsOpen(false)}
         entries={entries}
       />
+
+      {/* 4. Fullscreen Expanded Graph Modal (Visão Geral) */}
+      {isGraphModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col p-3 sm:p-6 md:p-8 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between pb-3 mb-2 border-b border-medium-700">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded bg-white text-black flex items-center justify-center font-bold text-xs">
+                <Network className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-sans font-bold text-white uppercase tracking-wide">
+                  Visão Geral do Grafo Mágicko
+                </h2>
+                <span className="text-[11px] font-mono text-medium-400">
+                  Constelação completa de conexões entre rituais, oráculos, sonhos lúcidos e correspondências de Liber 777
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsGraphModalOpen(false)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-xs font-mono border border-medium-700 transition-colors"
+            >
+              <span>Fechar</span>
+              <kbd className="text-[10px] bg-medium-700 px-1 rounded text-medium-300">Esc</kbd>
+            </button>
+          </div>
+
+          <div className="flex-1 w-full min-h-0">
+            <GraphView
+              entries={entries}
+              onSelectEntry={(entry) => {
+                setSelectedEntryId(entry.id);
+                setIsGraphModalOpen(false);
+              }}
+              onClose={() => setIsGraphModalOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

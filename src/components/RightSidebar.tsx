@@ -2,18 +2,20 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { MagickEntry, ChatMessage } from "@/lib/types";
-import { Send, Bot, Sparkles, User, Network, RotateCcw, Link2, Trash2 } from "lucide-react";
+import { Send, Bot, Sparkles, User, Network, RotateCcw, Link2, Trash2, Maximize2 } from "lucide-react";
 
 interface RightSidebarProps {
   currentEntry: MagickEntry | null;
   allEntries: MagickEntry[];
   onSelectEntry: (entry: MagickEntry) => void;
+  onOpenFullGraph?: () => void;
 }
 
 export function RightSidebar({
   currentEntry,
   allEntries,
   onSelectEntry,
+  onOpenFullGraph,
 }: RightSidebarProps) {
   // Chat States
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -404,20 +406,37 @@ export function RightSidebar({
             <Network className="w-3.5 h-3.5 text-white" />
             <span>Mini Grafo de Conexões</span>
           </span>
-          <span className="text-[10px] text-medium-500">
-            {currentEntry?.connections?.length || 0} links
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-medium-500">
+              {currentEntry?.connections?.length || 0} links
+            </span>
+            {onOpenFullGraph && (
+              <button
+                type="button"
+                onClick={onOpenFullGraph}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700 text-[10px] transition-colors"
+                title="Expandir Visão Geral do Grafo Completo"
+              >
+                <Maximize2 className="w-3 h-3 text-white" />
+                <span>Expandir</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex-1 rounded border border-medium-800 bg-medium-950/60 overflow-hidden relative">
+        <div
+          onClick={() => onOpenFullGraph && onOpenFullGraph()}
+          className="flex-1 rounded border border-medium-800 bg-medium-950/60 overflow-hidden relative cursor-pointer group"
+          title="Clique para expandir a visão geral completa do grafo"
+        >
           <canvas
             ref={canvasRef}
             width={320}
             height={150}
-            className="w-full h-full cursor-pointer"
+            className="w-full h-full"
           />
-          <div className="absolute bottom-1 right-2 text-[9px] font-mono text-medium-500 pointer-events-none">
-            Clique no nó para navegar
+          <div className="absolute bottom-1 right-2 text-[9px] font-mono text-medium-400 bg-black/60 px-1.5 py-0.5 rounded border border-medium-800 pointer-events-none group-hover:text-white transition-colors">
+            ⤢ Clique para expandir visão geral
           </div>
         </div>
       </div>

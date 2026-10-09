@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { MagickEntry } from "@/lib/types";
-import { Filter, ZoomIn, ZoomOut, RotateCcw, Info, Sparkles } from "lucide-react";
+import { MagickEntry, normalizeCategory } from "@/lib/types";
+import { Filter, ZoomIn, ZoomOut, RotateCcw, Sparkles, X, Network } from "lucide-react";
 
 interface GraphNode {
   id: string;
@@ -29,9 +29,10 @@ interface GraphEdge {
 interface GraphViewProps {
   onSelectEntry: (entry: MagickEntry) => void;
   entries: MagickEntry[];
+  onClose?: () => void;
 }
 
-export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
+export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
@@ -57,31 +58,34 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
           const initializedNodes: GraphNode[] = data.nodes.map((n: any, i: number) => {
             const angle = (i / data.nodes.length) * Math.PI * 2;
             const dist = 100 + Math.random() * 200;
-            let color = "#a7c080";
+            let color = "#ffffff";
             let radius = 14;
 
             if (n.isEntry) {
-              radius = 18;
-              switch (n.type) {
-                case "ritual":
-                  color = "#dbbc7f"; // Solar Gold
+              radius = 16;
+              const cat = normalizeCategory(n.type);
+              switch (cat) {
+                case "Prática":
+                  color = "#ffffff"; // Pure White
                   break;
-                case "oracle":
-                  color = "#a7c080"; // Moss Emerald
+                case "Oráculo":
+                  color = "#e5e5e5"; // Bright Silver
                   break;
-                case "dream":
-                  color = "#d699b6"; // Twilight Purple
+                case "Visão Astral":
+                  color = "#cccccc"; // Astral Silver
                   break;
-                case "vision":
-                  color = "#7fbbb3"; // Cyan Lunar
+                case "Sonho":
+                  color = "#999999"; // Moon Twilight Gray
                   break;
-                case "study":
-                  color = "#e69875"; // Amber Fire
+                case "Estudo":
+                  color = "#777777"; // Slate Gray
                   break;
+                default:
+                  color = "#ffffff";
               }
             } else {
-              radius = 9;
-              color = n.type.includes("entity") ? "#f2d08a" : "#7a8478";
+              radius = 7;
+              color = n.type.includes("entity") ? "#d4d4d4" : "#525252";
             }
 
             return {
@@ -121,7 +125,7 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
           const distSq = dx * dx + dy * dy || 1;
           const dist = Math.sqrt(distSq);
 
-          if (dist < 350) {
+          if (dist < 320) {
             const force = (n1.radius * n2.radius * 45) / distSq;
             const fx = (dx / dist) * force;
             const fy = (dy / dist) * force;
@@ -147,7 +151,7 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
           const dx = tNode.x - sNode.x;
           const dy = tNode.y - sNode.y;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const desiredDist = 120;
+          const desiredDist = 110;
           const springForce = (dist - desiredDist) * 0.04;
 
           const fx = (dx / dist) * springForce;
@@ -159,7 +163,7 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
           }
           if (dragNodeRef.current !== tNode) {
             tNode.vx -= fx;
-            tNode.vy -= fy;
+            tNode.vy += fy;
           }
         }
       }
@@ -186,19 +190,22 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
       ctx.translate(transformRef.current.x, transformRef.current.y);
       ctx.scale(transformRef.current.scale, transformRef.current.scale);
 
-      // Draw subtle background celestial circles
-      ctx.strokeStyle = "rgba(167, 192, 128, 0.05)";
+      // Celestial concentric circles
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(cx, cy, 150, 0, Math.PI * 2);
-      ctx.arc(cx, cy, 300, 0, Math.PI * 2);
-      ctx.arc(cx, cy, 450, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 140, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 280, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 420, 0, Math.PI * 2);
       ctx.stroke();
 
       // Filter nodes based on state
       const visibleNodes = nodes.filter((n) => {
         if (!showInfluences && !n.isEntry) return false;
-        if (filterType !== "all" && n.isEntry && n.type !== filterType) return false;
+        if (filterType !== "all" && n.isEntry) {
+          const cat = normalizeCategory(n.type);
+          if (cat !== filterType) return false;
+        }
         return true;
       });
       const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
@@ -215,10 +222,10 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
           hoveredNode && (hoveredNode.id === sNode.id || hoveredNode.id === tNode.id);
 
         ctx.strokeStyle = isHighlighted
-          ? "rgba(219, 188, 127, 0.8)"
+          ? "rgba(255, 255, 255, 0.95)"
           : edge.type === "entry_connection"
-          ? "rgba(167, 192, 128, 0.35)"
-          : "rgba(122, 132, 120, 0.2)";
+          ? "rgba(255, 255, 255, 0.35)"
+          : "rgba(255, 255, 255, 0.12)";
         ctx.lineWidth = isHighlighted ? 2.5 : edge.type === "entry_connection" ? 1.5 : 0.8;
 
         ctx.beginPath();
@@ -230,7 +237,7 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
         if (isHighlighted && edge.label) {
           const midX = (sNode.x + tNode.x) / 2;
           const midY = (sNode.y + tNode.y) / 2;
-          ctx.fillStyle = "#fdf6e3";
+          ctx.fillStyle = "#ffffff";
           ctx.font = "10px JetBrains Mono, monospace";
           ctx.fillText(edge.label, midX, midY - 4);
         }
@@ -245,8 +252,8 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
           ctx.beginPath();
           ctx.arc(node.x, node.y, node.radius + (isHovered ? 8 : 4), 0, Math.PI * 2);
           ctx.fillStyle = isHovered
-            ? "rgba(219, 188, 127, 0.35)"
-            : "rgba(167, 192, 128, 0.08)";
+            ? "rgba(255, 255, 255, 0.35)"
+            : "rgba(255, 255, 255, 0.08)";
           ctx.fill();
         }
 
@@ -255,12 +262,12 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
         ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
         ctx.fillStyle = node.color;
         ctx.fill();
-        ctx.strokeStyle = isHovered ? "#fdf6e3" : "#1e2326";
+        ctx.strokeStyle = isHovered ? "#ffffff" : "#121212";
         ctx.lineWidth = isHovered ? 2 : 1.5;
         ctx.stroke();
 
         // Label
-        ctx.fillStyle = isHovered ? "#fdf6e3" : "#d3c6aa";
+        ctx.fillStyle = isHovered ? "#ffffff" : "#a3a3a3";
         ctx.font = `${node.isEntry ? "11px" : "9px"} Inter, sans-serif`;
         ctx.textAlign = "center";
         const labelText = node.label.length > 22 ? `${node.label.slice(0, 20)}...` : node.label;
@@ -304,7 +311,6 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const coords = getGraphCoords(e);
-    // Find node under mouse
     const clickedNode = nodes.find((n) => {
       const dx = n.x - coords.x;
       const dy = n.y - coords.y;
@@ -377,68 +383,81 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
   };
 
   return (
-    <div className="relative w-full h-[650px] bg-forest-900 rounded-2xl border border-forest-700 overflow-hidden shadow-2xl flex flex-col">
+    <div className="relative w-full h-full min-h-[500px] bg-medium-900 rounded-xl border border-medium-700 overflow-hidden shadow-2xl flex flex-col select-none">
       {/* Top Toolbar */}
-      <div className="absolute top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+      <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 bg-forest-850/90 backdrop-blur-md p-1.5 rounded-xl border border-forest-700 pointer-events-auto shadow-arcane">
-          <Filter className="w-3.5 h-3.5 text-parchment-400 ml-1.5 mr-1" />
+        <div className="flex flex-wrap items-center gap-1.5 bg-medium-850/95 backdrop-blur-md p-1.5 rounded-lg border border-medium-700 pointer-events-auto shadow-xl">
+          <Filter className="w-3.5 h-3.5 text-medium-400 ml-1 mr-0.5" />
           {[
-            { id: "all", label: "Todos" },
-            { id: "ritual", label: "Rituais", color: "text-gold-400" },
-            { id: "oracle", label: "Oráculos", color: "text-moss-400" },
-            { id: "dream", label: "Sonhos", color: "text-twilight-400" },
-            { id: "vision", label: "Visões", color: "text-lunar-400" },
-            { id: "study", label: "Estudos", color: "text-amber-500" },
+            { id: "all", label: "Todas" },
+            { id: "Estudo", label: "Estudo" },
+            { id: "Visão Astral", label: "Visão Astral" },
+            { id: "Sonho", label: "Sonho" },
+            { id: "Oráculo", label: "Oráculo" },
+            { id: "Prática", label: "Prática" },
           ].map((f) => (
             <button
               key={f.id}
               onClick={() => setFilterType(f.id)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+              className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
                 filterType === f.id
-                  ? "bg-forest-700 text-parchment-100 font-semibold"
-                  : "text-parchment-300 hover:text-parchment-100"
+                  ? "bg-white text-black font-semibold shadow-sm"
+                  : "text-medium-300 hover:text-white hover:bg-medium-800"
               }`}
             >
-              <span className={f.color}>{f.label}</span>
+              <span>{f.label}</span>
             </button>
           ))}
 
           <button
             onClick={() => setShowInfluences(!showInfluences)}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+            className={`px-2 py-0.5 rounded text-xs font-medium border transition-all ${
               showInfluences
-                ? "bg-forest-750 border-moss-500/40 text-moss-400"
-                : "border-transparent text-parchment-400 hover:text-parchment-200"
+                ? "bg-medium-800 border-white/40 text-white font-medium"
+                : "border-transparent text-medium-400 hover:text-medium-200"
             }`}
           >
-            Influências
+            Influências (777)
           </button>
         </div>
 
-        {/* View Controls */}
-        <div className="flex items-center gap-1 bg-forest-850/90 backdrop-blur-md p-1.5 rounded-xl border border-forest-700 pointer-events-auto shadow-arcane">
+        {/* View Controls & Optional Close */}
+        <div className="flex items-center gap-1 bg-medium-850/95 backdrop-blur-md p-1.5 rounded-lg border border-medium-700 pointer-events-auto shadow-xl">
           <button
             onClick={() => (transformRef.current.scale = Math.min(transformRef.current.scale * 1.2, 3))}
-            className="p-1.5 text-parchment-300 hover:text-parchment-100 hover:bg-forest-750 rounded-lg"
+            className="p-1.5 text-medium-300 hover:text-white hover:bg-medium-800 rounded transition-colors"
             title="Aproximar (Zoom In)"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={() => (transformRef.current.scale = Math.max(transformRef.current.scale / 1.2, 0.3))}
-            className="p-1.5 text-parchment-300 hover:text-parchment-100 hover:bg-forest-750 rounded-lg"
+            className="p-1.5 text-medium-300 hover:text-white hover:bg-medium-800 rounded transition-colors"
             title="Afastar (Zoom Out)"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
           <button
             onClick={resetView}
-            className="p-1.5 text-parchment-300 hover:text-parchment-100 hover:bg-forest-750 rounded-lg"
+            className="p-1.5 text-medium-300 hover:text-white hover:bg-medium-800 rounded transition-colors"
             title="Centralizar Grafo"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
+
+          {onClose && (
+            <>
+              <div className="w-[1px] h-4 bg-medium-700 mx-1" />
+              <button
+                onClick={onClose}
+                className="p-1.5 text-medium-300 hover:text-white hover:bg-medium-800 rounded transition-colors"
+                title="Fechar Visão Geral (Esc)"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -450,35 +469,35 @@ export function GraphView({ onSelectEntry, entries }: GraphViewProps) {
         onMouseUp={handleMouseUp}
         onClick={handleClick}
         onWheel={handleWheel}
-        className="w-full h-full cursor-grab active:cursor-grabbing"
+        className="w-full h-full cursor-grab active:cursor-grabbing bg-medium-900"
       />
 
       {/* Bottom Hint */}
-      <div className="absolute bottom-3 left-4 z-20 pointer-events-none flex items-center gap-2 text-xs font-mono text-parchment-400 bg-forest-850/80 px-3 py-1.5 rounded-lg border border-forest-750 backdrop-blur-sm">
-        <Sparkles className="w-3.5 h-3.5 text-gold-400" />
-        <span>Arraste nós, use o scroll para zoom ou clique em uma nota para abrir seus detalhes.</span>
+      <div className="absolute bottom-3 left-3 z-20 pointer-events-none flex items-center gap-2 text-xs font-mono text-medium-300 bg-medium-850/90 px-3 py-1.5 rounded-lg border border-medium-700 backdrop-blur-sm">
+        <Sparkles className="w-3.5 h-3.5 text-white" />
+        <span>Arraste os nós, role para zoom ou clique em uma nota para abri-la.</span>
       </div>
 
       {/* Hover Card */}
       {hoveredNode && (
-        <div className="absolute bottom-3 right-4 z-20 bg-forest-850/95 border border-forest-700 rounded-xl p-3.5 text-xs shadow-2xl max-w-xs backdrop-blur-md">
+        <div className="absolute bottom-3 right-3 z-20 bg-medium-850/95 border border-medium-700 rounded-xl p-3 text-xs shadow-2xl max-w-xs backdrop-blur-md">
           <div className="flex items-center gap-2 mb-1">
             <span
               className="w-2.5 h-2.5 rounded-full"
               style={{ backgroundColor: hoveredNode.color }}
             ></span>
-            <strong className="text-parchment-100 text-sm font-serif line-clamp-1">
+            <strong className="text-white text-sm font-sans font-semibold line-clamp-1">
               {hoveredNode.label}
             </strong>
           </div>
-          <div className="text-[11px] text-parchment-300 space-y-0.5 font-mono">
-            <div>Tipo: <span className="text-gold-400 capitalize">{hoveredNode.type}</span></div>
+          <div className="text-[11px] text-medium-300 space-y-0.5 font-mono">
+            <div>Categoria: <span className="text-white capitalize">{normalizeCategory(hoveredNode.type)}</span></div>
             {hoveredNode.success_rating !== undefined && (
-              <div>Sucesso Mágicko: <span className="text-moss-400">{hoveredNode.success_rating}/10</span></div>
+              <div>Sucesso Mágicko: <span className="text-white font-semibold">{hoveredNode.success_rating}/10</span></div>
             )}
             {hoveredNode.isEntry && (
-              <div className="text-[10px] text-lunar-400 pt-1">
-                Clique com o mouse para inspecionar / editar esta operação.
+              <div className="text-[10px] text-medium-400 pt-1">
+                Clique para abrir e inspecionar esta nota.
               </div>
             )}
           </div>
