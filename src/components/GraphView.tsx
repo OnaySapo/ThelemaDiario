@@ -9,6 +9,8 @@ interface GraphNode {
   label: string;
   type: string;
   isEntry: boolean;
+  parentId?: string;
+  parentTitle?: string;
   x: number;
   y: number;
   vx: number;
@@ -68,6 +70,44 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
     return { width: w, height: h };
   };
 
+  // Helper to re-anchor satellites in neat orbits around their parents
+  const anchorSatellitesToParents = (nodes: GraphNode[], edges: GraphEdge[]) => {
+    const entryMap = new Map(nodes.filter((n) => n.isEntry).map((n) => [n.id, n]));
+    const parentSatelliteCount = new Map<string, number>();
+
+    // Map parent to satellites
+    const satParentMap = new Map<string, { parentId: string; parentTitle: string }>();
+    for (const edge of edges) {
+      if (edge.type === "influence_link") {
+        const parent = entryMap.get(edge.source);
+        if (parent) {
+          satParentMap.set(edge.target, { parentId: parent.id, parentTitle: parent.label });
+        }
+      }
+    }
+
+    for (const node of nodes) {
+      if (!node.isEntry) {
+        const satInfo = satParentMap.get(node.id);
+        if (satInfo) {
+          node.parentId = satInfo.parentId;
+          node.parentTitle = satInfo.parentTitle;
+          const parent = entryMap.get(satInfo.parentId);
+          if (parent) {
+            const count = parentSatelliteCount.get(satInfo.parentId) || 0;
+            parentSatelliteCount.set(satInfo.parentId, count + 1);
+            const angle = (count / 6) * Math.PI * 2 + (count % 2 === 0 ? 0 : 0.35);
+            const dist = 50 + (count % 2) * 8;
+            node.x = parent.x + Math.cos(angle) * dist;
+            node.y = parent.y + Math.sin(angle) * dist;
+            node.vx = 0;
+            node.vy = 0;
+          }
+        }
+      }
+    }
+  };
+
   // Load Graph Data
   useEffect(() => {
     fetch("/api/graph")
@@ -78,38 +118,34 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
           const cx = width / 2;
           const cy = height / 2;
 
-          // Golden Angle Fermat's Spiral positioning (organic celestial distribution)
-          const initializedNodes: GraphNode[] = data.nodes.map((n: any, i: number) => {
-            const angle = i * 2.39996; // Golden angle ~137.5°
-            const dist = 35 + Math.sqrt(i + 1) * 55;
-            let color = "#ffffff";
-            let radius = 14;
+          const rawEntries = data.nodes.filter((n: any) => n.isEntry);
+          const rawInfluences = data.nodes.filter((n: any) => !n.isEntry);
 
-            if (n.isEntry) {
-              radius = 16;
-              const cat = normalizeCategory(n.type);
-              switch (cat) {
-                case "Prática":
-                  color = "#ffffff"; // White Star
-                  break;
-                case "Oráculo":
-                  color = "#e5e5e5"; // Bright Silver
-                  break;
-                case "Visão Astral":
-                  color = "#cccccc"; // Astral Silver
-                  break;
-                case "Sonho":
-                  color = "#999999"; // Twilight Gray
-                  break;
-                case "Estudo":
-                  color = "#777777"; // Slate Gray
-                  break;
-                default:
-                  color = "#ffffff";
-              }
-            } else {
-              radius = 7;
-              color = n.type.includes("entity") ? "#d4d4d4" : "#525252";
+          // 1. Position Entry Notes in a harmonic circle around center
+          const initializedEntries: GraphNode[] = rawEntries.map((n: any, i: number) => {
+            const angle = (i / Math.max(rawEntries.length, 1)) * Math.PI * 2 - Math.PI / 2;
+            const dist = Math.min(width, height) * 0.28;
+            let color = "#ffffff";
+            const cat = normalizeCategory(n.type);
+
+            switch (cat) {
+              case "Prática":
+                color = "#ffffff"; // Brilliant White Star
+                break;
+              case "Oráculo":
+                color = "#eaeaea"; // Lunar Silver
+                break;
+              case "Visão Astral":
+                color = "#d4d4d4"; // Astral Mercury
+                break;
+              case "Sonho":
+                color = "#a3a3a3"; // Twilight Gray
+                break;
+              case "Estudo":
+                color = "#858585"; // Slate Wisdom
+                break;
+              default:
+                color = "#ffffff";
             }
 
             return {
@@ -118,14 +154,41 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
               y: cy + Math.sin(angle) * dist,
               vx: 0,
               vy: 0,
-              radius,
+              radius: 16,
               color,
             };
           });
 
-          nodesRef.current = initializedNodes;
-          edgesRef.current = data.edges || [];
-          alphaRef.current = 1.0; // Start simulation with full energy
+          // 2. Initialize Influences (Satellites)
+          const initializedInfluences: GraphNode[] = rawInfluences.map((n: any) => {
+            let color = "#d4d4d4";
+            if (n.type.includes("entity")) color = "#ffffff"; // Deidade / Entidade
+            else if (n.type.includes("candle")) color = "#f0f0f0"; // Vela / Luz
+            else if (n.type.includes("tool")) color = "#e5e5e5"; // Arma Mágica
+            else if (n.type.includes("incense")) color = "#cccccc"; // Incenso
+            else if (n.type.includes("feeling")) color = "#b0b0b0"; // Sentimento
+            else if (n.type.includes("element")) color = "#d8d8d8"; // Elemento / Tattwa
+
+            return {
+              ...n,
+              x: cx,
+              y: cy,
+              vx: 0,
+              vy: 0,
+              radius: 7,
+              color,
+            };
+          });
+
+          const allNodes = [...initializedEntries, ...initializedInfluences];
+          const edges = data.edges || [];
+
+          // Orbitally anchor satellites around their parent entries
+          anchorSatellitesToParents(allNodes, edges);
+
+          nodesRef.current = allNodes;
+          edgesRef.current = edges;
+          alphaRef.current = 0.8; // Clean, gentle settling
         }
       })
       .catch((err) => console.error("Erro ao carregar dados do grafo:", err));
@@ -163,15 +226,18 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       const cx = width / 2;
       const cy = height / 2;
 
-      // Filter visible nodes based on active state
-      const visibleNodes = nodes.filter((n) => {
-        if (!showInfluences && !n.isEntry) return false;
-        if (filterType !== "all" && n.isEntry) {
-          const cat = normalizeCategory(n.type);
-          if (cat !== filterType) return false;
-        }
-        return true;
-      });
+      // 1. Identify active entry notes
+      const activeEntries = nodes.filter(
+        (n) => n.isEntry && (filterType === "all" || normalizeCategory(n.type) === filterType)
+      );
+      const activeEntryIds = new Set(activeEntries.map((n) => n.id));
+
+      // 2. Identify active satellites (must have their parent entry currently active and visible!)
+      const activeSatellites = showInfluences
+        ? nodes.filter((n) => !n.isEntry && n.parentId && activeEntryIds.has(n.parentId))
+        : [];
+
+      const visibleNodes = [...activeEntries, ...activeSatellites];
       const visibleNodeIds = new Set(visibleNodes.map((n) => n.id));
       const nodeMap = new Map(visibleNodes.map((n) => [n.id, n]));
 
@@ -181,31 +247,29 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       }
       const alpha = alphaRef.current;
 
-      // Run Physics ONLY while alpha has energy
+      // ==========================================
+      // STABLE PLANETARY-SATELLITE PHYSICS ENGINE
+      // ==========================================
       if (alpha > 0.005 && visibleNodes.length > 0) {
-        // 1. Repulsion between nodes (Coulomb with softening to prevent explosion)
-        const kRepulsion = 1400 * alpha;
-        for (let i = 0; i < visibleNodes.length; i++) {
-          for (let j = i + 1; j < visibleNodes.length; j++) {
-            const n1 = visibleNodes[i];
-            const n2 = visibleNodes[j];
+        // A. Repulsion between Entry Notes (Planets push each other apart)
+        const kRepulsion = 1600 * alpha;
+        for (let i = 0; i < activeEntries.length; i++) {
+          for (let j = i + 1; j < activeEntries.length; j++) {
+            const n1 = activeEntries[i];
+            const n2 = activeEntries[j];
 
             let dx = n2.x - n1.x;
             let dy = n2.y - n1.y;
 
-            // Small jiggle if perfectly overlapping
             if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1) {
               dx = (Math.random() - 0.5) * 4;
               dy = (Math.random() - 0.5) * 4;
             }
 
-            const distSq = dx * dx + dy * dy;
-            const dist = Math.sqrt(distSq);
-
-            if (dist < 320) {
-              // Softened distance threshold prevents division by near-zero!
-              const softenedDist = Math.max(dist, 30);
-              const force = Math.min(kRepulsion / (softenedDist * softenedDist), 8);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 340) {
+              const softenedDist = Math.max(dist, 40);
+              const force = Math.min(kRepulsion / (softenedDist * softenedDist), 6);
               const fx = (dx / dist) * force;
               const fy = (dy / dist) * force;
 
@@ -221,11 +285,12 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
           }
         }
 
-        // 2. Spring attraction along connected edges
-        const kSpring = 0.025 * alpha;
-        const desiredDist = 110;
+        // B. Spring Attraction between Connected Entry Notes
+        const kSpring = 0.02 * alpha;
+        const desiredDist = 135;
         for (const edge of edges) {
-          if (!visibleNodeIds.has(edge.source) || !visibleNodeIds.has(edge.target)) continue;
+          if (edge.type !== "entry_connection") continue;
+          if (!activeEntryIds.has(edge.source) || !activeEntryIds.has(edge.target)) continue;
 
           const sNode = nodeMap.get(edge.source);
           const tNode = nodeMap.get(edge.target);
@@ -234,7 +299,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
             let dy = tNode.y - sNode.y;
             const dist = Math.sqrt(dx * dx + dy * dy) || 1;
             const displacement = dist - desiredDist;
-            const force = Math.min(Math.max(displacement * kSpring, -6), 6);
+            const force = Math.min(Math.max(displacement * kSpring, -5), 5);
 
             const fx = (dx / dist) * force;
             const fy = (dy / dist) * force;
@@ -245,43 +310,120 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
             }
             if (dragNodeRef.current !== tNode) {
               tNode.vx -= fx;
-              tNode.vy += fy;
+              tNode.vy -= fy;
             }
           }
         }
 
-        // 3. Gentle center gravity, friction damping & velocity clamp
-        const kCenter = 0.0025 * alpha;
-        const maxSpeed = 8; // Hard velocity ceiling prevents supersonic oscillation!
+        // C. Center Gravity, Friction & Speed Ceiling for Entry Notes
+        const kCenter = 0.002 * alpha;
+        const maxSpeed = 6;
+        for (const e of activeEntries) {
+          if (dragNodeRef.current === e) continue;
 
-        for (const node of visibleNodes) {
-          if (dragNodeRef.current === node) continue;
+          e.vx += (cx - e.x) * kCenter;
+          e.vy += (cy - e.y) * kCenter;
 
-          // Pull gently to center
-          node.vx += (cx - node.x) * kCenter;
-          node.vy += (cy - node.y) * kCenter;
+          e.vx *= 0.84;
+          e.vy *= 0.84;
 
-          // Friction damping
-          node.vx *= 0.84;
-          node.vy *= 0.84;
-
-          // Strict speed clamp
-          const speed = Math.sqrt(node.vx * node.vx + node.vy * node.vy);
+          const speed = Math.sqrt(e.vx * e.vx + e.vy * e.vy);
           if (speed > maxSpeed) {
-            node.vx = (node.vx / speed) * maxSpeed;
-            node.vy = (node.vy / speed) * maxSpeed;
+            e.vx = (e.vx / speed) * maxSpeed;
+            e.vy = (e.vy / speed) * maxSpeed;
           }
 
-          // Apply displacement
-          node.x += node.vx;
-          node.y += node.vy;
+          e.x += e.vx;
+          e.y += e.vy;
 
-          // NaN & Boundary safety protection
-          if (isNaN(node.x) || isNaN(node.y)) {
-            node.x = cx + (Math.random() - 0.5) * 80;
-            node.y = cy + (Math.random() - 0.5) * 80;
-            node.vx = 0;
-            node.vy = 0;
+          if (isNaN(e.x) || isNaN(e.y)) {
+            e.x = cx;
+            e.y = cy;
+            e.vx = 0;
+            e.vy = 0;
+          }
+        }
+
+        // D. Orbital Satellite Physics for Liber 777 Influences
+        const kSatSpring = 0.07 * alpha;
+        const desiredSatDist = 50;
+
+        for (const sat of activeSatellites) {
+          if (dragNodeRef.current === sat) continue;
+
+          const parent = sat.parentId ? nodeMap.get(sat.parentId) : null;
+          if (parent) {
+            let dx = sat.x - parent.x;
+            let dy = sat.y - parent.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const displacement = dist - desiredSatDist;
+            const force = Math.min(Math.max(displacement * kSatSpring, -4), 4);
+
+            const fx = (dx / dist) * force;
+            const fy = (dy / dist) * force;
+
+            sat.vx -= fx;
+            sat.vy -= fy;
+
+            // Subtle counter-force on parent note
+            if (dragNodeRef.current !== parent) {
+              parent.vx += fx * 0.12;
+              parent.vy += fy * 0.12;
+            }
+          }
+        }
+
+        // Sibling Separation between Satellites of the same Parent
+        for (let i = 0; i < activeSatellites.length; i++) {
+          for (let j = i + 1; j < activeSatellites.length; j++) {
+            const s1 = activeSatellites[i];
+            const s2 = activeSatellites[j];
+
+            if (s1.parentId !== s2.parentId) continue; // Only spread sibling satellites around the ring!
+
+            let dx = s2.x - s1.x;
+            let dy = s2.y - s1.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+            if (dist < 46) {
+              const force = Math.min((320 * alpha) / (dist * dist), 3);
+              const fx = (dx / dist) * force;
+              const fy = (dy / dist) * force;
+
+              if (dragNodeRef.current !== s1) {
+                s1.vx -= fx;
+                s1.vy -= fy;
+              }
+              if (dragNodeRef.current !== s2) {
+                s2.vx += fx;
+                s2.vy += fy;
+              }
+            }
+          }
+        }
+
+        // Satellite Damping & Speed Clamping
+        for (const sat of activeSatellites) {
+          if (dragNodeRef.current === sat) continue;
+
+          sat.vx *= 0.78;
+          sat.vy *= 0.78;
+
+          const spd = Math.sqrt(sat.vx * sat.vx + sat.vy * sat.vy);
+          if (spd > 4) {
+            sat.vx = (sat.vx / spd) * 4;
+            sat.vy = (sat.vy / spd) * 4;
+          }
+
+          sat.x += sat.vx;
+          sat.y += sat.vy;
+
+          if (isNaN(sat.x) || isNaN(sat.y)) {
+            const p = sat.parentId ? nodeMap.get(sat.parentId) : null;
+            sat.x = p ? p.x + 50 : cx;
+            sat.y = p ? p.y : cy;
+            sat.vx = 0;
+            sat.vy = 0;
           }
         }
       }
@@ -318,7 +460,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
           ? "rgba(255, 255, 255, 0.95)"
           : edge.type === "entry_connection"
           ? "rgba(255, 255, 255, 0.35)"
-          : "rgba(255, 255, 255, 0.12)";
+          : "rgba(255, 255, 255, 0.16)";
         ctx.lineWidth = isHighlighted ? 2.5 : edge.type === "entry_connection" ? 1.5 : 0.8;
 
         ctx.beginPath();
@@ -360,11 +502,12 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
         ctx.stroke();
 
         // Label
-        ctx.fillStyle = isHovered ? "#ffffff" : "#a3a3a3";
+        ctx.fillStyle = isHovered ? "#ffffff" : node.isEntry ? "#a3a3a3" : "#737373";
         ctx.font = `${node.isEntry ? "11px" : "9px"} Inter, sans-serif`;
         ctx.textAlign = "center";
-        const labelText = node.label.length > 22 ? `${node.label.slice(0, 20)}...` : node.label;
-        ctx.fillText(labelText, node.x, node.y + node.radius + 14);
+        const maxLen = node.isEntry ? 22 : 14;
+        const labelText = node.label.length > maxLen ? `${node.label.slice(0, maxLen - 2)}...` : node.label;
+        ctx.fillText(labelText, node.x, node.y + node.radius + (node.isEntry ? 14 : 11));
       }
 
       ctx.restore();
@@ -378,7 +521,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       isRunning = false;
       if (animIdRef.current) cancelAnimationFrame(animIdRef.current);
     };
-  }, [hoveredNode, filterType, showInfluences]);
+  }, [filterType, showInfluences]);
 
   // Coordinates translation
   const getGraphCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -419,7 +562,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       dragNodeRef.current.y = coords.y;
       dragNodeRef.current.vx = 0;
       dragNodeRef.current.vy = 0;
-      alphaRef.current = 0.3; // Keep moving connected nodes
+      alphaRef.current = 0.3; // Keep moving connected nodes smoothly
     } else if (isDraggingRef.current) {
       const dx = e.clientX - lastMousePosRef.current.x;
       const dy = e.clientY - lastMousePosRef.current.y;
@@ -427,7 +570,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       transformRef.current.y += dy;
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
     } else {
-      // Check Hover
+      // Check Hover without re-triggering simulation effect
       const hovered = nodesRef.current.find((n) => {
         const dx = n.x - coords.x;
         const dy = n.y - coords.y;
@@ -450,10 +593,18 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       return Math.sqrt(dx * dx + dy * dy) <= n.radius + 6;
     });
 
-    if (clickedNode && clickedNode.isEntry) {
-      const fullEntry = entries.find((en) => en.id === clickedNode.id);
-      if (fullEntry) {
-        onSelectEntry(fullEntry);
+    if (clickedNode) {
+      if (clickedNode.isEntry) {
+        const fullEntry = entries.find((en) => en.id === clickedNode.id);
+        if (fullEntry) {
+          onSelectEntry(fullEntry);
+        }
+      } else if (clickedNode.parentId) {
+        // Clicking an influence satellite selects its parent note!
+        const fullEntry = entries.find((en) => en.id === clickedNode.parentId);
+        if (fullEntry) {
+          onSelectEntry(fullEntry);
+        }
       }
     }
   };
@@ -467,7 +618,28 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
 
   const resetView = () => {
     transformRef.current = { x: 0, y: 0, scale: 1 };
-    alphaRef.current = 0.5; // Re-energize slightly to center
+    alphaRef.current = 0.4;
+  };
+
+  // Safe toggle of Influences with orbital realignment
+  const handleToggleInfluences = () => {
+    const nextState = !showInfluences;
+    setShowInfluences(nextState);
+    if (nextState) {
+      anchorSatellitesToParents(nodesRef.current, edgesRef.current);
+    }
+    alphaRef.current = 0.3;
+  };
+
+  // Human-readable format for influence categories
+  const getInfluenceBadge = (type: string) => {
+    if (type.includes("entity")) return "Entidade / Deidade";
+    if (type.includes("candle")) return "Vela / Cor";
+    if (type.includes("tool")) return "Arma / Instrumento";
+    if (type.includes("incense")) return "Incenso / Perfume";
+    if (type.includes("feeling")) return "Sentimento / Êxtase";
+    if (type.includes("element")) return "Elemento / Tattwa";
+    return "Correspondência 777";
   };
 
   return (
@@ -478,8 +650,8 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       {/* Top Toolbar */}
       <div className="absolute top-3 left-3 right-3 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-medium-850/95 backdrop-blur-md p-1.5 rounded-lg border border-medium-700 pointer-events-auto shadow-xl">
-          <Filter className="w-3.5 h-3.5 text-medium-400 ml-1 mr-0.5" />
+        <div className="flex flex-wrap items-center gap-1.5 bg-medium-850/95 backdrop-blur-md p-1.5 rounded-lg border border-medium-700 pointer-events-auto shadow-xl max-w-full overflow-x-auto">
+          <Filter className="w-3.5 h-3.5 text-medium-400 ml-1 mr-0.5 flex-shrink-0" />
           {[
             { id: "all", label: "Todas" },
             { id: "Estudo", label: "Estudo" },
@@ -494,7 +666,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
                 setFilterType(f.id);
                 alphaRef.current = 0.3; // Re-energize gently
               }}
-              className={`px-2 py-0.5 rounded text-xs font-medium transition-all ${
+              className={`px-2 py-0.5 rounded text-xs font-medium transition-all whitespace-nowrap ${
                 filterType === f.id
                   ? "bg-white text-black font-semibold shadow-sm"
                   : "text-medium-300 hover:text-white hover:bg-medium-800"
@@ -505,11 +677,8 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
           ))}
 
           <button
-            onClick={() => {
-              setShowInfluences(!showInfluences);
-              alphaRef.current = 0.3;
-            }}
-            className={`px-2 py-0.5 rounded text-xs font-medium border transition-all ${
+            onClick={handleToggleInfluences}
+            className={`px-2 py-0.5 rounded text-xs font-medium border transition-all whitespace-nowrap ${
               showInfluences
                 ? "bg-medium-800 border-white/40 text-white font-medium"
                 : "border-transparent text-medium-400 hover:text-medium-200"
@@ -572,7 +741,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       {/* Bottom Hint */}
       <div className="absolute bottom-3 left-3 z-20 pointer-events-none flex items-center gap-2 text-xs font-mono text-medium-300 bg-medium-850/90 px-3 py-1.5 rounded-lg border border-medium-700 backdrop-blur-sm">
         <Sparkles className="w-3.5 h-3.5 text-white" />
-        <span>Arraste os nós, role para zoom ou clique em qualquer nota para abri-la.</span>
+        <span>Arraste os nós, role para zoom ou clique em qualquer nota/influência para inspecioná-la.</span>
       </div>
 
       {/* Hover Card */}
@@ -588,14 +757,26 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
             </strong>
           </div>
           <div className="text-[11px] text-medium-300 space-y-0.5 font-mono">
-            <div>Categoria: <span className="text-white capitalize">{normalizeCategory(hoveredNode.type)}</span></div>
-            {hoveredNode.success_rating !== undefined && (
-              <div>Sucesso Mágicko: <span className="text-white font-semibold">{hoveredNode.success_rating}/10</span></div>
-            )}
-            {hoveredNode.isEntry && (
-              <div className="text-[10px] text-medium-400 pt-1">
-                Clique para abrir e inspecionar esta nota.
-              </div>
+            {hoveredNode.isEntry ? (
+              <>
+                <div>Categoria: <span className="text-white capitalize">{normalizeCategory(hoveredNode.type)}</span></div>
+                {hoveredNode.success_rating !== undefined && (
+                  <div>Sucesso Mágicko: <span className="text-white font-semibold">{hoveredNode.success_rating}/10</span></div>
+                )}
+                <div className="text-[10px] text-medium-400 pt-1">
+                  Clique para abrir e inspecionar esta nota.
+                </div>
+              </>
+            ) : (
+              <>
+                <div>Tipo: <span className="text-white">{getInfluenceBadge(hoveredNode.type)}</span></div>
+                {hoveredNode.parentTitle && (
+                  <div>Nota: <span className="text-medium-200">{hoveredNode.parentTitle}</span></div>
+                )}
+                <div className="text-[10px] text-medium-400 pt-1">
+                  Correspondência de Liber 777 · Clique para abrir a nota vinculada.
+                </div>
+              </>
             )}
           </div>
         </div>
