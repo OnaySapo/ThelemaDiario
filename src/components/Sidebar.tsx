@@ -111,8 +111,8 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* Category Pills Bar */}
-      <div className="px-3 py-2 border-b border-medium-700 bg-medium-900 flex items-center gap-1 overflow-x-auto no-scrollbar">
+      {/* Category Pills Bar - Todas as categorias visíveis e clicáveis em wrap */}
+      <div className="p-2.5 border-b border-medium-700 bg-medium-850/60 flex flex-wrap items-center gap-1.5">
         {categories.map((c) => {
           const count =
             c.name === "all"
@@ -124,16 +124,16 @@ export function Sidebar({
             <button
               key={c.name}
               onClick={() => onSelectCategory(c.name)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] whitespace-nowrap font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
                 isActive
-                  ? "bg-white text-black font-semibold"
-                  : "text-medium-300 hover:text-white hover:bg-medium-800"
+                  ? "bg-white text-black font-semibold shadow-sm"
+                  : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/70"
               }`}
             >
               <span>{c.label}</span>
               <span
-                className={`text-[9px] px-1 rounded-full ${
-                  isActive ? "bg-black/15 text-black font-mono" : "text-medium-400 font-mono"
+                className={`text-[9px] px-1 py-0.2 rounded-full font-mono ${
+                  isActive ? "bg-black/15 text-black font-bold" : "bg-medium-700/60 text-medium-300"
                 }`}
               >
                 {count}
