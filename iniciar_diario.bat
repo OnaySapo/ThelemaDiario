@@ -1,21 +1,26 @@
 @echo off
-chcp 65001 > nul
-title Diário Mágicko Thelêmico
+title Diario Magicko Thelemico
 color 07
 
-set "PATH=%~dp0node-v24.21.0-win-x64;%PATH%"
+cd /d "%~dp0"
+
+set "NODE_DIR=%~dp0node-v24.21.0-win-x64"
+
+if exist "%NODE_DIR%\node.exe" (
+    set "PATH=%NODE_DIR%;%PATH%"
+)
 
 echo ==============================================================================
-echo             DIÁRIO MÁGICKO THELÊMICO — LIBER SCIENTIA
-echo         "O Método da Ciência -- O Alvo da Religião"
+echo             DIARIO MAGICKO THELEMICO - LIBER SCIENTIA
+echo            "O Metodo da Ciencia -- O Alvo da Religiao"
 echo ==============================================================================
 echo.
-echo [1/2] Iniciando em http://localhost:3000 ...
-echo [2/2] Pressione Ctrl+C para encerrar o programa a qualquer momento.
+echo [1/2] Abrindo navegador em http://localhost:3000 ...
+echo [2/2] Servidor iniciado. Pressione Ctrl+C para encerrar o programa.
 echo.
 
 start "" "http://localhost:3000"
 
-npm run start
+call npm.cmd run start
 
 pause
