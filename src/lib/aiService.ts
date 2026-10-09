@@ -189,6 +189,7 @@ ${JSON.stringify(entriesSummary, null, 2)}
 
 Instruções:
 - Responda diretamente e com rigor empírico cruzando os dados do diário.
+- Entradas da categoria "Diário" são para crônicas e reflexões mundanas/seculares cotidianas (fora do foco puramente cerimonial); respeite esse contexto secular e ajude a integrar harmoniosamente a rotina diária à Grande Obra.
 - Se perguntado sobre quais processos tiveram mais sucesso e influências em comum, aponte correlações explícitas (signos, luas, velas, incensos, entidades).
 - Forneça recomendações práticas e fundamentadas na Cabala Hermética e no Liber 777.
 - Utilize formatação Markdown limpa e moderna.`;

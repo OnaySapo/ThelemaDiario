@@ -3,6 +3,23 @@ import { CategoryName } from "./types";
 export function getDefaultTemplateForCategory(category: CategoryName | string): string {
   const norm = (category || "").toLowerCase();
 
+  if (norm.includes("diário") || norm.includes("diario") || norm === "journal" || norm === "mundane" || norm === "daily") {
+    return `## 1. Crônica do Dia & Acontecimentos Mundanos
+*Eventos do cotidiano secular, trabalho, estudos, notícias, encontros e tarefas.*
+
+## 2. Pensamentos, Impressões & Emoções
+*Reflexões pessoais, ideias que surgiram, sentimentos e dinâmicas dos relacionamentos.*
+
+## 3. Estado Físico, Corpo & Energia
+*Alimentação, qualidade do sono, cansaço, vigor físico, exercícios e saúde geral.*
+
+## 4. Aprendizados & Insights do Dia
+*O que a experiência prática do dia ensinou? O que funcionou e o que pode ser aprimorado?*
+
+## 5. Fechamento & Foco para Amanhã
+*Como encerro o dia e quais as prioridades imediatas para o dia seguinte.*`;
+  }
+
   if (norm.includes("estudo") || norm === "study") {
     return `## 1. Obra & Tópico de Pesquisa
 *Indique o Livro Sagrado, trecho de Liber AL vel Legis, Liber 777 ou teoria sob escrutínio.*

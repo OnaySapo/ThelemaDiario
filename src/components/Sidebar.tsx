@@ -42,6 +42,7 @@ export function Sidebar({
 }: SidebarProps) {
   const categories: { name: string; label: string; icon: React.ReactNode }[] = [
     { name: "all", label: "Todas", icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
+    { name: "Diário", label: "Diário", icon: getCategoryThelemicIcon("Diário", "w-3.5 h-3.5") },
     { name: "Estudo", label: "Estudo", icon: getCategoryThelemicIcon("Estudo", "w-3.5 h-3.5") },
     { name: "Visão Astral", label: "Visão Astral", icon: getCategoryThelemicIcon("Visão Astral", "w-3.5 h-3.5") },
     { name: "Sonho", label: "Sonho", icon: getCategoryThelemicIcon("Sonho", "w-3.5 h-3.5") },

@@ -263,6 +263,25 @@ function seedInitialData(db: DatabaseSync) {
         { category: "feeling", name: "Curiosidade Lúcida" },
       ],
     },
+    {
+      id: "diario-cronica-cotidiano",
+      type: "Diário",
+      title: "Crônica Cotidiana: Rotina, Café e Equilíbrio Secular",
+      content: `## 1. Crônica do Dia & Acontecimentos Mundanos\nDia produtivo dedicado à organização das tarefas de trabalho e rotina doméstica. Caminhada matinal sob o sol leve, organização da mesa de estudos e resolução de pendências práticas que estavam acumuladas.\n\n## 2. Pensamentos, Impressões & Emoções\nSensação de clareza mental e tranquilidade. Conversa agradável com um amigo à tarde sobre planos e leituras. O ritmo do dia fluiu sem pressa ou ansiedade desnecessária.\n\n## 3. Estado Físico, Corpo & Energia\nBoa disposição física ao longo de todo o período. Sono reparador na noite anterior, alimentação equilibrada e hidratação adequada.\n\n## 4. Aprendizados & Insights do Dia\nCuidar do plano material com zelo e atenção é a base que sustenta a estabilidade da mente. Quando as coisas práticas estão em ordem, o espírito encontra espaço para descansar e contemplar.\n\n## 5. Fechamento & Foco para Amanhã\nFinalizo a noite lendo e organizando a agenda de amanhã. Prioridade: manter a mesma serenidade nas tarefas matinais.`,
+      date: "2026-10-06T20:15:00.000Z",
+      success_rating: 8,
+      thelemic_date: "☉ in ♎ 13°, ☽ in ♌ 04°",
+      sun_sign: "Libra",
+      sun_degree: 13.2,
+      moon_sign: "Leão",
+      moon_degree: 4.5,
+      moon_phase: "Minguante",
+      moon_illumination: 35,
+      planetary_day: "Dies Martis",
+      planetary_hour: "Hora de Marte",
+      tags: ["#cotidiano", "#rotina", "#clareza", "#mundano"],
+      influences: [],
+    },
   ];
 
   for (const entry of sampleEntries) {

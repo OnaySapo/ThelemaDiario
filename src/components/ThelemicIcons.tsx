@@ -190,8 +190,32 @@ export function IconeLuaThelema({ className = "w-4 h-4", size = 20 }: IconProps)
   );
 }
 
+// 9. Ícone para a Categoria: DIÁRIO (Caderno Secular / Crônica Mundana)
+export function IconeDiario({ className = "w-4 h-4", size = 20 }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      {/* Caderno com linhas de escrita e pena secular */}
+      <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 1 4 19.5z" />
+      <path d="M8 7h8" />
+      <path d="M8 11h8" />
+      <path d="M8 15h5" />
+    </svg>
+  );
+}
+
 export function getCategoryThelemicIcon(category: string, className = "w-4 h-4") {
   const norm = (category || "").toLowerCase();
+  if (norm.includes("diário") || norm.includes("diario") || norm === "journal" || norm === "mundane") return <IconeDiario className={className} />;
   if (norm.includes("estudo")) return <IconeEstudo className={className} />;
   if (norm.includes("visão") || norm.includes("visao")) return <IconeVisaoAstral className={className} />;
   if (norm.includes("sonho")) return <IconeSonho className={className} />;

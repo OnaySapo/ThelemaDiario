@@ -622,6 +622,7 @@ export function ArticleView({
                   }}
                   className="w-full bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-white font-sans"
                 >
+                  <option value="Diário">Diário (Mundano / Cotidiano)</option>
                   <option value="Estudo">Estudo</option>
                   <option value="Visão Astral">Visão Astral</option>
                   <option value="Sonho">Sonho</option>

@@ -1,4 +1,4 @@
-export type CategoryName = "Estudo" | "Visão Astral" | "Sonho" | "Oráculo" | "Prática";
+export type CategoryName = "Diário" | "Estudo" | "Visão Astral" | "Sonho" | "Oráculo" | "Prática";
 
 export interface MagickEntry {
   id: string;
@@ -48,6 +48,7 @@ export interface MagickEntry {
 
 export function normalizeCategory(rawType: string): CategoryName {
   const lower = (rawType || "").toLowerCase();
+  if (lower.includes("diário") || lower.includes("diario") || lower === "journal" || lower === "mundane" || lower === "daily") return "Diário";
   if (lower.includes("estudo") || lower === "study") return "Estudo";
   if (lower.includes("visão") || lower.includes("visao") || lower === "vision") return "Visão Astral";
   if (lower.includes("sonho") || lower === "dream") return "Sonho";

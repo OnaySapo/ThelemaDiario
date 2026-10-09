@@ -74,7 +74,9 @@ export default function Home() {
       const targetCategory = (selectedCategory !== "all" ? normalizeCategory(selectedCategory) : "Prática") as CategoryName;
       const defaultContent = getDefaultTemplateForCategory(targetCategory);
       const defaultTitle =
-        targetCategory === "Oráculo"
+        targetCategory === "Diário"
+          ? "Crônica Diária & Reflexões"
+          : targetCategory === "Oráculo"
           ? "Consulta Oracular"
           : targetCategory === "Sonho"
           ? "Registro de Sonho Lúcido"

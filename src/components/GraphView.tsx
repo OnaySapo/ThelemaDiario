@@ -129,6 +129,9 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
             const cat = normalizeCategory(n.type);
 
             switch (cat) {
+              case "Diário":
+                color = "#b8b8b8"; // Warm Neutral Silver
+                break;
               case "Prática":
                 color = "#ffffff"; // Brilliant White Star
                 break;
@@ -654,6 +657,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
           <Filter className="w-3.5 h-3.5 text-medium-400 ml-1 mr-0.5 flex-shrink-0" />
           {[
             { id: "all", label: "Todas" },
+            { id: "Diário", label: "Diário" },
             { id: "Estudo", label: "Estudo" },
             { id: "Visão Astral", label: "Visão Astral" },
             { id: "Sonho", label: "Sonho" },
