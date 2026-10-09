@@ -77,3 +77,10 @@ export interface ChatMessage {
   timestamp: string;
   sources?: string[];
 }
+
+export interface TodoItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  created_at: string;
+}

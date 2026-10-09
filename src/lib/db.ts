@@ -84,6 +84,13 @@ export function getDatabase(): DatabaseSync {
       value TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS todos (
+      id TEXT PRIMARY KEY,
+      text TEXT NOT NULL,
+      completed INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
+
     -- Fast retrieval and ordering indexes
     CREATE INDEX IF NOT EXISTS idx_entries_date ON entries(date DESC);
     CREATE INDEX IF NOT EXISTS idx_entries_type ON entries(type);
@@ -609,4 +616,49 @@ export function getAppSetting(key: string): string | null {
 export function setAppSetting(key: string, value: string): void {
   const db = getDatabase();
   db.prepare("INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value").run(key, value);
+}
+
+export function getAllTodos() {
+  const db = getDatabase();
+  // Check if initial todos are needed
+  const countRow = db.prepare("SELECT COUNT(*) as count FROM todos").get() as { count: number };
+  if (countRow.count === 0) {
+    const initialTodos = [
+      "Executar Liber Resh vel Helios (Adoração Solar)",
+      "Anotar e analisar sonhos lúcidos da noite",
+      "Ritual Menor do Pentagrama (LBR / Banimento)",
+      "Meditação Dharana e reflexão da Verdadeira Vontade",
+    ];
+    for (let i = 0; i < initialTodos.length; i++) {
+      const id = `todo_seed_${i + 1}`;
+      const created_at = new Date(Date.now() - (initialTodos.length - i) * 60000).toISOString();
+      db.prepare("INSERT INTO todos (id, text, completed, created_at) VALUES (?, ?, 0, ?)").run(id, initialTodos[i], created_at);
+    }
+  }
+
+  const rows = db.prepare("SELECT id, text, completed, created_at FROM todos ORDER BY completed ASC, created_at DESC").all() as any[];
+  return rows.map((r) => ({
+    id: r.id,
+    text: r.text,
+    completed: Boolean(r.completed),
+    created_at: r.created_at,
+  }));
+}
+
+export function createTodo(text: string) {
+  const db = getDatabase();
+  const id = `todo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const created_at = new Date().toISOString();
+  db.prepare("INSERT INTO todos (id, text, completed, created_at) VALUES (?, ?, 0, ?)").run(id, text.trim(), created_at);
+  return { id, text: text.trim(), completed: false, created_at };
+}
+
+export function updateTodo(id: string, completed: boolean) {
+  const db = getDatabase();
+  db.prepare("UPDATE todos SET completed = ? WHERE id = ?").run(completed ? 1 : 0, id);
+}
+
+export function deleteTodo(id: string) {
+  const db = getDatabase();
+  db.prepare("DELETE FROM todos WHERE id = ?").run(id);
 }

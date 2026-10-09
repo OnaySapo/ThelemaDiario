@@ -238,3 +238,143 @@ export function getFullAstrologicalData(targetDate: Date = new Date()): Astrolog
     };
   }
 }
+
+export interface UpcomingMoonPhase {
+  name: string;
+  phaseCode: "nova" | "crescente" | "cheia" | "minguante";
+  date: string;
+  formattedDate: string;
+  icon: string;
+  illuminationPct: number;
+  zodiacSign: string;
+  zodiacSymbol: string;
+  degreeFormatted: string;
+}
+
+export function getUpcomingMoonPhases(startDate: Date = new Date()): UpcomingMoonPhase[] {
+  try {
+    const phasesToSearch = [
+      { angle: 0, code: "nova" as const, name: "Lua Nova", icon: "🌑", pct: 0 },
+      { angle: 90, code: "crescente" as const, name: "Quarto Crescente", icon: "🌓", pct: 50 },
+      { angle: 180, code: "cheia" as const, name: "Lua Cheia", icon: "🌕", pct: 100 },
+      { angle: 270, code: "minguante" as const, name: "Quarto Minguante", icon: "🌗", pct: 50 },
+    ];
+
+    const rawList = phasesToSearch.flatMap((p) => {
+      const searchRes = Astronomy.SearchMoonPhase(p.angle, startDate, 45);
+      if (!searchRes) return [];
+      const moonDate = searchRes.date;
+
+      // Calculate Moon's Zodiac sign on that date
+      const moonVec = Astronomy.GeoVector(Astronomy.Body.Moon, moonDate, false);
+      const moonEcl = Astronomy.Ecliptic(moonVec);
+      const zodiac = getZodiacFromLongitude(moonEcl.elon);
+
+      return [
+        {
+          name: p.name,
+          phaseCode: p.code,
+          date: moonDate.toISOString(),
+          formattedDate: moonDate.toLocaleDateString("pt-BR", {
+            day: "2-digit",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          icon: p.icon,
+          illuminationPct: p.pct,
+          zodiacSign: zodiac.sign,
+          zodiacSymbol: zodiac.symbol,
+          degreeFormatted: zodiac.formatted,
+          rawTime: moonDate.getTime(),
+        },
+      ];
+    });
+
+    rawList.sort((a, b) => a.rawTime - b.rawTime);
+    return rawList.map(({ rawTime, ...rest }) => rest);
+  } catch (e) {
+    console.error("Erro ao calcular fases lunares:", e);
+    return [];
+  }
+}
+
+export interface ReshTideInfo {
+  station: "Ra" | "Hathor" | "Tum" | "Khephra";
+  direction: "Leste" | "Sul" | "Oeste" | "Norte";
+  element: string;
+  hourRange: string;
+  salutation: string;
+  thelemicGod: string;
+  symbol: string;
+  minutesToNext: number;
+  nextStation: "Ra" | "Hathor" | "Tum" | "Khephra";
+}
+
+export function getReshSolarTide(date: Date = new Date()): ReshTideInfo {
+  const hours = date.getHours() + date.getMinutes() / 60;
+
+  // Ra: 03:00 to 09:00 (Dawn / East)
+  // Hathor: 09:00 to 15:00 (Noon / South)
+  // Tum: 15:00 to 21:00 (Sunset / West)
+  // Khephra: 21:00 to 03:00 (Midnight / North)
+
+  if (hours >= 3 && hours < 9) {
+    const minsLeft = Math.round((9 - hours) * 60);
+    return {
+      station: "Ra",
+      direction: "Leste",
+      element: "Fogo / Aurora",
+      hourRange: "Nascer do Sol (~06:00)",
+      salutation: "Salve a Ti que és Ra em Teu nascer, mesmo a Ti que és Ra em Tua força...",
+      thelemicGod: "Ra (O Sol Vitorioso no Leste)",
+      symbol: "☉",
+      minutesToNext: minsLeft,
+      nextStation: "Hathor",
+    };
+  }
+
+  if (hours >= 9 && hours < 15) {
+    const minsLeft = Math.round((15 - hours) * 60);
+    return {
+      station: "Hathor",
+      direction: "Sul",
+      element: "Luz Meridiana / Êxtase",
+      hourRange: "Meio-Dia Solar (~12:00)",
+      salutation: "Salve a Ti que és Hathor em Teu triunfo, mesmo a Ti que és Hathor em Tua beleza...",
+      thelemicGod: "Hathor (O Sol no Zênite Meridional)",
+      symbol: "♀",
+      minutesToNext: minsLeft,
+      nextStation: "Tum",
+    };
+  }
+
+  if (hours >= 15 && hours < 21) {
+    const minsLeft = Math.round((21 - hours) * 60);
+    return {
+      station: "Tum",
+      direction: "Oeste",
+      element: "Crepúsculo / Introspecção",
+      hourRange: "Pôr do Sol (~18:00)",
+      salutation: "Salve a Ti que és Tum em Teu ocaso, mesmo a Ti que és Tum em Tua quietude...",
+      thelemicGod: "Tum (O Sol Poente no Ocidente)",
+      symbol: "♄",
+      minutesToNext: minsLeft,
+      nextStation: "Khephra",
+    };
+  }
+
+  // Khephra (21h to 03h)
+  const minsLeft = Math.round(((hours < 3 ? 3 - hours : 27 - hours)) * 60);
+  return {
+    station: "Khephra",
+    direction: "Norte",
+    element: "Meia-Noite / O Escaravelho Sagrado",
+    hourRange: "Meia-Noite Oculta (~00:00)",
+    salutation: "Salve a Ti que és Khephra em Teu esconderijo, mesmo a Ti que és Khephra em Teu silêncio...",
+    thelemicGod: "Khephra (O Sol Secreto da Meia-Noite)",
+    symbol: "☽",
+    minutesToNext: minsLeft,
+    nextStation: "Ra",
+  };
+}

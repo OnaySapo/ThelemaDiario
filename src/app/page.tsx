@@ -6,6 +6,8 @@ import { ArticleView } from "@/components/ArticleView";
 import { RightSidebar } from "@/components/RightSidebar";
 import { SettingsModal } from "@/components/SettingsModal";
 import { GraphView } from "@/components/GraphView";
+import { HomeView } from "@/components/HomeView";
+import { DashboardView } from "@/components/DashboardView";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { getDefaultTemplateForCategory } from "@/lib/templates";
 import { applyTheme, getStoredTheme } from "@/lib/theme";
@@ -14,6 +16,7 @@ import { Network } from "lucide-react";
 export default function Home() {
   const [entries, setEntries] = useState<MagickEntry[]>([]);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"home" | "article" | "dashboard">("home");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -68,16 +71,21 @@ export default function Home() {
   const selectedEntry = entries.find((e) => e.id === selectedEntryId) || (entries.length > 0 ? entries[0] : null);
 
   // Create new note directly in center canvas
-  const handleNewNote = async () => {
+  const handleNewNote = async (
+    prefilledCategory?: CategoryName,
+    prefilledContent?: string,
+    prefilledTitle?: string
+  ) => {
     try {
       // Get astrological data for now
       const astroRes = await fetch("/api/astronomy");
       const astro = await astroRes.json();
 
-      const targetCategory = (selectedCategory !== "all" ? normalizeCategory(selectedCategory) : "Prática") as CategoryName;
-      const defaultContent = getDefaultTemplateForCategory(targetCategory);
+      const targetCategory = prefilledCategory || ((selectedCategory !== "all" ? normalizeCategory(selectedCategory) : "Prática") as CategoryName);
+      const defaultContent = prefilledContent || getDefaultTemplateForCategory(targetCategory);
       const defaultTitle =
-        targetCategory === "Diário"
+        prefilledTitle ||
+        (targetCategory === "Diário"
           ? "Crônica Diária & Reflexões"
           : targetCategory === "Oráculo"
           ? "Consulta Oracular"
@@ -87,7 +95,7 @@ export default function Home() {
           ? "Exploração do Plano Astral"
           : targetCategory === "Estudo"
           ? "Estudo & Correspondências"
-          : "Operação Mágicka";
+          : "Operação Mágicka");
 
       const defaultOracleData =
         targetCategory === "Oráculo"
@@ -166,6 +174,7 @@ export default function Home() {
       const data = await res.json();
       if (data.success) {
         await loadEntries(data.entry.id);
+        setViewMode("article");
       }
     } catch (err) {
       console.error("Erro ao criar nova nota:", err);
@@ -219,43 +228,73 @@ export default function Home() {
         <Sidebar
           entries={entries}
           selectedEntryId={selectedEntryId}
-          onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
-          onNewEntry={handleNewNote}
+          onSelectEntry={(entry) => {
+            setSelectedEntryId(entry.id);
+            setViewMode("article");
+          }}
+          onNewEntry={() => handleNewNote()}
           selectedCategory={selectedCategory}
           onSelectCategory={setSelectedCategory}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          currentView={viewMode}
+          onOpenHome={() => setViewMode("home")}
+          onOpenDashboard={() => setViewMode("dashboard")}
         />
       </div>
 
-      {/* 2. Center Reading & Editing Canvas (Medium Style) */}
+      {/* 2. Center Canvas (Home / Dashboard / Article) */}
       <main className="flex-1 h-full min-w-0 bg-medium-900 overflow-hidden flex flex-col transition-all duration-300">
-        <ArticleView
-          entry={selectedEntry}
-          onUpdateEntry={handleUpdateEntry}
-          onDeleteEntry={handleDeleteEntry}
-          allEntries={entries}
-          onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
-          onNewNote={handleNewNote}
-          isZenMode={isZenMode}
-          onToggleZenMode={() => setIsZenMode((prev) => !prev)}
-        />
+        {viewMode === "home" ? (
+          <HomeView
+            entries={entries}
+            onSelectEntry={(entry) => {
+              setSelectedEntryId(entry.id);
+              setViewMode("article");
+            }}
+            onNewNote={(cat, content, title) => handleNewNote(cat, content, title)}
+            onOpenDashboard={() => setViewMode("dashboard")}
+          />
+        ) : viewMode === "dashboard" ? (
+          <DashboardView
+            entries={entries}
+            onSelectEntry={(entry) => {
+              setSelectedEntryId(entry.id);
+              setViewMode("article");
+            }}
+            onBackToHome={() => setViewMode("home")}
+          />
+        ) : (
+          <ArticleView
+            entry={selectedEntry}
+            onUpdateEntry={handleUpdateEntry}
+            onDeleteEntry={handleDeleteEntry}
+            allEntries={entries}
+            onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
+            onNewNote={() => handleNewNote()}
+            isZenMode={isZenMode}
+            onToggleZenMode={() => setIsZenMode((prev) => !prev)}
+            onBackToHome={() => setViewMode("home")}
+          />
+        )}
       </main>
 
-      {/* 3. Right Sidebar (Frater Auxiliar + Mini Grafo) */}
-      <div
-        className={`transition-all duration-300 ease-in-out flex-shrink-0 h-full ${
-          isZenMode ? "-mr-80 opacity-0 pointer-events-none w-0 overflow-hidden" : "w-80"
-        }`}
-      >
-        <RightSidebar
-          currentEntry={selectedEntry}
-          allEntries={entries}
-          onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
-          onOpenFullGraph={() => setIsGraphModalOpen(true)}
-        />
-      </div>
+      {/* 3. Right Sidebar (Frater Auxiliar + Mini Grafo) - ativo no modo artigo */}
+      {viewMode === "article" && (
+        <div
+          className={`transition-all duration-300 ease-in-out flex-shrink-0 h-full ${
+            isZenMode ? "-mr-80 opacity-0 pointer-events-none w-0 overflow-hidden" : "w-80"
+          }`}
+        >
+          <RightSidebar
+            currentEntry={selectedEntry}
+            allEntries={entries}
+            onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
+            onOpenFullGraph={() => setIsGraphModalOpen(true)}
+          />
+        </div>
+      )}
 
       {/* Settings Modal */}
       <SettingsModal

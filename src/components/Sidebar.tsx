@@ -14,6 +14,8 @@ import {
   Settings,
   Calendar,
   Star,
+  Home,
+  BarChart2,
 } from "lucide-react";
 import { EstrelaDeThelema, getCategoryThelemicIcon, ZodiacIcon, IconeSolThelema } from "@/components/ThelemicIcons";
 
@@ -27,6 +29,9 @@ interface SidebarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onOpenSettings: () => void;
+  currentView?: "home" | "article" | "dashboard";
+  onOpenHome?: () => void;
+  onOpenDashboard?: () => void;
 }
 
 export function Sidebar({
@@ -39,6 +44,9 @@ export function Sidebar({
   searchQuery,
   onSearchChange,
   onOpenSettings,
+  currentView = "article",
+  onOpenHome,
+  onOpenDashboard,
 }: SidebarProps) {
   const categories: { name: string; label: string; icon: React.ReactNode }[] = [
     { name: "all", label: "Todas", icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
@@ -87,6 +95,35 @@ export function Sidebar({
           title="Configurações e Soberania"
         >
           <Settings className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Navigation Quick Bar (Home / Dashboard) */}
+      <div className="p-2 border-b border-medium-700 bg-medium-850/60 grid grid-cols-2 gap-1.5">
+        <button
+          onClick={onOpenHome}
+          className={`flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all ${
+            currentView === "home"
+              ? "bg-white text-black font-semibold shadow-sm"
+              : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
+          }`}
+          title="Tela Inicial Thelêmica (Portal de Entrada)"
+        >
+          <Home className="w-3.5 h-3.5" />
+          <span>Início</span>
+        </button>
+
+        <button
+          onClick={onOpenDashboard}
+          className={`flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all ${
+            currentView === "dashboard"
+              ? "bg-white text-black font-semibold shadow-sm"
+              : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
+          }`}
+          title="Dashboard Analítico de Frequência e Sucesso"
+        >
+          <BarChart2 className="w-3.5 h-3.5" />
+          <span>Dashboard</span>
         </button>
       </div>
 

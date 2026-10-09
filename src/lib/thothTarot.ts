@@ -1055,3 +1055,28 @@ export const THOTH_TAROT_DECK: ThothCard[] = [
     description: "A jovem sacerdotisa de cornos sagrados dançando nos bosques com a árvore da vida germinando.",
   },
 ];
+
+export function getDailyNumerologyCard(targetDate: Date = new Date()) {
+  const day = targetDate.getDate();
+  const month = targetDate.getMonth() + 1;
+  const year = targetDate.getFullYear();
+
+  // Sum of digits: e.g. 9 + 1 + 0 + 2 + 0 + 2 + 6 = 20 (Atu XX - O Eon)
+  const allDigits = `${day}${month}${year}`.split("").map((d) => parseInt(d, 10));
+  let sum = allDigits.reduce((acc, n) => acc + n, 0);
+
+  const initialSum = sum;
+  while (sum > 21) {
+    const digits = String(sum).split("").map((d) => parseInt(d, 10));
+    sum = digits.reduce((acc, n) => acc + n, 0);
+  }
+
+  const cardId = `atu_${sum}`;
+  const card = THOTH_TAROT_DECK.find((c) => c.id === cardId) || THOTH_TAROT_DECK[0];
+
+  return {
+    card,
+    atuNumber: sum,
+    formula: `${day} + ${month} + ${year} = ${initialSum}${initialSum > 21 ? ` ➔ ${sum}` : ""}`,
+  };
+}

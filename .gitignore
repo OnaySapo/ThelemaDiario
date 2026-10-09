@@ -6,3 +6,5 @@ build/
 *.log
 Tarot de Toth/
 public/tarot/
+*.db-shm
+*.db-wal

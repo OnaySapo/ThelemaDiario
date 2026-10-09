@@ -34,6 +34,7 @@ import {
   Download,
   Maximize2,
   Minimize2,
+  ArrowLeft,
 } from "lucide-react";
 
 interface ArticleViewProps {
@@ -45,6 +46,7 @@ interface ArticleViewProps {
   onNewNote: () => void;
   isZenMode?: boolean;
   onToggleZenMode?: () => void;
+  onBackToHome?: () => void;
 }
 
 export function ArticleView({
@@ -56,6 +58,7 @@ export function ArticleView({
   onNewNote,
   isZenMode = false,
   onToggleZenMode,
+  onBackToHome,
 }: ArticleViewProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -352,6 +355,15 @@ export function ArticleView({
       {/* Top Reading Navigation Bar */}
       <div className="sticky top-0 z-30 bg-medium-900/95 backdrop-blur-md border-b border-medium-700/80 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
+          {onBackToHome && (
+            <button
+              onClick={onBackToHome}
+              className="p-1.5 -ml-2 rounded-md text-medium-400 hover:text-white hover:bg-medium-800 transition-colors"
+              title="Voltar para a Tela Inicial (Home)"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
           <span className="px-2.5 py-0.5 rounded-full bg-medium-800 border border-medium-700 text-xs font-mono text-medium-300 uppercase tracking-wider font-semibold flex items-center gap-1.5">
             {getCategoryThelemicIcon(entry.type, "w-3.5 h-3.5 text-medium-300")}
             <span>{normalizeCategory(entry.type)}</span>
