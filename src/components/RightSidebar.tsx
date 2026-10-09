@@ -238,7 +238,7 @@ export function RightSidebar({
   }, [currentEntry, allEntries, onSelectEntry]);
 
   return (
-    <aside className="w-80 md:w-88 h-full bg-medium-900 border-l border-medium-700 flex flex-col flex-shrink-0 select-none">
+    <aside className="w-full h-full bg-medium-900 border-l border-medium-700 flex flex-col select-none">
       {/* ========================================================
           TOP: FRATER AUXILIAR (CHATBOT PERMANENTE)
           ======================================================== */}

@@ -201,8 +201,8 @@ export default function Home() {
     <div className="flex h-screen w-screen overflow-hidden bg-medium-900 text-medium-100 antialiased font-sans">
       {/* 1. Left Sidebar (Obsidian Tree Navigator) */}
       <div
-        className={`transition-all duration-300 ease-in-out flex-shrink-0 ${
-          isZenMode ? "-ml-72 opacity-0 pointer-events-none w-0 overflow-hidden" : "w-72"
+        className={`transition-all duration-300 ease-in-out flex-shrink-0 h-full ${
+          isZenMode ? "-ml-80 opacity-0 pointer-events-none w-0 overflow-hidden" : "w-80"
         }`}
       >
         <Sidebar
@@ -234,8 +234,8 @@ export default function Home() {
 
       {/* 3. Right Sidebar (Frater Auxiliar + Mini Grafo) */}
       <div
-        className={`transition-all duration-300 ease-in-out flex-shrink-0 ${
-          isZenMode ? "-mr-80 md:-mr-88 opacity-0 pointer-events-none w-0 overflow-hidden" : "w-80 md:w-88"
+        className={`transition-all duration-300 ease-in-out flex-shrink-0 h-full ${
+          isZenMode ? "-mr-80 opacity-0 pointer-events-none w-0 overflow-hidden" : "w-80"
         }`}
       >
         <RightSidebar
