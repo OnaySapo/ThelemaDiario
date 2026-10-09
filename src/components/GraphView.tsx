@@ -439,8 +439,10 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
       ctx.translate(transformRef.current.x, transformRef.current.y);
       ctx.scale(transformRef.current.scale, transformRef.current.scale);
 
+      const isLight = typeof document !== "undefined" && document.documentElement.getAttribute("data-mode") === "light";
+
       // Celestial concentric circles
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+      ctx.strokeStyle = isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.04)";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(cx, cy, 120, 0, Math.PI * 2);
@@ -460,10 +462,10 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
           hoveredNode && (hoveredNode.id === sNode.id || hoveredNode.id === tNode.id);
 
         ctx.strokeStyle = isHighlighted
-          ? "rgba(255, 255, 255, 0.95)"
+          ? isLight ? "rgba(0, 0, 0, 0.9)" : "rgba(255, 255, 255, 0.95)"
           : edge.type === "entry_connection"
-          ? "rgba(255, 255, 255, 0.35)"
-          : "rgba(255, 255, 255, 0.16)";
+          ? isLight ? "rgba(0, 0, 0, 0.35)" : "rgba(255, 255, 255, 0.35)"
+          : isLight ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.16)";
         ctx.lineWidth = isHighlighted ? 2.5 : edge.type === "entry_connection" ? 1.5 : 0.8;
 
         ctx.beginPath();
@@ -475,7 +477,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
         if (isHighlighted && edge.label) {
           const midX = (sNode.x + tNode.x) / 2;
           const midY = (sNode.y + tNode.y) / 2;
-          ctx.fillStyle = "#ffffff";
+          ctx.fillStyle = isLight ? "#111111" : "#ffffff";
           ctx.font = "10px JetBrains Mono, monospace";
           ctx.fillText(edge.label, midX, midY - 4);
         }
@@ -490,8 +492,8 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
           ctx.beginPath();
           ctx.arc(node.x, node.y, node.radius + (isHovered ? 8 : 4), 0, Math.PI * 2);
           ctx.fillStyle = isHovered
-            ? "rgba(255, 255, 255, 0.35)"
-            : "rgba(255, 255, 255, 0.08)";
+            ? isLight ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.35)"
+            : isLight ? "rgba(0, 0, 0, 0.05)" : "rgba(255, 255, 255, 0.08)";
           ctx.fill();
         }
 
@@ -500,12 +502,16 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
         ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
         ctx.fillStyle = node.color;
         ctx.fill();
-        ctx.strokeStyle = isHovered ? "#ffffff" : "#121212";
+        ctx.strokeStyle = isHovered ? (isLight ? "#111111" : "#ffffff") : (isLight ? "#ffffff" : "#121212");
         ctx.lineWidth = isHovered ? 2 : 1.5;
         ctx.stroke();
 
         // Label
-        ctx.fillStyle = isHovered ? "#ffffff" : node.isEntry ? "#a3a3a3" : "#737373";
+        ctx.fillStyle = isHovered
+          ? isLight ? "#111111" : "#ffffff"
+          : node.isEntry
+          ? isLight ? "#222222" : "#a3a3a3"
+          : isLight ? "#555555" : "#737373";
         ctx.font = `${node.isEntry ? "11px" : "9px"} Inter, sans-serif`;
         ctx.textAlign = "center";
         const maxLen = node.isEntry ? 22 : 14;

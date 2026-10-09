@@ -177,8 +177,10 @@ export function RightSidebar({
       ctx.arc(cx, cy, 70, 0, Math.PI * 2);
       ctx.stroke();
 
+      const isLight = typeof document !== "undefined" && document.documentElement.getAttribute("data-mode") === "light";
+
       // Draw Edges
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+      ctx.strokeStyle = isLight ? "rgba(0, 0, 0, 0.25)" : "rgba(255, 255, 255, 0.25)";
       ctx.lineWidth = 1;
       const nodeMap = new Map(miniNodes.map((n) => [n.id, n]));
       for (const [sId, tId] of miniEdges) {
@@ -196,15 +198,19 @@ export function RightSidebar({
       for (const node of miniNodes) {
         ctx.beginPath();
         ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-        ctx.fillStyle = node.isMain ? "#ffffff" : node.entryObj ? "#a3a3a3" : "#525252";
+        ctx.fillStyle = node.isMain
+          ? isLight ? "#111111" : "#ffffff"
+          : node.entryObj
+          ? isLight ? "#444444" : "#a3a3a3"
+          : isLight ? "#888888" : "#525252";
         ctx.fill();
-        ctx.strokeStyle = "#121212";
+        ctx.strokeStyle = isLight ? "#ffffff" : "#121212";
         ctx.lineWidth = 2;
         ctx.stroke();
 
         // Label for main and connected notes
         if (node.isMain || node.entryObj) {
-          ctx.fillStyle = node.isMain ? "#ffffff" : "#a3a3a3";
+          ctx.fillStyle = node.isMain ? (isLight ? "#111111" : "#ffffff") : (isLight ? "#444444" : "#a3a3a3");
           ctx.font = "9px Inter, sans-serif";
           ctx.textAlign = "center";
           const short = node.label.length > 14 ? `${node.label.slice(0, 12)}...` : node.label;

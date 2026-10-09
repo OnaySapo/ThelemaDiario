@@ -6,9 +6,22 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const key = searchParams.get("key") || "gemini_api_key";
     const value = getAppSetting(key);
-    // Mask key if returning to frontend
-    const masked = value ? `${value.slice(0, 4)}...${value.slice(-4)}` : "";
-    return NextResponse.json({ success: true, key, hasKey: Boolean(value), masked });
+
+    // Mask only sensitive credentials
+    const isSensitive = key.includes("key") || key.includes("secret") || key.includes("password");
+    const masked = isSensitive
+      ? value
+        ? `${value.slice(0, 4)}...${value.slice(-4)}`
+        : ""
+      : value;
+
+    return NextResponse.json({
+      success: true,
+      key,
+      hasKey: Boolean(value),
+      value: value || "",
+      masked,
+    });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

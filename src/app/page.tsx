@@ -8,6 +8,7 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { GraphView } from "@/components/GraphView";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { getDefaultTemplateForCategory } from "@/lib/templates";
+import { applyTheme, getStoredTheme } from "@/lib/theme";
 import { Network } from "lucide-react";
 
 export default function Home() {
@@ -58,6 +59,8 @@ export default function Home() {
   };
 
   useEffect(() => {
+    const { theme, mode } = getStoredTheme();
+    applyTheme(theme, mode);
     loadEntries();
   }, []);
 

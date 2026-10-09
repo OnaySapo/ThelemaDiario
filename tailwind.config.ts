@@ -6,24 +6,26 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
         medium: {
-          950: "#0a0a0a",
-          900: "#121212", // Medium dark base
-          850: "#181818",
-          800: "#202020", // Card/Sidebar base
-          750: "#262626", // Hover surface
-          700: "#2e2e2e", // Borders
-          600: "#3d3d3d",
-          500: "#525252",
-          400: "#737373",
-          300: "#a3a3a3",
-          200: "#d4d4d4",
-          100: "#f5f5f5",
-          50: "#fafafa",
+          950: "rgb(var(--color-medium-950) / <alpha-value>)",
+          900: "rgb(var(--color-medium-900) / <alpha-value>)", // Base canvas background
+          850: "rgb(var(--color-medium-850) / <alpha-value>)", // Sidebars / Cards / Ribbons
+          800: "rgb(var(--color-medium-800) / <alpha-value>)", // Inputs / Buttons / Surfaces
+          750: "rgb(var(--color-medium-750) / <alpha-value>)", // Hover surfaces
+          700: "rgb(var(--color-medium-700) / <alpha-value>)", // Borders
+          600: "rgb(var(--color-medium-600) / <alpha-value>)", // Subtle borders
+          500: "rgb(var(--color-medium-500) / <alpha-value>)", // Faint text
+          400: "rgb(var(--color-medium-400) / <alpha-value>)", // Muted text / Captions
+          300: "rgb(var(--color-medium-300) / <alpha-value>)", // Secondary text
+          200: "rgb(var(--color-medium-200) / <alpha-value>)", // Body text
+          100: "rgb(var(--color-medium-100) / <alpha-value>)", // Heading text
+          50: "rgb(var(--color-medium-50) / <alpha-value>)",  // Bright highlight
         },
+        themeAccent: "rgb(var(--theme-accent) / <alpha-value>)",
       },
       fontFamily: {
         serif: ["Newsreader", "Merriweather", "Charter", "Georgia", "serif"],
@@ -34,7 +36,7 @@ const config: Config = {
         DEFAULT: {
           css: {
             maxWidth: "68ch",
-            color: "#d4d4d4",
+            color: "var(--theme-body-color, #d4d4d4)",
             lineHeight: "1.8",
           },
         },

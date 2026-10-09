@@ -1,9 +1,28 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Key, Database, Download, ShieldCheck, Check, Sparkles, Cpu } from "lucide-react";
+import {
+  X,
+  Key,
+  Database,
+  Download,
+  ShieldCheck,
+  Check,
+  Sparkles,
+  Cpu,
+  Palette,
+  Sun,
+  Moon,
+} from "lucide-react";
 import { MagickEntry } from "@/lib/types";
 import { EstrelaDeThelema } from "@/components/ThelemicIcons";
+import {
+  THEMES,
+  ThemeId,
+  ThemeMode,
+  applyTheme,
+  getStoredTheme,
+} from "@/lib/theme";
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -12,6 +31,11 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) {
+  // Theme States
+  const [currentTheme, setCurrentTheme] = useState<ThemeId>("medium");
+  const [currentMode, setCurrentMode] = useState<ThemeMode>("dark");
+
+  // OpenRouter States
   const [apiKey, setApiKey] = useState("");
   const [hasKey, setHasKey] = useState(false);
   const [maskedKey, setMaskedKey] = useState("");
@@ -19,7 +43,33 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    // Load initial theme from localStorage
+    const stored = getStoredTheme();
+    setCurrentTheme(stored.theme);
+    setCurrentMode(stored.mode);
+  }, []);
+
+  useEffect(() => {
     if (isOpen) {
+      // Sync theme from server settings if available
+      fetch("/api/settings?key=theme")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.value) {
+            setCurrentTheme(data.value as ThemeId);
+          }
+        })
+        .catch(() => {});
+
+      fetch("/api/settings?key=theme_mode")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.value) {
+            setCurrentMode(data.value as ThemeMode);
+          }
+        })
+        .catch(() => {});
+
       // Fetch OpenRouter Key
       fetch("/api/settings?key=openrouter_api_key")
         .then((res) => res.json())
@@ -36,12 +86,42 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
         .then((res) => res.json())
         .then((data) => {
           if (data.success && data.hasKey) {
-            setSelectedModel(data.masked ? data.masked : "google/gemini-2.5-flash");
+            setSelectedModel(data.value || data.masked || "google/gemini-2.5-flash");
           }
         })
         .catch((err) => console.error("Erro ao carregar modelo:", err));
     }
   }, [isOpen]);
+
+  const handleSelectTheme = async (themeId: ThemeId) => {
+    setCurrentTheme(themeId);
+    applyTheme(themeId, currentMode);
+
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "theme", value: themeId }),
+      });
+    } catch (e) {
+      console.error("Erro ao salvar tema no servidor:", e);
+    }
+  };
+
+  const handleSelectMode = async (mode: ThemeMode) => {
+    setCurrentMode(mode);
+    applyTheme(currentTheme, mode);
+
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "theme_mode", value: mode }),
+      });
+    } catch (e) {
+      console.error("Erro ao salvar modo no servidor:", e);
+    }
+  };
 
   const handleSaveSettings = async () => {
     try {
@@ -105,13 +185,13 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-medium-900 border border-medium-700 w-full max-w-xl rounded-xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="bg-medium-900 border border-medium-700 w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="px-6 py-4 border-b border-medium-700 bg-medium-850 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <EstrelaDeThelema className="w-5 h-5 text-white" />
             <h2 className="text-sm font-sans font-bold text-white uppercase tracking-wide">
-              Configurações & IA (OpenRouter)
+              Configurações, Temas & IA
             </h2>
           </div>
           <button
@@ -123,7 +203,134 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5 text-xs text-medium-200 overflow-y-auto max-h-[80vh]">
+        <div className="p-6 space-y-6 text-xs text-medium-200 overflow-y-auto">
+          {/* ========================================================
+              SEÇÃO: PALETAS DE CORES & TEMAS (LIGHT / DARK)
+              ======================================================== */}
+          <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-medium-750 pb-2.5">
+              <div className="flex items-center gap-2 text-white font-semibold font-mono text-xs">
+                <Palette className="w-4 h-4 text-white" />
+                <span>Paleta de Cores & Aparência</span>
+              </div>
+              <span className="text-[11px] font-mono text-medium-400">
+                Ativo:{" "}
+                <strong className="text-white uppercase">
+                  {THEMES.find((t) => t.id === currentTheme)?.name || currentTheme} (
+                  {currentMode === "dark" ? "Escuro" : "Claro"})
+                </strong>
+              </span>
+            </div>
+
+            {/* Seletor de Modo: Claro / Escuro */}
+            <div>
+              <label className="block text-[10px] font-mono font-bold text-medium-400 mb-2 uppercase tracking-wider">
+                1. MODO DE APARÊNCIA
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleSelectMode("dark")}
+                  className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border transition-all text-xs font-semibold ${
+                    currentMode === "dark"
+                      ? "bg-white text-black border-white shadow-sm ring-1 ring-white"
+                      : "bg-medium-900 border-medium-750 text-medium-300 hover:text-white hover:bg-medium-800"
+                  }`}
+                >
+                  <Moon className="w-4 h-4" />
+                  <span>Modo Escuro (Dark)</span>
+                  {currentMode === "dark" && <Check className="w-3.5 h-3.5 ml-1 stroke-[3]" />}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectMode("light")}
+                  className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border transition-all text-xs font-semibold ${
+                    currentMode === "light"
+                      ? "bg-white text-black border-white shadow-sm ring-1 ring-white"
+                      : "bg-medium-900 border-medium-750 text-medium-300 hover:text-white hover:bg-medium-800"
+                  }`}
+                >
+                  <Sun className="w-4 h-4" />
+                  <span>Modo Claro (Light)</span>
+                  {currentMode === "light" && <Check className="w-3.5 h-3.5 ml-1 stroke-[3]" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Seletor de Família do Tema (7 Temas) */}
+            <div>
+              <label className="block text-[10px] font-mono font-bold text-medium-400 mb-2 uppercase tracking-wider">
+                2. FAMÍLIA VISUAL DO TEMA ({THEMES.length} PALETAS)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {THEMES.map((theme) => {
+                  const isSelected = currentTheme === theme.id;
+                  const preview = theme.preview[currentMode];
+
+                  return (
+                    <button
+                      key={theme.id}
+                      type="button"
+                      onClick={() => handleSelectTheme(theme.id)}
+                      className={`text-left p-3 rounded-lg border transition-all relative overflow-hidden flex flex-col justify-between ${
+                        isSelected
+                          ? "bg-medium-800 border-white ring-1 ring-white shadow-sm"
+                          : "bg-medium-900 border-medium-750 hover:border-medium-600 hover:bg-medium-800/60"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-xs text-white">
+                              {theme.name}
+                            </span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-medium-750 text-medium-300 border border-medium-700">
+                              {theme.badge}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-medium-400 line-clamp-1 mt-0.5">
+                            {theme.tagline}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <div className="w-4 h-4 rounded-full bg-white text-black flex items-center justify-center shrink-0 shadow-xs">
+                            <Check className="w-2.5 h-2.5 stroke-[3]" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Amostras das 4 cores do tema no modo selecionado */}
+                      <div className="flex items-center gap-1.5 pt-2 border-t border-medium-750/70">
+                        <span className="text-[9px] font-mono text-medium-500 mr-1">Paleta:</span>
+                        <span
+                          className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs"
+                          style={{ backgroundColor: preview.bg }}
+                          title={`Fundo: ${preview.bg}`}
+                        />
+                        <span
+                          className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs"
+                          style={{ backgroundColor: preview.surface }}
+                          title={`Superfície: ${preview.surface}`}
+                        />
+                        <span
+                          className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs"
+                          style={{ backgroundColor: preview.accent }}
+                          title={`Destaque: ${preview.accent}`}
+                        />
+                        <span
+                          className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs"
+                          style={{ backgroundColor: preview.text }}
+                          title={`Texto: ${preview.text}`}
+                        />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
           {/* Database Info */}
           <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-2">
             <div className="flex items-center gap-2 text-white font-semibold font-mono text-xs">
