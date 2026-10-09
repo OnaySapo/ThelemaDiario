@@ -15,6 +15,19 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isZenMode, setIsZenMode] = useState(false);
+
+  // Global keyboard shortcut for Zen/Focus mode (Ctrl+\ or Cmd+\)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
+        e.preventDefault();
+        setIsZenMode((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
 
   // Load entries
   const loadEntries = async (preferSelectedId?: string) => {
@@ -187,20 +200,26 @@ export default function Home() {
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-medium-900 text-medium-100 antialiased font-sans">
       {/* 1. Left Sidebar (Obsidian Tree Navigator) */}
-      <Sidebar
-        entries={entries}
-        selectedEntryId={selectedEntryId}
-        onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
-        onNewEntry={handleNewNote}
-        selectedCategory={selectedCategory}
-        onSelectCategory={setSelectedCategory}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-      />
+      <div
+        className={`transition-all duration-300 ease-in-out flex-shrink-0 ${
+          isZenMode ? "-ml-72 opacity-0 pointer-events-none w-0 overflow-hidden" : "w-72"
+        }`}
+      >
+        <Sidebar
+          entries={entries}
+          selectedEntryId={selectedEntryId}
+          onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
+          onNewEntry={handleNewNote}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
+      </div>
 
       {/* 2. Center Reading & Editing Canvas (Medium Style) */}
-      <main className="flex-1 h-full min-w-0 bg-medium-900 overflow-hidden flex flex-col">
+      <main className="flex-1 h-full min-w-0 bg-medium-900 overflow-hidden flex flex-col transition-all duration-300">
         <ArticleView
           entry={selectedEntry}
           onUpdateEntry={handleUpdateEntry}
@@ -208,15 +227,23 @@ export default function Home() {
           allEntries={entries}
           onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
           onNewNote={handleNewNote}
+          isZenMode={isZenMode}
+          onToggleZenMode={() => setIsZenMode((prev) => !prev)}
         />
       </main>
 
       {/* 3. Right Sidebar (Frater Auxiliar + Mini Grafo) */}
-      <RightSidebar
-        currentEntry={selectedEntry}
-        allEntries={entries}
-        onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
-      />
+      <div
+        className={`transition-all duration-300 ease-in-out flex-shrink-0 ${
+          isZenMode ? "-mr-80 md:-mr-88 opacity-0 pointer-events-none w-0 overflow-hidden" : "w-80 md:w-88"
+        }`}
+      >
+        <RightSidebar
+          currentEntry={selectedEntry}
+          allEntries={entries}
+          onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
+        />
+      </div>
 
       {/* Settings Modal */}
       <SettingsModal

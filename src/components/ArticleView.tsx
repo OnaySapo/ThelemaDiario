@@ -31,6 +31,9 @@ import {
   Eye,
   FileText,
   BookOpen,
+  Download,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 interface ArticleViewProps {
@@ -40,6 +43,8 @@ interface ArticleViewProps {
   allEntries: MagickEntry[];
   onSelectEntry: (entry: MagickEntry) => void;
   onNewNote: () => void;
+  isZenMode?: boolean;
+  onToggleZenMode?: () => void;
 }
 
 export function ArticleView({
@@ -49,6 +54,8 @@ export function ArticleView({
   allEntries,
   onSelectEntry,
   onNewNote,
+  isZenMode = false,
+  onToggleZenMode,
 }: ArticleViewProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -160,6 +167,87 @@ export function ArticleView({
     const tableTemplate = `\n| Correspondência | Símbolo | Atribuição |\n| :--- | :---: | :--- |\n| Planeta | ☉ Sol | Tiphareth |\n| Elemento | 🔥 Fogo | Yod |\n\n`;
     insertFormatting(tableTemplate);
   };
+
+  const handleExportMarkdown = () => {
+    if (!entry) return;
+    const frontmatter = [
+      "---",
+      `title: "${entry.title.replace(/"/g, '\\"')}"`,
+      `type: "${normalizeCategory(entry.type)}"`,
+      `date: "${entry.date}"`,
+      `thelemic_date: "${entry.thelemic_date || ""}"`,
+      `success_rating: ${entry.success_rating ?? 5}`,
+      `moon_phase: "${entry.moon_phase || ""}"`,
+      `moon_sign: "${entry.moon_sign || ""}"`,
+      `sun_sign: "${entry.sun_sign || ""}"`,
+      `influences: ${JSON.stringify(entry.influences || [])}`,
+      "---",
+      "",
+      `# ${entry.title}`,
+      "",
+      entry.thelemic_date ? `> ☉ ${entry.thelemic_date}\n` : "",
+      entry.content,
+    ].join("\n");
+
+    const blob = new Blob([frontmatter], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const sanitizedTitle = entry.title.toLowerCase().replace(/[^a-z0-9]/gi, "_").slice(0, 40);
+    link.href = url;
+    link.download = `${entry.date.slice(0, 10)}_${sanitizedTitle}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Keyboard Shortcuts (Ctrl+S to save, Ctrl+B for bold, Ctrl+I for italic, Esc to cancel)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+S or Cmd+S to save while editing
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        if (isEditing) {
+          e.preventDefault();
+          handleSaveEdit();
+        }
+      }
+      // Ctrl+B or Cmd+B to toggle bold in textarea
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        if (isEditing && document.activeElement === textareaRef.current) {
+          e.preventDefault();
+          insertFormatting("**", "**");
+        }
+      }
+      // Ctrl+I or Cmd+I to toggle italic in textarea
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
+        if (isEditing && document.activeElement === textareaRef.current) {
+          e.preventDefault();
+          insertFormatting("*", "*");
+        }
+      }
+      // Esc to cancel editing
+      if (e.key === "Escape" && isEditing) {
+        setIsEditing(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    isEditing,
+    editTitle,
+    editContent,
+    editCategory,
+    editRating,
+    editDate,
+    editThelemicDate,
+    editInfluences,
+    editConnections,
+    editCards,
+    editSpread,
+    editQuery,
+    editCardBackStyle,
+  ]);
 
   // Reading time estimator
   const readingTime = entry ? Math.max(1, Math.ceil(entry.content.split(/\s+/).length / 200)) : 1;
@@ -279,8 +367,34 @@ export function ArticleView({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Botão Modo Foco / Zen */}
+          {onToggleZenMode && (
+            <button
+              onClick={onToggleZenMode}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-mono border transition-colors ${
+                isZenMode
+                  ? "bg-white text-black border-white font-semibold"
+                  : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border-medium-700"
+              }`}
+              title={isZenMode ? "Sair do Modo Foco (Ctrl+\\)" : "Ativar Modo Foco / Zen (Ctrl+\\)"}
+            >
+              {isZenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">{isZenMode ? "Modo Normal" : "Modo Foco"}</span>
+            </button>
+          )}
+
           {!isEditing ? (
             <>
+              {/* Exportar Markdown */}
+              <button
+                onClick={handleExportMarkdown}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white rounded-md text-xs font-medium border border-medium-700 transition-colors"
+                title="Exportar esta nota para arquivo Markdown (.md)"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Exportar (.md)</span>
+              </button>
+
               <button
                 onClick={handleStartEdit}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded-md text-xs font-medium border border-medium-700 transition-colors"

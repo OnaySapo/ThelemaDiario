@@ -277,20 +277,55 @@ export function RightSidebar({
           </button>
         </div>
 
-        {/* Suggested Quick Prompt */}
-        <div className="p-2 border-b border-medium-800 bg-medium-950/60 overflow-x-auto no-scrollbar">
+        {/* Suggested Quick Prompt Chips */}
+        <div className="p-2 border-b border-medium-800 bg-medium-950/60 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <button
             onClick={() =>
               handleSend(
                 "Quais processos mágickos eu tive mais sucessos e quais influências eles tinham em comum?"
               )
             }
-            className="w-full text-left p-1.5 rounded bg-medium-850 hover:bg-medium-800 border border-medium-700 text-[11px] text-medium-300 hover:text-white flex items-center gap-1.5 transition-colors"
+            className="flex-shrink-0 px-2 py-1 rounded bg-medium-850 hover:bg-medium-800 border border-medium-700 text-[10px] text-medium-300 hover:text-white flex items-center gap-1 transition-colors"
+            title="Análise dos rituais e práticas com maior nota de sucesso e fatores comuns"
           >
             <Sparkles className="w-3 h-3 text-white flex-shrink-0" />
-            <span className="truncate">
-              Quais processos mágickos tive mais sucesso e o que tinham em comum?
-            </span>
+            <span>Sucesso & Influências</span>
+          </button>
+
+          <button
+            onClick={() =>
+              handleSend(
+                "Qual a relação entre as fases lunares e os signos lunares com meu índice de sucesso mágyco?"
+              )
+            }
+            className="flex-shrink-0 px-2 py-1 rounded bg-medium-850 hover:bg-medium-800 border border-medium-700 text-[10px] text-medium-300 hover:text-white flex items-center gap-1 transition-colors"
+            title="Cruzamento estatístico entre a Lua e o sucesso nos registros"
+          >
+            <span>🌕 Fases da Lua</span>
+          </button>
+
+          <button
+            onClick={() =>
+              handleSend(
+                "Como as minhas consultas oraculares do Tarô de Thoth se conectaram com meus sonhos e visões?"
+              )
+            }
+            className="flex-shrink-0 px-2 py-1 rounded bg-medium-850 hover:bg-medium-800 border border-medium-700 text-[10px] text-medium-300 hover:text-white flex items-center gap-1 transition-colors"
+            title="Conexões entre oráculos, sonhos lúcidos e skrying"
+          >
+            <span>🎴 Oráculos & Sonhos</span>
+          </button>
+
+          <button
+            onClick={() =>
+              handleSend(
+                "Quais correspondências do Liber 777 estão mais presentes no meu templo e quais posso explorar?"
+              )
+            }
+            className="flex-shrink-0 px-2 py-1 rounded bg-medium-850 hover:bg-medium-800 border border-medium-700 text-[10px] text-medium-300 hover:text-white flex items-center gap-1 transition-colors"
+            title="Correspondências cabalísticas e mágickas de Liber 777"
+          >
+            <span>📜 Liber 777</span>
           </button>
         </div>
 

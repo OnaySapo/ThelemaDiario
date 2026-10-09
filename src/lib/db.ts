@@ -18,6 +18,11 @@ export function getDatabase(): DatabaseSync {
   const dbPath = path.join(dataDir, "magick_diary.db");
   const db = new DatabaseSync(dbPath);
 
+  // High performance & integrity SQLite PRAGMAs
+  db.exec("PRAGMA journal_mode = WAL;");
+  db.exec("PRAGMA foreign_keys = ON;");
+  db.exec("PRAGMA synchronous = NORMAL;");
+
   // Initialize Tables
   db.exec(`
     CREATE TABLE IF NOT EXISTS entries (
@@ -68,6 +73,8 @@ export function getDatabase(): DatabaseSync {
       spread_name TEXT NOT NULL,
       query TEXT NOT NULL,
       cards_json TEXT NOT NULL,
+      card_back_style TEXT,
+      ai_interpretation TEXT,
       confirmation_notes TEXT,
       FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
     );
@@ -76,7 +83,31 @@ export function getDatabase(): DatabaseSync {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    -- Fast retrieval and ordering indexes
+    CREATE INDEX IF NOT EXISTS idx_entries_date ON entries(date DESC);
+    CREATE INDEX IF NOT EXISTS idx_entries_type ON entries(type);
+    CREATE INDEX IF NOT EXISTS idx_entry_influences_entry_id ON entry_influences(entry_id);
+    CREATE INDEX IF NOT EXISTS idx_entry_connections_source_id ON entry_connections(source_id);
+    CREATE INDEX IF NOT EXISTS idx_entry_connections_target_id ON entry_connections(target_id);
+    CREATE INDEX IF NOT EXISTS idx_oracle_records_entry_id ON oracle_records(entry_id);
   `);
+
+  // Migrate existing tables if columns are missing
+  try {
+    const oracleCols = db.prepare("PRAGMA table_info(oracle_records)").all() as any[];
+    const hasCardBack = oracleCols.some((c) => c.name === "card_back_style");
+    const hasAiInterp = oracleCols.some((c) => c.name === "ai_interpretation");
+
+    if (!hasCardBack) {
+      db.exec("ALTER TABLE oracle_records ADD COLUMN card_back_style TEXT;");
+    }
+    if (!hasAiInterp) {
+      db.exec("ALTER TABLE oracle_records ADD COLUMN ai_interpretation TEXT;");
+    }
+  } catch (err) {
+    console.warn("Aviso ao verificar migrações do banco:", err);
+  }
 
   // Check if initial seed is needed
   const countRow = db.prepare("SELECT COUNT(*) as count FROM entries").get() as { count: number };
@@ -292,6 +323,8 @@ export function getAllEntries(filters?: { type?: string; tag?: string; search?: 
         spread_name: oracle.spread_name,
         query: oracle.query,
         cards: JSON.parse(oracle.cards_json || "[]"),
+        card_back_style: oracle.card_back_style || "rosa_cruz",
+        ai_interpretation: oracle.ai_interpretation || "",
         confirmation_notes: oracle.confirmation_notes,
       };
     }
@@ -340,6 +373,8 @@ export function getEntryById(id: string): MagickEntry | null {
       spread_name: oracle.spread_name,
       query: oracle.query,
       cards: JSON.parse(oracle.cards_json || "[]"),
+      card_back_style: oracle.card_back_style || "rosa_cruz",
+      ai_interpretation: oracle.ai_interpretation || "",
       confirmation_notes: oracle.confirmation_notes,
     };
   }
@@ -456,14 +491,16 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
   if (entry.oracle_data) {
     db.prepare("DELETE FROM oracle_records WHERE entry_id = ?").run(entryId);
     db.prepare(`
-      INSERT INTO oracle_records (entry_id, system, spread_name, query, cards_json, confirmation_notes)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO oracle_records (entry_id, system, spread_name, query, cards_json, card_back_style, ai_interpretation, confirmation_notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       entryId,
       entry.oracle_data.system || "thoth_tarot",
       entry.oracle_data.spread_name || "Tiragem Livre",
       entry.oracle_data.query || "",
       JSON.stringify(entry.oracle_data.cards || []),
+      entry.oracle_data.card_back_style || "rosa_cruz",
+      entry.oracle_data.ai_interpretation || "",
       entry.oracle_data.confirmation_notes || ""
     );
   }

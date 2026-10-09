@@ -20,6 +20,7 @@ import {
   Copy,
   BookOpen,
   Layers,
+  Shuffle,
 } from "lucide-react";
 
 export interface CardOnTable {
@@ -120,6 +121,39 @@ export function OracleTable({
       isFlipped: true,
       notes: "",
     };
+    const updated = [...cards, newCard];
+    onChange(updated);
+    setActiveCardIdx(updated.length - 1);
+  };
+
+  // Tirar Carta Aleatória do Livro de Thoth (sorteio canônico com opção aberta ou oculta)
+  const handleDrawRandomCard = (faceDown: boolean = false) => {
+    if (!onChange) return;
+    const existingIds = new Set(cards.map((c) => c.cardId));
+    let availableDeck = THOTH_TAROT_DECK.filter((c) => !existingIds.has(c.id));
+    if (availableDeck.length === 0) {
+      availableDeck = [...THOTH_TAROT_DECK];
+    }
+    const randomIndex = Math.floor(Math.random() * availableDeck.length);
+    const thoth = availableDeck[randomIndex];
+
+    const count = cards.length;
+    const posX = Math.min(Math.max(20 + (count % 4) * 17, 8), 76);
+    const posY = Math.min(Math.max(20 + Math.floor(count / 4) * 22, 12), 65);
+
+    const newCard: CardOnTable = {
+      position: `Lâmina ${count + 1}`,
+      cardId: thoth.id,
+      cardName: thoth.name,
+      imageUrl: thoth.imageUrl,
+      imageFile: thoth.imageFile,
+      x: posX,
+      y: posY,
+      rotation: 0,
+      isFlipped: !faceDown,
+      notes: thoth.keywords.join(", "),
+    };
+
     const updated = [...cards, newCard];
     onChange(updated);
     setActiveCardIdx(updated.length - 1);
@@ -458,6 +492,26 @@ export function OracleTable({
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Personalizada</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDrawRandomCard(false)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-xs border border-medium-700 transition-colors font-medium"
+              title="Tirar uma lâmina aleatória do Livro de Thoth sobre o altar"
+            >
+              <Shuffle className="w-3.5 h-3.5 text-white" />
+              <span>Tirar Aleatória</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDrawRandomCard(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white rounded text-xs border border-medium-700 transition-colors"
+              title="Tirar uma lâmina oculta (virada para baixo) para revelação cega"
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+              <span>Tirar Oculta</span>
             </button>
           </div>
         ) : (

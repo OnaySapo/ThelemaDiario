@@ -105,6 +105,24 @@ export function generateLocalAnalyticalResponse(userQuery: string, entries: Magi
     return response;
   }
 
+  // Check if asking about Liber 777 / correspondences
+  if (query.includes("777") || query.includes("correspond") || query.includes("cabala") || query.includes("arvore")) {
+    const studies = entries.filter((e) => e.type === "study");
+    let response = `**Faze o que tu queres há de ser tudo da Lei.**\n\n`;
+    response += `### 📜 Correspondências Herméticas de Liber 777 Identificadas:\n\n`;
+    response += `Seu diário registra **${studies.length}** estudos doutrinários catalogados.\n\n`;
+    response += `* **Chave Fundamental**: *'A Cabala não é uma fantasia de palavras, mas o esqueleto anatômico da mente do universo.'* (Liber 777).\n`;
+    response += `* **Elementos em Destaque nos seus Trabalhos Registrados**:\n`;
+    if (insights.bestIncenses.length > 0) {
+      response += `  * *Perfumes e Incensos*: ${insights.bestIncenses.map((i) => `**${i.name}**`).join(", ")} (Coluna XLII)\n`;
+    }
+    if (insights.bestEntities.length > 0) {
+      response += `  * *Hierarquias e Forças Invocadas*: ${insights.bestEntities.map((e) => `**${e.name}**`).join(", ")} (Colunas XVIII e XIX)\n`;
+    }
+    response += `\n> **Instrução para a Obra**: Ao planejar suas operações, verifique se as armas mágicas (Vara, Taça, Espada, Disco) e o perfume do templo ressoam estritamente com o Sephira ou Caminho do trânsito astrológico vigente.\n\n*Amor é a lei, amor sob vontade.*`;
+    return response;
+  }
+
   // Default synthesis
   const astro = getFullAstrologicalData();
   return (
