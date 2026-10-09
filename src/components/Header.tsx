@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { AstrologicalCoordinates } from "@/lib/astronomy";
 import { Sparkles, Compass, Network, MessageSquare, Plus, Settings, BarChart3, Moon, Sun } from "lucide-react";
+import { ThelemicDateDisplay, ZodiacIcon } from "@/components/ThelemicIcons";
 
 interface HeaderProps {
   currentTab: "timeline" | "graph" | "insights";
@@ -38,8 +39,8 @@ export function Header({
       <div className="bg-forest-950/80 px-4 py-1.5 text-xs border-b border-forest-800 flex flex-wrap items-center justify-between gap-3 text-parchment-300">
         <div className="flex items-center gap-2 font-mono">
           <span className="inline-block w-2 h-2 rounded-full bg-moss-500 animate-pulse"></span>
-          <span className="text-gold-400 font-semibold tracking-wide">
-            {astro ? astro.thelemicDate : "Calculando coordenadas Thelêmicas..."}
+          <span className="text-gold-400 font-semibold tracking-wide flex items-center">
+            {astro ? <ThelemicDateDisplay thelemicDate={astro.thelemicDate} /> : "Calculando coordenadas Thelêmicas..."}
           </span>
         </div>
 
@@ -47,10 +48,12 @@ export function Header({
           <div className="flex items-center gap-4 text-xs font-mono">
             <div className="flex items-center gap-1.5 text-parchment-200">
               <Sun className="w-3.5 h-3.5 text-gold-500" />
+              <ZodiacIcon sign={astro.sunSign} className="w-3.5 h-3.5 text-gold-400" size={14} />
               <span>Sol em {astro.sunSign} ({astro.sunDegreeFormatted})</span>
             </div>
             <div className="flex items-center gap-1.5 text-parchment-200">
               <span className="text-sm">{astro.moonPhaseIcon}</span>
+              <ZodiacIcon sign={astro.moonSign} className="w-3.5 h-3.5 text-parchment-200" size={14} />
               <span>
                 {astro.moonPhaseName} ({astro.moonIllumination}%) em {astro.moonSign} ({astro.moonDegreeFormatted})
               </span>

@@ -3,7 +3,7 @@
 import React, { useState, useRef } from "react";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { THOTH_TAROT_DECK, TAROT_SPREADS } from "@/lib/thothTarot";
-import { getCategoryThelemicIcon } from "@/components/ThelemicIcons";
+import { getCategoryThelemicIcon, ThelemicDateDisplay, ZodiacIcon } from "@/components/ThelemicIcons";
 import { OracleTable, CardOnTable } from "@/components/OracleTable";
 import { getDefaultTemplateForCategory } from "@/lib/templates";
 import {
@@ -449,10 +449,8 @@ export function ArticleView({
             {/* Astrological / Thelemic Header Ribbon */}
             <div className="p-3.5 rounded-lg bg-medium-850 border border-medium-700 text-xs font-mono text-medium-300 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Compass className="w-4 h-4 text-white" />
-                <span className="text-white font-semibold">
-                  {entry.thelemic_date || "Thelemic Record"}
-                </span>
+                <Compass className="w-4 h-4 text-white shrink-0" />
+                <ThelemicDateDisplay thelemicDate={entry.thelemic_date} />
               </div>
 
               <div className="flex items-center gap-3">

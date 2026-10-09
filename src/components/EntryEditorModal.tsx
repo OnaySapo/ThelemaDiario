@@ -20,6 +20,7 @@ import {
   HelpCircle,
   RefreshCw,
 } from "lucide-react";
+import { ThelemicDateDisplay, ZodiacIcon } from "@/components/ThelemicIcons";
 
 interface EntryEditorModalProps {
   isOpen: boolean;
@@ -247,9 +248,9 @@ export function EntryEditorModal({
               <h2 className="text-base font-serif font-bold text-parchment-100">
                 {initialEntry ? "Editar Registro Mágicko" : "Novo Registro Mágicko"}
               </h2>
-              <p className="text-xs text-parchment-400 font-mono">
-                {astroData.thelemicDate || "Thelemic Record"}
-              </p>
+              <div className="text-xs text-parchment-400 font-mono mt-0.5">
+                <ThelemicDateDisplay thelemicDate={astroData.thelemicDate} />
+              </div>
             </div>
           </div>
           <button
@@ -337,16 +338,22 @@ export function EntryEditorModal({
                 <Compass className="w-4 h-4 text-gold-400" />
                 Coordenadas Astrológicas & Thelêmicas (Cálculo Automático):
               </span>
-              <span className="text-parchment-400">{astroData.thelemicDate}</span>
+              <ThelemicDateDisplay thelemicDate={astroData.thelemicDate} />
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-parchment-200">
               <div className="bg-forest-900/60 p-2 rounded border border-forest-700">
                 <span className="text-parchment-400 block text-[10px]">SOL</span>
-                <strong>{astroData.sunSign || "—"} ({astroData.sunDegreeFormatted || `${astroData.sunDegree}°`})</strong>
+                <strong className="flex items-center gap-1.5">
+                  <ZodiacIcon sign={astroData.sunSign} className="w-3.5 h-3.5 text-gold-400 shrink-0" size={14} />
+                  <span>{astroData.sunSign || "—"} ({astroData.sunDegreeFormatted || `${astroData.sunDegree}°`})</span>
+                </strong>
               </div>
               <div className="bg-forest-900/60 p-2 rounded border border-forest-700">
                 <span className="text-parchment-400 block text-[10px]">LUA</span>
-                <strong>{astroData.moonSign || "—"} ({astroData.moonDegreeFormatted || `${astroData.moonDegree}°`})</strong>
+                <strong className="flex items-center gap-1.5">
+                  <ZodiacIcon sign={astroData.moonSign} className="w-3.5 h-3.5 text-gold-400 shrink-0" size={14} />
+                  <span>{astroData.moonSign || "—"} ({astroData.moonDegreeFormatted || `${astroData.moonDegree}°`})</span>
+                </strong>
               </div>
               <div className="bg-forest-900/60 p-2 rounded border border-forest-700">
                 <span className="text-parchment-400 block text-[10px]">FASE LUNAR</span>

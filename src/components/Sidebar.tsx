@@ -15,7 +15,7 @@ import {
   Calendar,
   Star,
 } from "lucide-react";
-import { EstrelaDeThelema, getCategoryThelemicIcon } from "@/components/ThelemicIcons";
+import { EstrelaDeThelema, getCategoryThelemicIcon, ZodiacIcon, IconeSolThelema } from "@/components/ThelemicIcons";
 
 interface SidebarProps {
   entries: MagickEntry[];
@@ -194,8 +194,18 @@ export function Sidebar({
 
                 {/* Coordinates & Success Micro-Tags */}
                 <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-medium-800/60 text-[10px] font-mono text-medium-400">
-                  <span className="truncate max-w-[170px]">
-                    {entry.sun_sign ? `☉ ${entry.sun_sign}` : "☉ Sol"} · {entry.moon_phase || "Lua"}
+                  <span className="truncate max-w-[170px] flex items-center gap-1">
+                    <IconeSolThelema className="w-2.5 h-2.5 text-medium-400 shrink-0 inline-block" size={10} />
+                    {entry.sun_sign ? (
+                      <>
+                        <ZodiacIcon sign={entry.sun_sign} className="w-2.5 h-2.5 text-white shrink-0 inline-block" size={10} />
+                        <span>{entry.sun_sign}</span>
+                      </>
+                    ) : (
+                      <span>Sol</span>
+                    )}
+                    <span className="text-medium-600">·</span>
+                    <span>{entry.moon_phase || "Lua"}</span>
                   </span>
                   {entry.success_rating !== undefined && entry.success_rating > 0 && (
                     <span className="flex items-center gap-0.5 text-medium-300 font-semibold">

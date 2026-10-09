@@ -17,6 +17,7 @@ import {
   Trash2,
   Edit3,
 } from "lucide-react";
+import { ThelemicDateDisplay } from "@/components/ThelemicIcons";
 
 interface EntryCardProps {
   entry: MagickEntry;
@@ -136,8 +137,8 @@ export function EntryCard({ entry, onEdit, onDelete, onSelectConnect }: EntryCar
 
       {/* Thelemic Coordinates */}
       {entry.thelemic_date && (
-        <div className="flex items-center gap-2 text-xs font-mono text-moss-400/90 mb-3 bg-forest-850/60 px-2.5 py-1 rounded border border-forest-750">
-          <span>{entry.thelemic_date}</span>
+        <div className="flex items-center gap-2 text-xs font-mono text-medium-300 mb-3 bg-medium-850 px-2.5 py-1 rounded border border-medium-700">
+          <ThelemicDateDisplay thelemicDate={entry.thelemic_date} />
         </div>
       )}
 
