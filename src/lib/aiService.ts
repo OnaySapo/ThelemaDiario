@@ -208,3 +208,119 @@ Instruções:
   }
 }
 
+export async function interpretOracleSpread(params: {
+  query?: string;
+  spreadName?: string;
+  cards: Array<{
+    position: string;
+    cardId: string;
+    cardName: string;
+    rotation?: number;
+    notes?: string;
+  }>;
+}): Promise<string> {
+  const { query, spreadName, cards } = params;
+  const openRouterKey =
+    getAppSetting("openrouter_api_key") ||
+    process.env.OPENROUTER_API_KEY ||
+    getAppSetting("gemini_api_key") ||
+    process.env.GEMINI_API_KEY;
+
+  const astro = getFullAstrologicalData();
+
+  if (!cards || cards.length === 0) {
+    return "Nenhuma lâmina foi posicionada na mesa do altar para interpretação.";
+  }
+
+  // Format cards with their orientations
+  const cardsDescription = cards
+    .map((c, i) => {
+      const rot = c.rotation || 0;
+      const orientacao = rot === 90 ? "Cruzada (Tensão/Obstáculo)" : rot === 180 ? "Invertida (Sombra/Bloqueio)" : "Em pé (Direta)";
+      return `${i + 1}. **${c.position}**: ${c.cardName} [${orientacao}]${c.notes ? ` (Notas do magista: "${c.notes}")` : ""}`;
+    })
+    .join("\n");
+
+  const promptText = `Pergunta / Vontade do Magista:
+"${query?.trim() || "Orientação Geral para a Vontade e a Grande Obra"}"
+
+Método / Disposição:
+${spreadName || "Mesa Oracular"}
+
+Lâminas no Altar:
+${cardsDescription}
+
+Momento Astrológico e Thelêmico:
+${astro.thelemicDate} (Sol em ${astro.sunSign}, Lua em ${astro.moonSign} - ${astro.moonPhaseName})`;
+
+  if (!openRouterKey) {
+    // Retorno analítico offline
+    let localResponse = `**Faze o que tu queres há de ser tudo da Lei.**\n\n`;
+    localResponse += `### 🎴 Análise da Tiragem Oracular: *${spreadName || "Mesa de Thoth"}*\n\n`;
+    if (query?.trim()) {
+      localResponse += `> **Foco da Consulta**: "${query.trim()}"\n\n`;
+    }
+    localResponse += `**Momento Astrológico**: ${astro.thelemicDate}\n\n`;
+    localResponse += `#### ⚔️ Leitura das Correntes no Altar:\n`;
+
+    cards.forEach((c) => {
+      const rot = c.rotation || 0;
+      const orientacao = rot === 90 ? "cruzada" : rot === 180 ? "invertida" : "direta";
+      localResponse += `* **${c.position}** — **${c.cardName}** (${orientacao}):\n`;
+      localResponse += `  A lâmina opera como canal da força correspondente. Em posição ${orientacao}, indica que a energia ${rot === 180 ? "encontra resistência no veículo material ou requer introspecção silenciosa" : rot === 90 ? "atua como um atrito fecundo para despertar a resolução da vontade" : "flui em seu vetor primário de manifestação"}.\n`;
+    });
+
+    localResponse += `\n#### 👁️ Síntese para a Verdadeira Vontade:\n`;
+    localResponse += `O método da ciência exige não tomar a consulta como um fatalismo, mas como uma radiografia do campo psíquico e astral. Mantenha o silêncio interior, purifique as intenções de qualquer apego ao resultado e dirija todas as armas do templo em linha reta em direção à Grande Obra.\n\n`;
+    localResponse += `*Amor é a lei, amor sob vontade.*`;
+    return localResponse;
+  }
+
+  const modelName = getAppSetting("openrouter_model") || "google/gemini-2.5-flash";
+
+  try {
+    const systemPrompt = `Você é o Frater Auxiliar, Secretário Hermético e Mestre Iniciado versado no Livro de Thoth (Liber LXXVIII) de Aleister Crowley, no Liber 777 e na Cabala da Aurora Dourada / Thelema.
+O magista realizou uma tiragem de Tarot de Thoth e pede seu palpite hermético e interpretação profunda.
+
+Instruções para a interpretação:
+1. Abra formalmente com a saudação Thelêmica: "Faze o que tu queres há de ser tudo da Lei."
+2. Interprete cada lâmina na sua posição específica, considerando sua orientação (direta, invertida ou cruzada) e suas atribuições cabalísticas e astrológicas do Livro de Thoth.
+3. Avalie as Dignidades Elementais (como os elementos Fogo, Água, Ar e Terra das cartas interagem entre si, se fortificam ou mitigam).
+4. Forneça uma Síntese Prática e Direta para a Verdadeira Vontade do Magista frente à questão proposta ("O que fazer / o que observar").
+5. Finalize formalmente com a saudação: "Amor é a lei, amor sob vontade."
+Use formatação Markdown elegante, clara e erudita.`;
+
+    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openRouterKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://localhost:3000",
+        "X-Title": "Diario Magicko Thelemico",
+      },
+      body: JSON.stringify({
+        model: modelName,
+        max_tokens: 1800,
+        temperature: 0.7,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: promptText },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn("Falha na chamada OpenRouter para oráculo:", await res.text());
+      return "Não foi possível obter a resposta da IA no momento. Verifique sua chave de API nas configurações.";
+    }
+
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content;
+    return reply || "A consulta foi concluída, mas nenhuma mensagem foi retornada.";
+  } catch (err: any) {
+    console.error("Erro na interpretação do oráculo:", err);
+    return `Erro ao processar palpite da IA: ${err.message}`;
+  }
+}
+
+

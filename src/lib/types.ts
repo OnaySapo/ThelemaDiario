@@ -30,11 +30,16 @@ export interface MagickEntry {
       cardId: string;
       cardName: string;
       imageUrl?: string;
+      imageFile?: string;
       x?: number; // 0 a 100% da largura da mesa
       y?: number; // 0 a 100% da altura da mesa
       rotation?: number; // graus (0, 90, 180, 270)
+      isFlipped?: boolean; // false = verso da carta, true = face revelada
+      cardBack?: "rosa_cruz" | "thelema";
       notes?: string;
     }>;
+    card_back_style?: "rosa_cruz" | "thelema";
+    ai_interpretation?: string;
     confirmation_notes?: string;
   };
   created_at?: string;

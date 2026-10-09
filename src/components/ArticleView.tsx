@@ -72,6 +72,7 @@ export function ArticleView({
   const [editSpread, setEditSpread] = useState("Tiragem Livre");
   const [editQuery, setEditQuery] = useState("");
   const [editCards, setEditCards] = useState<CardOnTable[]>([]);
+  const [editCardBackStyle, setEditCardBackStyle] = useState<"rosa_cruz" | "thelema">("rosa_cruz");
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -91,10 +92,12 @@ export function ArticleView({
       setEditQuery(entry.oracle_data.query || "");
       setEditCards((entry.oracle_data.cards as CardOnTable[]) || []);
       setEditSpread(entry.oracle_data.spread_name || "Tiragem Livre");
+      setEditCardBackStyle(entry.oracle_data.card_back_style || "rosa_cruz");
     } else {
       setEditQuery("");
       setEditCards([]);
       setEditSpread("Tiragem Livre");
+      setEditCardBackStyle("rosa_cruz");
     }
 
     setIsEditing(true);
@@ -119,6 +122,7 @@ export function ArticleView({
               spread_name: editSpread.trim() || "Mesa Oracular",
               query: editQuery.trim(),
               cards: editCards,
+              card_back_style: editCardBackStyle,
             }
           : undefined,
     });
@@ -385,7 +389,20 @@ export function ArticleView({
 
                 {/* Mesa com as cartas espalhadas exatamente como no altar */}
                 {entry.oracle_data.cards && entry.oracle_data.cards.length > 0 && (
-                  <OracleTable cards={entry.oracle_data.cards as CardOnTable[]} isEditable={false} />
+                  <OracleTable
+                    cards={entry.oracle_data.cards as CardOnTable[]}
+                    isEditable={false}
+                    query={entry.oracle_data.query}
+                    spreadName={entry.oracle_data.spread_name}
+                    cardBackStyle={entry.oracle_data.card_back_style || "rosa_cruz"}
+                    onApplyInterpretation={async (text) => {
+                      const updatedContent = entry.content + "\n\n### 🔮 Palpite Hermético do Frater Auxiliar:\n" + text;
+                      await onUpdateEntry({
+                        id: entry.id,
+                        content: updatedContent,
+                      });
+                    }}
+                  />
                 )}
 
                 {entry.oracle_data.confirmation_notes && (
@@ -571,6 +588,15 @@ export function ArticleView({
                   cards={editCards}
                   onChange={setEditCards}
                   isEditable={true}
+                  query={editQuery}
+                  spreadName={editSpread}
+                  cardBackStyle={editCardBackStyle}
+                  onCardBackStyleChange={setEditCardBackStyle}
+                  onApplyInterpretation={(text) => {
+                    setEditContent((prev) => {
+                      return prev + "\n\n### 🔮 Palpite Hermético do Frater Auxiliar:\n" + text;
+                    });
+                  }}
                 />
               </div>
             )}

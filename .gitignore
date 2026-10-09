@@ -4,3 +4,5 @@ out/
 build/
 .DS_Store
 *.log
+Tarot de Toth/
+public/tarot/

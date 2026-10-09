@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { THOTH_TAROT_DECK, ThothCard } from "@/lib/thothTarot";
+import { THOTH_TAROT_DECK, ThothCard, CARD_BACKS } from "@/lib/thothTarot";
 import {
   Sparkles,
   RotateCw,
@@ -15,6 +15,11 @@ import {
   Compass,
   Check,
   Eye,
+  EyeOff,
+  Bot,
+  Copy,
+  BookOpen,
+  Layers,
 } from "lucide-react";
 
 export interface CardOnTable {
@@ -22,9 +27,11 @@ export interface CardOnTable {
   cardId: string;
   cardName: string;
   imageUrl?: string;
+  imageFile?: string;
   x?: number; // porcentagem 5% a 90%
   y?: number; // porcentagem 5% a 85%
   rotation?: number; // 0, 90, 180, 270 graus
+  isFlipped?: boolean; // false = verso da carta, true = face revelada
   notes?: string;
 }
 
@@ -32,9 +39,23 @@ interface OracleTableProps {
   cards: CardOnTable[];
   onChange?: (cards: CardOnTable[]) => void;
   isEditable?: boolean;
+  query?: string;
+  spreadName?: string;
+  onApplyInterpretation?: (text: string) => void;
+  cardBackStyle?: "rosa_cruz" | "thelema";
+  onCardBackStyleChange?: (style: "rosa_cruz" | "thelema") => void;
 }
 
-export function OracleTable({ cards, onChange, isEditable = false }: OracleTableProps) {
+export function OracleTable({
+  cards,
+  onChange,
+  isEditable = false,
+  query = "",
+  spreadName = "Tiragem Oracular",
+  onApplyInterpretation,
+  cardBackStyle = "rosa_cruz",
+  onCardBackStyleChange,
+}: OracleTableProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -43,8 +64,24 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [imageUploadIdx, setImageUploadIdx] = useState<number | null>(null);
   const [selectedThothToAdd, setSelectedThothToAdd] = useState("");
+  const [localBackStyle, setLocalBackStyle] = useState<"rosa_cruz" | "thelema">(cardBackStyle);
 
-  // Adicionar Carta do Baralho de Thoth
+  // Estados do Palpite da IA
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiInterpretation, setAiInterpretation] = useState<string | null>(null);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [copiedSuccess, setCopiedSuccess] = useState(false);
+
+  const currentBack = CARD_BACKS.find((b) => b.id === (cardBackStyle || localBackStyle)) || CARD_BACKS[0];
+
+  const handleBackStyleChange = (style: "rosa_cruz" | "thelema") => {
+    setLocalBackStyle(style);
+    if (onCardBackStyleChange) {
+      onCardBackStyleChange(style);
+    }
+  };
+
+  // Adicionar Carta do Baralho de Thoth com imagem oficial mapeada
   const handleAddThothCard = (cardId: string) => {
     if (!onChange) return;
     const thoth = THOTH_TAROT_DECK.find((c) => c.id === cardId);
@@ -55,9 +92,12 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
       position: `Posição ${count + 1}`,
       cardId: thoth.id,
       cardName: thoth.name,
-      x: 30 + (count % 4) * 15,
-      y: 30 + Math.floor(count / 4) * 20,
+      imageUrl: thoth.imageUrl,
+      imageFile: thoth.imageFile,
+      x: 25 + (count % 4) * 16,
+      y: 25 + Math.floor(count / 4) * 22,
       rotation: 0,
+      isFlipped: true,
       notes: thoth.keywords.join(", "),
     };
     const updated = [...cards, newCard];
@@ -74,9 +114,10 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
       position: `Lâmina ${count + 1}`,
       cardId: `custom-${Date.now()}`,
       cardName: `Nova Lâmina / Oráculo`,
-      x: 35 + (count % 3) * 15,
-      y: 35 + Math.floor(count / 3) * 20,
+      x: 30 + (count % 3) * 16,
+      y: 30 + Math.floor(count / 3) * 22,
       rotation: 0,
+      isFlipped: true,
       notes: "",
     };
     const updated = [...cards, newCard];
@@ -94,6 +135,30 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
       ...updated[idx],
       rotation: (currentRot + 90) % 360,
     };
+    onChange(updated);
+  };
+
+  // Virar carta (Face-up / Face-down)
+  const handleToggleFlipCard = (idx: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!onChange) return;
+    const updated = [...cards];
+    const isCurrentlyFlipped = updated[idx].isFlipped !== false;
+    updated[idx] = {
+      ...updated[idx],
+      isFlipped: !isCurrentlyFlipped,
+    };
+    onChange(updated);
+  };
+
+  // Virar todas as cartas (Reveal all or hide all)
+  const handleToggleFlipAll = () => {
+    if (!onChange || cards.length === 0) return;
+    const anyHidden = cards.some((c) => c.isFlipped === false);
+    const updated = cards.map((c) => ({
+      ...c,
+      isFlipped: anyHidden ? true : false,
+    }));
     onChange(updated);
   };
 
@@ -142,7 +207,7 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
     if (e) e.stopPropagation();
     if (!onChange) return;
     const updated = [...cards];
-    updated[idx] = { ...updated[idx], imageUrl: undefined };
+    updated[idx] = { ...updated[idx], imageUrl: undefined, imageFile: undefined };
     onChange(updated);
   };
 
@@ -162,6 +227,15 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
   // Iniciar Drag no Altar
   const handleMouseDown = (idx: number, e: React.MouseEvent) => {
     setActiveCardIdx(idx);
+
+    // Se clicou na carta e ela estiver virada para baixo no modo de leitura, vire-a!
+    if (!isEditable && cards[idx].isFlipped === false && onChange) {
+      const updated = [...cards];
+      updated[idx] = { ...updated[idx], isFlipped: true };
+      onChange(updated);
+      return;
+    }
+
     if (!isEditable || !tableRef.current) return;
 
     const rect = tableRef.current.getBoundingClientRect();
@@ -267,6 +341,51 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
     onChange(updated);
   };
 
+  // Pedir Palpite do Frater Auxiliar (IA)
+  const handleRequestAiInterpretation = async () => {
+    if (cards.length === 0) {
+      alert("Coloque ao menos uma lâmina no altar antes de solicitar o palpite da IA.");
+      return;
+    }
+    setIsAiLoading(true);
+    setShowAiModal(true);
+    try {
+      const res = await fetch("/api/oracle/interpret", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: query || "",
+          spreadName: spreadName || "Mesa Oracular",
+          cards: cards.map((c) => ({
+            position: c.position,
+            cardId: c.cardId,
+            cardName: c.cardName,
+            rotation: c.rotation || 0,
+            notes: c.notes || "",
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAiInterpretation(data.interpretation);
+      } else {
+        setAiInterpretation("Não foi possível gerar a interpretação: " + data.error);
+      }
+    } catch (err: any) {
+      setAiInterpretation("Erro ao comunicar com a IA: " + err.message);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const handleCopyAiText = () => {
+    if (aiInterpretation) {
+      navigator.clipboard.writeText(aiInterpretation);
+      setCopiedSuccess(true);
+      setTimeout(() => setCopiedSuccess(false), 2000);
+    }
+  };
+
   // Card Ativo Selecionado
   const activeCard = activeCardIdx !== null ? cards[activeCardIdx] : null;
 
@@ -281,10 +400,10 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
         className="hidden"
       />
 
-      {/* Barra de Ferramentas da Mesa (Modo Edição) */}
-      {isEditable && (
-        <div className="p-3 bg-medium-850 rounded-lg border border-medium-700 flex flex-wrap items-center justify-between gap-3 text-xs">
-          {/* Seletor Thoth & Adição */}
+      {/* Barra de Ferramentas Superior da Mesa */}
+      <div className="p-3 bg-medium-850 rounded-lg border border-medium-700 flex flex-wrap items-center justify-between gap-3 text-xs">
+        {/* Lado Esquerdo: Adicionar Cartas (Modo Edição) */}
+        {isEditable ? (
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={selectedThothToAdd}
@@ -292,38 +411,38 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
                 const val = e.target.value;
                 if (val) handleAddThothCard(val);
               }}
-              className="bg-medium-800 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white max-w-[200px]"
+              className="bg-medium-800 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white max-w-[210px] truncate"
             >
-              <option value="">+ Lâmina de Thoth...</option>
-              <optgroup label="Arcanos Maiores">
+              <option value="">+ Adicionar Lâmina de Thoth...</option>
+              <optgroup label="Arcanos Maiores (22 Atus)">
                 {THOTH_TAROT_DECK.filter((c) => c.suit === "major").map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.number ? `${c.number}. ` : ""}{c.name}
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="Bastões (Fogo)">
+              <optgroup label="Paus (Fogo - 14 Lâminas)">
                 {THOTH_TAROT_DECK.filter((c) => c.suit === "wands").map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="Copas (Água)">
+              <optgroup label="Copas (Água - 14 Lâminas)">
                 {THOTH_TAROT_DECK.filter((c) => c.suit === "cups").map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="Espadas (Ar)">
+              <optgroup label="Espadas (Ar - 14 Lâminas)">
                 {THOTH_TAROT_DECK.filter((c) => c.suit === "swords").map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="Discos (Terra)">
+              <optgroup label="Discos (Terra - 14 Lâminas)">
                 {THOTH_TAROT_DECK.filter((c) => c.suit === "disks").map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -338,50 +457,105 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
               className="flex items-center gap-1 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-xs border border-medium-700 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Carta Personalizada</span>
+              <span>Personalizada</span>
             </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-xs font-mono text-medium-300">
+            <Sparkles className="w-4 h-4 text-white" />
+            <span className="font-semibold text-white">Altar de Consulta Oracular</span>
+            <span>({cards.length} {cards.length === 1 ? "lâmina" : "lâminas"})</span>
+          </div>
+        )}
+
+        {/* Lado Direito: Versos das Cartas + Revelar + Palpite IA */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Seletor de Verso (2 Tipos) */}
+          <div className="flex items-center gap-1.5 bg-medium-800 px-2 py-1 rounded border border-medium-700">
+            <Layers className="w-3.5 h-3.5 text-medium-400" />
+            <span className="text-[10px] font-mono text-medium-400">Verso:</span>
+            <select
+              value={cardBackStyle || localBackStyle}
+              onChange={(e) => handleBackStyleChange(e.target.value as any)}
+              className="bg-transparent text-white text-[11px] font-mono focus:outline-none cursor-pointer"
+            >
+              <option value="rosa_cruz">Rosa-Cruz</option>
+              <option value="thelema">Thelema</option>
+            </select>
           </div>
 
-          {/* Presets de Alinhamento */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-mono text-medium-400 font-semibold uppercase">
-              Alinhamento:
-            </span>
+          {/* Botão Revelar / Ocultar Todas */}
+          {cards.length > 0 && (
             <button
               type="button"
-              onClick={() => applyPresetLayout("line")}
-              className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
-              title="Alinhar em Linha"
+              onClick={handleToggleFlipAll}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700 transition-colors"
+              title="Alternar entre mostrar a face ou o verso de todas as lâminas"
             >
-              Linha
+              {cards.some((c) => c.isFlipped === false) ? (
+                <>
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Revelar Todas</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff className="w-3.5 h-3.5" />
+                  <span>Ocultar Todas</span>
+                </>
+              )}
             </button>
-            <button
-              type="button"
-              onClick={() => applyPresetLayout("cross")}
-              className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
-              title="Dispor em Cruz (4 Cartas)"
-            >
-              Cruz
-            </button>
-            <button
-              type="button"
-              onClick={() => applyPresetLayout("hexagram")}
-              className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
-              title="Hexagrama Thelêmico (7 Cartas)"
-            >
-              Hexagrama
-            </button>
-            <button
-              type="button"
-              onClick={() => applyPresetLayout("celtic")}
-              className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
-              title="Cruz Céltica (10 Cartas)"
-            >
-              Cruz Céltica
-            </button>
-          </div>
+          )}
+
+          {/* Presets de Alinhamento (No modo edição) */}
+          {isEditable && (
+            <div className="hidden sm:flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => applyPresetLayout("line")}
+                className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
+                title="Alinhar em Linha"
+              >
+                Linha
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPresetLayout("cross")}
+                className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
+                title="Cruz (4)"
+              >
+                Cruz
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPresetLayout("hexagram")}
+                className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
+                title="Hexagrama (7)"
+              >
+                Hexagrama
+              </button>
+              <button
+                type="button"
+                onClick={() => applyPresetLayout("celtic")}
+                className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
+                title="Cruz Céltica (10)"
+              >
+                Céltica
+              </button>
+            </div>
+          )}
+
+          {/* BOTÃO MÁGICO DE PALPITE DA IA */}
+          <button
+            type="button"
+            onClick={handleRequestAiInterpretation}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-medium-200 text-black font-semibold rounded text-xs transition-colors shadow-sm"
+            title="Pedir palpite e interpretação hermética da tiragem ao Frater Auxiliar"
+          >
+            <Bot className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Palpite da IA</span>
+          </button>
         </div>
-      )}
+      </div>
 
       {/* O Pano de Mesa do Altar (Canvas Interativo) */}
       <div
@@ -389,20 +563,20 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        className="relative w-full h-[450px] bg-[#121212] rounded-xl border-2 border-medium-700 overflow-hidden shadow-2xl"
+        className="relative w-full h-[470px] bg-[#111111] rounded-xl border-2 border-medium-700 overflow-hidden shadow-2xl"
         style={{
           backgroundImage: `
-            radial-gradient(circle at center, rgba(255, 255, 255, 0.05) 0%, transparent 70%),
+            radial-gradient(circle at center, rgba(255, 255, 255, 0.06) 0%, transparent 75%),
             linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
             linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)
           `,
           backgroundSize: "100% 100%, 35px 35px, 35px 35px",
         }}
       >
-        {/* Marca d'água da Geometria do Altar Thelêmico */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-          <div className="w-80 h-80 rounded-full border border-dashed border-white flex items-center justify-center">
-            <div className="w-56 h-56 rounded-full border border-white flex items-center justify-center">
+        {/* Geometria Sagrada no Centro do Altar */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-25">
+          <div className="w-80 h-80 rounded-full border border-dashed border-white/60 flex items-center justify-center">
+            <div className="w-56 h-56 rounded-full border border-white/40 flex items-center justify-center">
               <Sparkles className="w-16 h-16 text-white" />
             </div>
           </div>
@@ -415,7 +589,7 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
             <span>Nenhuma lâmina sobre a mesa oracular.</span>
             {isEditable && (
               <span className="text-[11px] text-medium-500 mt-1">
-                Selecione uma lâmina no menu superior para dispor sobre o altar.
+                Selecione uma lâmina de Thoth no menu superior para dispor sobre o altar.
               </span>
             )}
           </div>
@@ -426,9 +600,15 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
           const posX = card.x !== undefined ? card.x : 20 + (idx % 4) * 18;
           const posY = card.y !== undefined ? card.y : 20 + Math.floor(idx / 4) * 22;
           const rot = card.rotation || 0;
+          const isFlipped = card.isFlipped !== false; // true = mostrando a face, false = verso
           const isDragging = draggingIdx === idx;
           const isSelected = activeCardIdx === idx;
           const thothInfo = THOTH_TAROT_DECK.find((tc) => tc.id === card.cardId);
+
+          // Imagem efetiva da face
+          const faceImage = card.imageUrl || thothInfo?.imageUrl;
+          // Imagem do verso
+          const backImage = currentBack.imageUrl;
 
           return (
             <div
@@ -446,11 +626,11 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
                 transformOrigin: "center center",
               }}
             >
-              {/* Carta Visual */}
+              {/* Carta Visual com efeito de espessura de baralho */}
               <div
-                className={`w-28 sm:w-32 h-44 sm:h-48 rounded-lg overflow-hidden border-2 bg-medium-900 flex flex-col justify-between p-2 shadow-2xl transition-colors ${
+                className={`w-28 sm:w-32 h-44 sm:h-48 rounded-lg overflow-hidden border-2 bg-medium-900 flex flex-col justify-between p-1.5 shadow-2xl transition-all ${
                   isDragging || isSelected
-                    ? "border-white ring-2 ring-white/30"
+                    ? "border-white ring-2 ring-white/40"
                     : "border-medium-600 hover:border-white"
                 }`}
               >
@@ -459,15 +639,31 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
                   {card.position}
                 </div>
 
-                {/* Centro da Carta: Imagem OU Arte Hermética */}
-                <div className="flex-1 my-1.5 rounded overflow-hidden flex flex-col items-center justify-center relative bg-medium-950/70 border border-medium-800">
-                  {card.imageUrl ? (
+                {/* Centro da Carta: FACE ou VERSO */}
+                <div className="flex-1 my-1 rounded overflow-hidden flex flex-col items-center justify-center relative bg-medium-950/70 border border-medium-800">
+                  {!isFlipped ? (
+                    /* VERSO DA CARTA (ROSA CRUZ OU THELEMA) */
+                    <div className="w-full h-full relative flex items-center justify-center bg-black/60">
+                      <img
+                        src={backImage}
+                        alt={currentBack.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/20 hover:bg-transparent transition-colors flex items-center justify-center">
+                        <span className="text-[9px] font-mono text-white/90 bg-black/70 px-1 py-0.5 rounded border border-white/20">
+                          {currentBack.id === "rosa_cruz" ? "Rosa-Cruz" : "Thelema"}
+                        </span>
+                      </div>
+                    </div>
+                  ) : faceImage ? (
+                    /* FACE DA CARTA: IMAGEM ALTA RESOLUÇÃO */
                     <img
-                      src={card.imageUrl}
+                      src={faceImage}
                       alt={card.cardName}
                       className="w-full h-full object-cover"
                     />
                   ) : (
+                    /* FACE DA CARTA: SÍMBOLO HERMÉTICO FALLBACK */
                     <div className="text-center p-2">
                       {thothInfo?.hebrewLetter && (
                         <span className="text-2xl text-white font-serif block leading-none mb-1">
@@ -489,7 +685,7 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
                 {/* Rodapé da Carta */}
                 <div className="flex items-center justify-between text-[9px] font-mono text-medium-400 px-0.5">
                   <span className="truncate max-w-[70px]">
-                    {card.cardName}
+                    {isFlipped ? card.cardName : "Oculta"}
                   </span>
                   <span>
                     {rot === 90 ? "Cruzada" : rot === 180 ? "Invert." : "Direta"}
@@ -502,6 +698,14 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
                 <div className="absolute -top-3 -right-3 hidden group-hover:flex items-center gap-1 bg-medium-850 p-1 rounded-md border border-medium-600 shadow-xl z-50">
                   <button
                     type="button"
+                    onClick={(e) => handleToggleFlipCard(idx, e)}
+                    className="p-1 text-white hover:bg-medium-750 rounded"
+                    title={isFlipped ? "Virar para Baixo (Verso)" : "Revelar Carta (Face)"}
+                  >
+                    {isFlipped ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  </button>
+                  <button
+                    type="button"
                     onClick={(e) => handleRotateCard(idx, e)}
                     className="p-1 text-white hover:bg-medium-750 rounded"
                     title="Girar Lâmina (90°)"
@@ -512,7 +716,7 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
                     type="button"
                     onClick={(e) => triggerLocalImageUpload(idx, e)}
                     className="p-1 text-white hover:bg-medium-750 rounded"
-                    title="Carregar Foto Local"
+                    title="Carregar Foto Personalizada"
                   >
                     <Upload className="w-3 h-3" />
                   </button>
@@ -543,8 +747,8 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
           <Sparkles className="w-3 h-3 text-white" />
           <span>
             {isEditable
-              ? "Arraste as cartas livremente pela mesa como no altar. Clique em uma carta para editar detalhes."
-              : "Clique em qualquer lâmina para inspecionar seus atributos e interpretação hermética."}
+              ? "Arraste as lâminas livremente pela mesa como no altar. Clique em uma lâmina para editar detalhes ou virar."
+              : "Clique nas lâminas para virar/inspecionar seus atributos cabalísticos e interpretação hermética."}
           </span>
         </div>
       </div>
@@ -607,49 +811,51 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
                 />
               </div>
 
-              {/* Botões de Ação da Imagem e Rotação */}
+              {/* Botões de Ação da Imagem, Rotação e Face */}
               <div>
                 <label className="block text-[10px] font-mono text-medium-400 mb-1">
-                  IMAGEM & ORIENTAÇÃO
+                  ORIENTAÇÃO & FOTO
                 </label>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => triggerLocalImageUpload(activeCardIdx)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] border border-medium-700"
-                    title="Carregar Imagem do Computador"
+                    onClick={() => handleToggleFlipCard(activeCardIdx)}
+                    className="flex items-center gap-1 px-2 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] border border-medium-700"
+                    title="Alternar face ou verso da carta"
                   >
-                    <Upload className="w-3 h-3" />
-                    <span>Foto</span>
+                    {activeCard.isFlipped === false ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                    <span>{activeCard.isFlipped === false ? "Revelar" : "Ocultar"}</span>
                   </button>
+
                   <button
                     type="button"
-                    onClick={() => handlePromptImageUrl(activeCardIdx)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] border border-medium-700"
-                    title="Inserir Link URL"
+                    onClick={() => handleRotateCard(activeCardIdx)}
+                    className="flex items-center gap-1 px-2 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] border border-medium-700"
+                    title="Girar Carta (90°)"
                   >
-                    <LinkIcon className="w-3 h-3" />
-                    <span>Link</span>
+                    <RotateCw className="w-3 h-3" />
+                    <span>{(activeCard.rotation || 0)}°</span>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => triggerLocalImageUpload(activeCardIdx)}
+                    className="flex items-center gap-1 px-2 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] border border-medium-700"
+                    title="Carregar Imagem Local"
+                  >
+                    <Upload className="w-3 h-3" />
+                  </button>
+
                   {activeCard.imageUrl && (
                     <button
                       type="button"
                       onClick={() => handleRemoveImage(activeCardIdx)}
                       className="px-2 py-1.5 text-red-400 hover:text-red-300 rounded text-[11px] border border-medium-700"
-                      title="Remover Imagem"
+                      title="Resetar Imagem"
                     >
-                      Remover
+                      Reset
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => handleRotateCard(activeCardIdx)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] border border-medium-700 ml-auto"
-                    title="Girar Carta"
-                  >
-                    <RotateCw className="w-3 h-3" />
-                    <span>{(activeCard.rotation || 0)}°</span>
-                  </button>
                 </div>
               </div>
 
@@ -674,23 +880,32 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
           ) : (
             /* Modo Leitura dos Detalhes da Carta */
             <div className="flex flex-col sm:flex-row gap-4 items-start">
-              {activeCard.imageUrl && (
+              {(activeCard.imageUrl || (activeCard.isFlipped === false ? currentBack.imageUrl : null)) && (
                 <div className="w-24 h-36 rounded-lg overflow-hidden border border-medium-700 shrink-0">
                   <img
-                    src={activeCard.imageUrl}
+                    src={activeCard.isFlipped === false ? currentBack.imageUrl : activeCard.imageUrl}
                     alt={activeCard.cardName}
                     className="w-full h-full object-cover"
                   />
                 </div>
               )}
               <div className="space-y-1.5 flex-1">
-                <span className="text-[10px] font-mono text-medium-400 uppercase font-semibold">
-                  {activeCard.position}
-                </span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-medium-400 uppercase font-semibold">
+                    {activeCard.position}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFlipCard(activeCardIdx)}
+                    className="text-[10px] font-mono text-medium-300 hover:text-white underline"
+                  >
+                    {activeCard.isFlipped === false ? "Revelar Carta" : "Virar para Baixo"}
+                  </button>
+                </div>
                 <h4 className="text-base font-sans font-bold text-white">
-                  {activeCard.cardName}
+                  {activeCard.isFlipped === false ? "Lâmina Oculta no Altar" : activeCard.cardName}
                 </h4>
-                {activeCard.notes && (
+                {activeCard.notes && activeCard.isFlipped !== false && (
                   <p className="text-medium-200 font-serif italic text-xs pt-1 leading-relaxed">
                     "{activeCard.notes}"
                   </p>
@@ -698,6 +913,89 @@ export function OracleTable({ cards, onChange, isEditable = false }: OracleTable
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* MODAL DE PALPITE HERMÉTICO DA IA */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-medium-850 border border-medium-700 rounded-xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-medium-700 flex items-center justify-between bg-medium-900">
+              <div className="flex items-center gap-2">
+                <Bot className="w-5 h-5 text-white" />
+                <h3 className="text-sm font-sans font-bold text-white">
+                  Palpite Hermético do Frater Auxiliar
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAiModal(false)}
+                className="p-1 text-medium-400 hover:text-white rounded"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4 font-serif text-sm text-medium-200 leading-relaxed">
+              {isAiLoading ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
+                  <Sparkles className="w-8 h-8 text-white animate-spin" />
+                  <p className="text-sm font-sans font-semibold text-white">
+                    Consultando as correntes astrais e as 78 lâminas do Livro de Thoth...
+                  </p>
+                  <p className="text-xs font-mono text-medium-400 max-w-md">
+                    Avaliando dignidades elementais, posições e correspondências cabalísticas do Liber 777.
+                  </p>
+                </div>
+              ) : aiInterpretation ? (
+                <div className="whitespace-pre-wrap leading-relaxed select-text font-serif text-sm">
+                  {aiInterpretation}
+                </div>
+              ) : (
+                <p className="text-medium-400 italic">Nenhuma interpretação disponível.</p>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            {!isAiLoading && aiInterpretation && (
+              <div className="p-4 border-t border-medium-700 bg-medium-900 flex flex-wrap items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyAiText}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-xs border border-medium-700 transition-colors"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>{copiedSuccess ? "Copiado!" : "Copiar Texto"}</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {onApplyInterpretation && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onApplyInterpretation(aiInterpretation);
+                        alert("Palpite hermético adicionado ao texto do diário com sucesso!");
+                        setShowAiModal(false);
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-1.5 bg-white hover:bg-medium-200 text-black font-semibold rounded text-xs transition-colors shadow-sm"
+                    >
+                      <BookOpen className="w-3.5 h-3.5" />
+                      <span>Inserir no Diário</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowAiModal(false)}
+                    className="px-4 py-1.5 text-medium-300 hover:text-white text-xs font-medium"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
