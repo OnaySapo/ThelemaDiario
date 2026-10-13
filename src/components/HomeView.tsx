@@ -10,6 +10,7 @@ import {
   getCategoryThelemicIcon,
   EstrelaDeThelema,
 } from "@/components/ThelemicIcons";
+import { DynamicMoonPhase } from "@/components/DynamicMoonPhase";
 import {
   getFullAstrologicalData,
   getUpcomingMoonPhases,
@@ -211,53 +212,75 @@ export function HomeView({
             </p>
           </div>
 
-          {/* Contador de Horas Thelemita (Live Digital Arcane Clock) */}
-          <div className="bg-medium-900 border border-medium-700 rounded-xl p-4 sm:p-5 flex flex-col justify-between min-w-[260px] shadow-sm">
-            <div className="flex items-center justify-between border-b border-medium-750 pb-2.5 mb-2.5">
-              <span className="text-[10px] font-mono font-bold text-medium-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-white" />
-                <span>Hora Local & Trânsito</span>
-              </span>
-              <span className="text-sm font-mono font-bold text-white tracking-widest">
-                {now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-              </span>
+          {/* Contador de Horas Thelemita (Live Digital Arcane Clock + Fase Lunar Dinâmica Diária) */}
+          <div className="bg-medium-900 border border-medium-700 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row items-center gap-5 shadow-sm shrink-0">
+            {/* Lado Esquerdo: Coordenadas e Relógio (sem segundos) */}
+            <div className="flex flex-col justify-between w-full md:w-auto min-w-[220px]">
+              <div className="flex items-center justify-between gap-3 border-b border-medium-750 pb-2 mb-2.5">
+                <span className="text-[10px] font-mono font-bold text-medium-400 uppercase tracking-wider flex items-center gap-1.5 shrink-0">
+                  <Clock className="w-3.5 h-3.5 text-white" />
+                  <span>Hora Local & Trânsito</span>
+                </span>
+                <span className="text-xs font-mono font-bold text-white bg-medium-800 px-2 py-0.5 rounded border border-medium-700 tracking-wider shrink-0 shadow-sm">
+                  {now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </div>
+
+              <div className="space-y-1.5 text-xs font-mono">
+                <div className="flex items-center justify-between text-medium-300">
+                  <span className="text-medium-400 text-[11px]">Ano Thelêmico:</span>
+                  <strong className="text-white font-bold">{astro?.thelemicDate.split(", ").pop() || "Anno V:xii"}</strong>
+                </div>
+                <div className="flex items-center justify-between text-medium-300">
+                  <span className="text-medium-400 text-[11px]">Dia Planetário:</span>
+                  <span className="text-white flex items-center gap-1">
+                    <span>{astro?.planetaryDaySymbol}</span>
+                    <span>{astro?.planetaryDay || "Dies Solis"}</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-medium-300">
+                  <span className="text-medium-400 text-[11px]">Hora Planetária:</span>
+                  <span className="text-white flex items-center gap-1">
+                    <span>{astro?.planetaryHourSymbol}</span>
+                    <span>{astro?.planetaryHour || "Hora Solar"}</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-medium-300 pt-1 border-t border-medium-800">
+                  <span className="text-medium-400 text-[11px]">Luminar Solar:</span>
+                  <span className="flex items-center gap-1 text-white">
+                    <IconeSolThelema className="w-3 h-3 text-white" size={12} />
+                    {astro?.sunSignSymbol && <ZodiacIcon sign={astro.sunSignSymbol} className="w-3 h-3 text-white" size={12} />}
+                    <span>{astro?.sunSign || "Sol"}</span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-medium-300">
+                  <span className="text-medium-400 text-[11px]">Luminar Lunar:</span>
+                  <span className="flex items-center gap-1 text-white">
+                    <IconeLuaThelema className="w-3 h-3 text-white" size={12} />
+                    {astro?.moonSignSymbol && <ZodiacIcon sign={astro.moonSignSymbol} className="w-3 h-3 text-white" size={12} />}
+                    <span>{astro?.moonSign || "Lua"}</span>
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-1.5 text-xs font-mono">
-              <div className="flex items-center justify-between text-medium-300">
-                <span className="text-medium-400 text-[11px]">Ano Thelêmico:</span>
-                <strong className="text-white font-bold">{astro?.thelemicDate.split(", ").pop() || "Anno V:xii"}</strong>
-              </div>
-              <div className="flex items-center justify-between text-medium-300">
-                <span className="text-medium-400 text-[11px]">Dia Planetário:</span>
-                <span className="text-white flex items-center gap-1">
-                  <span>{astro?.planetaryDaySymbol}</span>
-                  <span>{astro?.planetaryDay || "Dies Solis"}</span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-medium-300">
-                <span className="text-medium-400 text-[11px]">Hora Planetária:</span>
-                <span className="text-white flex items-center gap-1">
-                  <span>{astro?.planetaryHourSymbol}</span>
-                  <span>{astro?.planetaryHour || "Hora Solar"}</span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-medium-300 pt-1 border-t border-medium-800">
-                <span className="text-medium-400 text-[11px]">Luminar Solar:</span>
-                <span className="flex items-center gap-1 text-white">
-                  <IconeSolThelema className="w-3 h-3 text-white" size={12} />
-                  {astro?.sunSignSymbol && <ZodiacIcon sign={astro.sunSignSymbol} className="w-3 h-3 text-white" size={12} />}
-                  <span>{astro?.sunSign || "Sol"}</span>
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-medium-300">
-                <span className="text-medium-400 text-[11px]">Luminar Lunar:</span>
-                <span className="flex items-center gap-1 text-white">
-                  <IconeLuaThelema className="w-3 h-3 text-white" size={12} />
-                  {astro?.moonSignSymbol && <ZodiacIcon sign={astro.moonSignSymbol} className="w-3 h-3 text-white" size={12} />}
-                  <span>{astro?.moonSign || "Lua"}</span>
-                </span>
-              </div>
+            {/* Divisor Vertical */}
+            <div className="hidden md:block w-[1px] h-full bg-medium-750 self-stretch my-0.5" />
+
+            {/* Lado Direito: Lua Gráfica Dinâmica que se modifica a cada dia */}
+            <div className="flex flex-col items-center justify-center p-3 rounded-lg bg-medium-850/70 border border-medium-750/80 min-w-[130px] w-full md:w-auto shadow-inner">
+              <span className="text-[9px] font-mono text-medium-400 uppercase tracking-widest block mb-1">
+                Fase Lunar de Hoje
+              </span>
+              <DynamicMoonPhase
+                moonAngle={astro?.moonAngle ?? 0}
+                illumination={astro?.moonIllumination ?? 50}
+                phaseName={astro?.moonPhaseName ?? "Lua"}
+                moonSign={astro?.moonSign}
+                moonSignSymbol={astro?.moonSignSymbol}
+                size={58}
+                showDetails={true}
+              />
             </div>
           </div>
         </div>
