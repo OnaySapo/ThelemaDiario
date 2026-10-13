@@ -13,6 +13,10 @@ import {
   Palette,
   Sun,
   Moon,
+  MapPin,
+  Navigation,
+  Archive,
+  Globe,
 } from "lucide-react";
 import { MagickEntry } from "@/lib/types";
 import { EstrelaDeThelema } from "@/components/ThelemicIcons";
@@ -34,6 +38,16 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
   // Theme States
   const [currentTheme, setCurrentTheme] = useState<ThemeId>("medium");
   const [currentMode, setCurrentMode] = useState<ThemeMode>("dark");
+
+  // Geolocation States
+  const [geoCity, setGeoCity] = useState("São Paulo, SP");
+  const [geoLat, setGeoLat] = useState("-23.5505");
+  const [geoLng, setGeoLng] = useState("-46.6333");
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [geoSaveStatus, setGeoSaveStatus] = useState<string | null>(null);
+
+  // Vault Zip Export State
+  const [isExportingVault, setIsExportingVault] = useState(false);
 
   // OpenRouter States
   const [apiKey, setApiKey] = useState("");
@@ -90,8 +104,100 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
           }
         })
         .catch((err) => console.error("Erro ao carregar modelo:", err));
+
+      // Fetch Geolocation Settings
+      fetch("/api/settings?key=geo_city")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.value) setGeoCity(data.value);
+        })
+        .catch(() => {});
+
+      fetch("/api/settings?key=geo_latitude")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.value) setGeoLat(data.value);
+        })
+        .catch(() => {});
+
+      fetch("/api/settings?key=geo_longitude")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.value) setGeoLng(data.value);
+        })
+        .catch(() => {});
     }
   }, [isOpen]);
+
+  const handleDetectLocation = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      alert("Geolocalização não é suportada por este dispositivo.");
+      return;
+    }
+    setIsDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude.toFixed(4);
+        const lng = pos.coords.longitude.toFixed(4);
+        setGeoLat(lat);
+        setGeoLng(lng);
+        setGeoCity("Localização Detectada via GPS");
+        setIsDetectingLocation(false);
+      },
+      (err) => {
+        setIsDetectingLocation(false);
+        alert("Não foi possível detectar localização: " + err.message);
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
+
+  const handleSaveGeo = async () => {
+    try {
+      await Promise.all([
+        fetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "geo_city", value: geoCity.trim() }),
+        }),
+        fetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "geo_latitude", value: geoLat.trim() }),
+        }),
+        fetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: "geo_longitude", value: geoLng.trim() }),
+        }),
+      ]);
+      setGeoSaveStatus("Localização salva! Horas planetárias temporais atualizadas.");
+      setTimeout(() => setGeoSaveStatus(null), 3500);
+    } catch (e) {
+      alert("Erro ao salvar localização.");
+    }
+  };
+
+  const handleExportVaultZip = async () => {
+    try {
+      setIsExportingVault(true);
+      const res = await fetch("/api/export/vault");
+      if (!res.ok) throw new Error("Falha na geração do ZIP do Vault.");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `diario_magicko_vault_obsidian_${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert("Erro ao exportar vault: " + err.message);
+    } finally {
+      setIsExportingVault(false);
+    }
+  };
 
   const handleSelectTheme = async (themeId: ThemeId) => {
     setCurrentTheme(themeId);
@@ -348,6 +454,91 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
             </p>
           </div>
 
+          {/* Localização Geográfica (Horas Planetárias Reais) */}
+          <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-medium-750 pb-2">
+              <div className="flex items-center gap-2 text-white font-semibold font-mono text-xs">
+                <MapPin className="w-4 h-4 text-white" />
+                <span>Localização & Horas Planetárias Temporais</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleDetectLocation}
+                disabled={isDetectingLocation}
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700 transition-colors"
+                title="Detectar automaticamente latitude e longitude do dispositivo"
+              >
+                <Navigation className={`w-3 h-3 ${isDetectingLocation ? "animate-spin" : ""}`} />
+                <span>{isDetectingLocation ? "Detectando GPS..." : "Detectar Localização Atual"}</span>
+              </button>
+            </div>
+
+            <p className="text-medium-300 leading-relaxed font-sans text-[11px]">
+              O cálculo das <strong>Horas Planetárias Thelêmicas e Herméticas</strong> é temporal, dividindo o intervalo exato entre o Nascer e o Pôr do Sol em 12 horas diurnas e 12 noturnas. Configure suas coordenadas para máxima precisão mágica.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label className="block text-[10px] font-mono text-medium-400 mb-1">
+                  CIDADE / LOCALIDADE
+                </label>
+                <input
+                  type="text"
+                  value={geoCity}
+                  onChange={(e) => setGeoCity(e.target.value)}
+                  placeholder="Ex: São Paulo, SP"
+                  className="w-full bg-medium-900 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-white font-sans"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono text-medium-400 mb-1">
+                  LATITUDE (°DECIMAL)
+                </label>
+                <input
+                  type="text"
+                  value={geoLat}
+                  onChange={(e) => setGeoLat(e.target.value)}
+                  placeholder="-23.5505"
+                  className="w-full bg-medium-900 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono text-medium-400 mb-1">
+                  LONGITUDE (°DECIMAL)
+                </label>
+                <input
+                  type="text"
+                  value={geoLng}
+                  onChange={(e) => setGeoLng(e.target.value)}
+                  placeholder="-46.6333"
+                  className="w-full bg-medium-900 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[10px] text-medium-400 font-mono">
+                Padrão: São Paulo (-23.5505, -46.6333).
+              </span>
+              <button
+                type="button"
+                onClick={handleSaveGeo}
+                className="px-3.5 py-1.5 bg-white hover:bg-medium-200 text-black font-semibold rounded text-xs transition-colors"
+              >
+                Salvar Localização
+              </button>
+            </div>
+
+            {geoSaveStatus && (
+              <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-mono">
+                <Check className="w-3.5 h-3.5" />
+                <span>{geoSaveStatus}</span>
+              </div>
+            )}
+          </div>
+
           {/* OpenRouter Configuration */}
           <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-3">
             <div className="flex items-center justify-between">
@@ -422,6 +613,16 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
               Exportação & Backup
             </span>
             <div className="flex flex-wrap gap-3">
+              <button
+                onClick={handleExportVaultZip}
+                disabled={isExportingVault}
+                className="flex items-center gap-2 px-3.5 py-2 bg-purple-900/30 hover:bg-purple-900/50 text-purple-200 rounded border border-purple-600/50 text-xs font-medium transition-colors shadow-sm"
+                title="Exporta o cofre completo com pastas por categoria, frontmatter YAML e anexos para abrir diretamente no Obsidian"
+              >
+                <Archive className={`w-4 h-4 text-purple-300 ${isExportingVault ? "animate-pulse" : ""}`} />
+                <span>{isExportingVault ? "Gerando Vault ZIP..." : "Exportar Vault Completo (.ZIP para Obsidian)"}</span>
+              </button>
+
               <button
                 onClick={handleExportJSON}
                 className="flex items-center gap-2 px-3.5 py-2 bg-medium-850 hover:bg-medium-800 text-white rounded border border-medium-700 text-xs font-medium transition-colors"

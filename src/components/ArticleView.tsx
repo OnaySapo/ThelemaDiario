@@ -38,6 +38,8 @@ import {
   Video,
   Palette,
   SlidersHorizontal,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { ImageInsertModal, VideoInsertModal } from "@/components/MediaInsertModais";
 
@@ -134,6 +136,121 @@ export function ArticleView({
     } catch (e) {}
   };
 
+  // Autosave Draft State
+  const [draftSavedTime, setDraftSavedTime] = useState<string | null>(null);
+  const [hasRecoverableDraft, setHasRecoverableDraft] = useState(false);
+  const [recoverableDraft, setRecoverableDraft] = useState<any | null>(null);
+
+  // Check for recoverable draft when entry changes
+  React.useEffect(() => {
+    if (!entry) {
+      setHasRecoverableDraft(false);
+      setRecoverableDraft(null);
+      return;
+    }
+    try {
+      const key = `magick_draft_${entry.id}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (
+          parsed &&
+          (parsed.content !== entry.content || parsed.title !== entry.title) &&
+          Date.now() - (parsed.timestamp || 0) < 7 * 24 * 3600 * 1000
+        ) {
+          setHasRecoverableDraft(true);
+          setRecoverableDraft(parsed);
+          return;
+        }
+      }
+    } catch (e) {}
+    setHasRecoverableDraft(false);
+    setRecoverableDraft(null);
+  }, [entry?.id, entry?.content, entry?.title]);
+
+  const handleRestoreDraft = () => {
+    if (!recoverableDraft) return;
+    if (recoverableDraft.title !== undefined) setEditTitle(recoverableDraft.title);
+    if (recoverableDraft.content !== undefined) setEditContent(recoverableDraft.content);
+    if (recoverableDraft.category !== undefined) setEditCategory(recoverableDraft.category);
+    if (recoverableDraft.rating !== undefined) setEditRating(recoverableDraft.rating);
+    if (recoverableDraft.date !== undefined) setEditDate(recoverableDraft.date);
+    if (recoverableDraft.thelemicDate !== undefined) setEditThelemicDate(recoverableDraft.thelemicDate);
+    if (recoverableDraft.influences !== undefined) setEditInfluences(recoverableDraft.influences);
+    if (recoverableDraft.connections !== undefined) setEditConnections(recoverableDraft.connections);
+    setHasRecoverableDraft(false);
+  };
+
+  const handleDiscardDraft = () => {
+    if (entry) {
+      try {
+        localStorage.removeItem(`magick_draft_${entry.id}`);
+      } catch (e) {}
+    }
+    setHasRecoverableDraft(false);
+    setRecoverableDraft(null);
+  };
+
+  // Autosave to localStorage while editing with 1s debounce
+  React.useEffect(() => {
+    if (!isEditing || !entry) return;
+
+    const isDirty =
+      editTitle !== entry.title ||
+      editContent !== entry.content ||
+      editCategory !== normalizeCategory(entry.type) ||
+      editRating !== (entry.success_rating ?? 8);
+
+    if (!isDirty) return;
+
+    const timer = setTimeout(() => {
+      try {
+        const key = `magick_draft_${entry.id}`;
+        const draftData = {
+          title: editTitle,
+          content: editContent,
+          category: editCategory,
+          rating: editRating,
+          date: editDate,
+          thelemicDate: editThelemicDate,
+          influences: editInfluences,
+          connections: editConnections,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(key, JSON.stringify(draftData));
+        setDraftSavedTime(
+          new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+        );
+      } catch (e) {}
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [
+    isEditing,
+    entry,
+    editTitle,
+    editContent,
+    editCategory,
+    editRating,
+    editDate,
+    editThelemicDate,
+    editInfluences,
+    editConnections,
+  ]);
+
+  // Window beforeunload warning if unsaved changes exist
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isEditing && entry && (editTitle !== entry.title || editContent !== entry.content)) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isEditing, entry, editTitle, editContent]);
+
   // Enter edit mode
   const handleStartEdit = () => {
     if (!entry) return;
@@ -161,6 +278,21 @@ export function ArticleView({
     setIsEditing(true);
   };
 
+  const handleCancelEdit = () => {
+    const isDirty =
+      entry &&
+      (editTitle !== entry.title ||
+        editContent !== entry.content ||
+        editCategory !== normalizeCategory(entry.type));
+
+    if (isDirty) {
+      if (!confirm("Existem alterações não salvas. Deseja sair do modo de edição? Seu rascunho continuará salvo localmente.")) {
+        return;
+      }
+    }
+    setIsEditing(false);
+  };
+
   const handleSaveEdit = async () => {
     if (!entry) return;
     await onUpdateEntry({
@@ -184,6 +316,15 @@ export function ArticleView({
             }
           : undefined,
     });
+
+    if (entry) {
+      try {
+        localStorage.removeItem(`magick_draft_${entry.id}`);
+      } catch (e) {}
+    }
+    setDraftSavedTime(null);
+    setHasRecoverableDraft(false);
+    setRecoverableDraft(null);
     setIsEditing(false);
   };
 
@@ -892,8 +1033,14 @@ export function ArticleView({
             </>
           ) : (
             <>
+              {draftSavedTime && (
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-mono text-medium-400 bg-medium-800/80 px-2 py-1 rounded border border-medium-700/60">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Salvo {draftSavedTime}</span>
+                </span>
+              )}
               <button
-                onClick={() => setIsEditing(false)}
+                onClick={handleCancelEdit}
                 className="px-3 py-1.5 text-medium-300 hover:text-white text-xs font-medium rounded hover:bg-medium-800"
               >
                 Cancelar
@@ -1073,6 +1220,41 @@ export function ArticleView({
              MEDIUM RICH EDITING VIEW
              ======================================================== */
           <div className="space-y-6">
+            {/* Recuperação de Rascunho Não Salvo */}
+            {hasRecoverableDraft && recoverableDraft && (
+              <div className="p-3.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md animate-fadeIn">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                  <div>
+                    <span className="font-semibold text-white">Rascunho automático encontrado!</span>
+                    <span className="block text-[11px] text-amber-300/80">
+                      Há alterações salvas neste dispositivo em{" "}
+                      {new Date(recoverableDraft.timestamp || Date.now()).toLocaleTimeString("pt-BR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}.
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleRestoreDraft}
+                    className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-black font-semibold rounded text-xs transition-colors shadow-sm"
+                  >
+                    Restaurar Rascunho
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDiscardDraft}
+                    className="px-2.5 py-1.5 text-amber-300 hover:text-white text-xs transition-colors"
+                  >
+                    Descartar
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Title Input */}
             <input
               type="text"

@@ -81,8 +81,19 @@ export function HomeView({
   // Compute astronomical & tidal coordinates
   useEffect(() => {
     try {
-      const data = getFullAstrologicalData(now);
-      setAstro(data);
+      fetch("/api/astronomy")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setAstro(data);
+          } else {
+            setAstro(getFullAstrologicalData(now));
+          }
+        })
+        .catch(() => {
+          setAstro(getFullAstrologicalData(now));
+        });
+
       setReshTide(getReshSolarTide(now));
       setUpcomingMoons(getUpcomingMoonPhases(now));
     } catch (e) {

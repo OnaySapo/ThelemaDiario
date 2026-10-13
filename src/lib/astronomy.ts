@@ -19,6 +19,10 @@ export interface AstrologicalCoordinates {
   planetaryDaySymbol: string;
   planetaryHour: string;
   planetaryHourSymbol: string;
+  isDiurnal?: boolean;
+  hourNumber?: number;
+  sunrise?: string;
+  sunset?: string;
 }
 
 const ZODIAC_SIGNS = [
@@ -149,29 +153,106 @@ export function getMoonPhaseDetails(moonAngle: number, phaseFraction: number) {
   };
 }
 
-export function calculatePlanetaryHour(date: Date) {
-  const dayOfWeek = date.getDay(); // 0 is Sunday
-  const dayInfo = PLANETARY_DAYS[dayOfWeek];
-  
-  // Approximate standard planetary hour: 24 equal hours starting from sunrise ~06:00
-  // Or relative to current hour
-  const hour = date.getHours();
-  // Hours elapsed since 6 AM (approximate sunrise)
-  const hoursSinceDawn = ((hour - 6) + 24) % 24;
-  
-  // Chaldean rotation from the day's first hour ruler
-  const currentChaldeanIndex = (dayInfo.chaldeanIndex + hoursSinceDawn) % 7;
-  const planet = CHALDEAN_ORDER[currentChaldeanIndex];
-  
-  return {
-    day: dayInfo.name,
-    daySymbol: dayInfo.symbol,
-    hour: `Hora de ${planet.name}`,
-    hourSymbol: planet.symbol,
-  };
+export function calculatePlanetaryHour(date: Date, latitude = -23.5505, longitude = -46.6333) {
+  try {
+    const obs = new Astronomy.Observer(latitude, longitude, 0);
+
+    // Search window: from 36 hours before date to catch the sunrise defining current astrological day
+    const windowStart = new Date(date.getTime() - 36 * 3600 * 1000);
+    let currentRise: Date | null = null;
+    let searchCursor = windowStart;
+
+    for (let i = 0; i < 5; i++) {
+      const riseRes = Astronomy.SearchRiseSet(Astronomy.Body.Sun, obs, 1, searchCursor, 2);
+      if (!riseRes) break;
+      if (riseRes.date.getTime() <= date.getTime()) {
+        currentRise = riseRes.date;
+        searchCursor = new Date(riseRes.date.getTime() + 10 * 60 * 1000);
+      } else {
+        break;
+      }
+    }
+
+    if (!currentRise) {
+      currentRise = new Date(date);
+      currentRise.setHours(6, 0, 0, 0);
+      if (currentRise.getTime() > date.getTime()) {
+        currentRise.setTime(currentRise.getTime() - 24 * 3600 * 1000);
+      }
+    }
+
+    const setRes = Astronomy.SearchRiseSet(Astronomy.Body.Sun, obs, -1, currentRise, 2);
+    const currentSet = setRes ? setRes.date : new Date(currentRise.getTime() + 12 * 3600 * 1000);
+
+    const dayOfWeek = currentRise.getDay();
+    const dayInfo = PLANETARY_DAYS[dayOfWeek];
+
+    let hourIndex = 0;
+    let isDiurnal = true;
+    let hourNumber = 1;
+
+    if (date.getTime() < currentSet.getTime()) {
+      isDiurnal = true;
+      const dayDuration = Math.max(1, currentSet.getTime() - currentRise.getTime());
+      const hourLength = dayDuration / 12;
+      const elapsed = Math.max(0, date.getTime() - currentRise.getTime());
+      hourIndex = Math.min(11, Math.floor(elapsed / hourLength));
+      hourNumber = hourIndex + 1;
+    } else {
+      isDiurnal = false;
+      const nextRiseRes = Astronomy.SearchRiseSet(Astronomy.Body.Sun, obs, 1, currentSet, 2);
+      const nextRiseTime = nextRiseRes ? nextRiseRes.date : new Date(currentSet.getTime() + 12 * 3600 * 1000);
+      const nightDuration = Math.max(1, nextRiseTime.getTime() - currentSet.getTime());
+      const hourLength = nightDuration / 12;
+      const elapsed = Math.max(0, date.getTime() - currentSet.getTime());
+      const nightHour = Math.min(11, Math.floor(elapsed / hourLength));
+      hourIndex = 12 + nightHour;
+      hourNumber = nightHour + 1;
+    }
+
+    const currentChaldeanIndex = (dayInfo.chaldeanIndex + hourIndex) % 7;
+    const planet = CHALDEAN_ORDER[currentChaldeanIndex];
+
+    const formatTime = (d: Date) =>
+      d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+    return {
+      day: dayInfo.name,
+      daySymbol: dayInfo.symbol,
+      hour: `Hora de ${planet.name}`,
+      hourSymbol: planet.symbol,
+      hourNumber,
+      isDiurnal,
+      sunrise: formatTime(currentRise),
+      sunset: formatTime(currentSet),
+    };
+  } catch (err) {
+    console.error("Erro no cálculo temporal das horas planetárias:", err);
+    const dayOfWeek = date.getDay();
+    const dayInfo = PLANETARY_DAYS[dayOfWeek];
+    const hour = date.getHours();
+    const hoursSinceDawn = ((hour - 6) + 24) % 24;
+    const currentChaldeanIndex = (dayInfo.chaldeanIndex + hoursSinceDawn) % 7;
+    const planet = CHALDEAN_ORDER[currentChaldeanIndex];
+
+    return {
+      day: dayInfo.name,
+      daySymbol: dayInfo.symbol,
+      hour: `Hora de ${planet.name}`,
+      hourSymbol: planet.symbol,
+      hourNumber: (hoursSinceDawn % 12) + 1,
+      isDiurnal: hoursSinceDawn < 12,
+      sunrise: "06:00",
+      sunset: "18:00",
+    };
+  }
 }
 
-export function getFullAstrologicalData(targetDate: Date = new Date()): AstrologicalCoordinates {
+export function getFullAstrologicalData(
+  targetDate: Date = new Date(),
+  latitude = -23.5505,
+  longitude = -46.6333
+): AstrologicalCoordinates {
   try {
     // 1. Sun Position
     const sunPos = Astronomy.SunPosition(targetDate);
@@ -186,9 +267,9 @@ export function getFullAstrologicalData(targetDate: Date = new Date()): Astrolog
     const moonPhase = Astronomy.MoonPhase(targetDate);
     const phaseInfo = getMoonPhaseDetails(moonPhase, moonIllum.phase_fraction);
 
-    // 3. Thelemic Date & Planetary Coordinates
+    // 3. Thelemic Date & Planetary Coordinates (real temporal calculation)
     const thelemicYear = calculateThelemicYear(targetDate);
-    const planetary = calculatePlanetaryHour(targetDate);
+    const planetary = calculatePlanetaryHour(targetDate, latitude, longitude);
 
     // Crowley format: ☉ in ♎ 15°, ☽ in ♍ 21°, Dies Mercurii, Anno V:xii
     const thelemicDateFormatted = `☉ in ${sunZodiac.symbol} ${Math.floor(sunZodiac.degree)}°, ☽ in ${moonZodiac.symbol} ${Math.floor(moonZodiac.degree)}°, ${planetary.day}, ${thelemicYear}`;
@@ -212,6 +293,10 @@ export function getFullAstrologicalData(targetDate: Date = new Date()): Astrolog
       planetaryDaySymbol: planetary.daySymbol,
       planetaryHour: planetary.hour,
       planetaryHourSymbol: planetary.hourSymbol,
+      isDiurnal: planetary.isDiurnal,
+      hourNumber: planetary.hourNumber,
+      sunrise: planetary.sunrise,
+      sunset: planetary.sunset,
     };
   } catch (err) {
     console.error("Erro ao calcular efemérides astrológicas:", err);
