@@ -266,6 +266,7 @@ export function TreeOfLifeView({
   onNewNoteUnderSephirah,
 }: TreeOfLifeViewProps) {
   const [selectedSephirahId, setSelectedSephirahId] = useState<number>(6); // Default: Tiphareth
+  const [hoveredSephirahId, setHoveredSephirahId] = useState<number | null>(null);
   const [filterQuery, setFilterQuery] = useState("");
 
   // Map notes to each Sephirah based on influences or content matching
@@ -300,6 +301,20 @@ export function TreeOfLifeView({
   const selectedSephirah = SEPHIROT.find((s) => s.id === selectedSephirahId) || SEPHIROT[5];
   const sephirahNotes = notesBySephirah.get(selectedSephirah.id) || [];
 
+  // Caminhos que partem ou chegam na Sephirah selecionada
+  const connectedPaths = useMemo(() => {
+    return TREE_PATHS.filter(
+      ([fromId, toId]) => fromId === selectedSephirah.id || toId === selectedSephirah.id
+    ).map(([fromId, toId, label]) => {
+      const otherId = fromId === selectedSephirah.id ? toId : fromId;
+      const otherSephirah = SEPHIROT.find((s) => s.id === otherId)!;
+      return {
+        label,
+        target: otherSephirah,
+      };
+    });
+  }, [selectedSephirah]);
+
   return (
     <div className="flex-1 h-full bg-medium-900 flex flex-col md:flex-row overflow-hidden">
       {/* 1. Main Interactive Sacred Geometry SVG Canvas */}
@@ -307,8 +322,8 @@ export function TreeOfLifeView({
         {/* Canvas Header */}
         <div className="absolute top-4 left-6 z-10">
           <div className="flex items-center gap-2">
-            <EstrelaDeThelema className="w-5 h-5 text-white" />
-            <h2 className="text-sm font-sans font-bold text-white uppercase tracking-wider">
+            <EstrelaDeThelema className="w-5 h-5 text-medium-100" />
+            <h2 className="text-sm font-sans font-bold text-medium-100 uppercase tracking-wider">
               Árvore da Vida Cabalística (Otz Chiim · Liber 777)
             </h2>
           </div>
@@ -320,96 +335,263 @@ export function TreeOfLifeView({
         {/* The SVG Container */}
         <div className="w-full max-w-xl aspect-[3/4] relative my-auto mt-14 mb-6">
           <svg
-            viewBox="0 0 100 100"
-            className="w-full h-full drop-shadow-[0_0_20px_rgba(0,0,0,0.5)]"
+            viewBox="0 0 100 105"
+            className="w-full h-full"
           >
-            {/* Draw The 22 Paths */}
+            <defs>
+              <style>{`
+                @keyframes sephirahIntenseGlow {
+                  0% { opacity: 0.6; stroke-width: 1.4px; }
+                  100% { opacity: 1; stroke-width: 2.2px; }
+                }
+                @keyframes sephirahPulseWave {
+                  0% { r: 6.8px; opacity: 0.9; stroke-width: 1.6px; }
+                  70% { r: 10.4px; opacity: 0.2; stroke-width: 0.8px; }
+                  100% { r: 11.2px; opacity: 0; stroke-width: 0px; }
+                }
+                @keyframes pathEnergyFlow {
+                  0% { stroke-dashoffset: 24; }
+                  100% { stroke-dashoffset: 0; }
+                }
+              `}</style>
+
+              {/* Dynamic Gradients for Connected Paths */}
+              {TREE_PATHS.map(([fromId, toId], idx) => {
+                const sFrom = SEPHIROT.find((s) => s.id === fromId)!;
+                const sTo = SEPHIROT.find((s) => s.id === toId)!;
+                const isFromSelected = sFrom.id === selectedSephirahId;
+                const isToSelected = sTo.id === selectedSephirahId;
+
+                if (!isFromSelected && !isToSelected) return null;
+
+                const origin = isFromSelected ? sFrom : sTo;
+                const target = isFromSelected ? sTo : sFrom;
+
+                return (
+                  <linearGradient
+                    key={`grad-${idx}-${selectedSephirahId}`}
+                    id={`grad-connected-${idx}`}
+                    gradientUnits="userSpaceOnUse"
+                    x1={origin.x}
+                    y1={origin.y}
+                    x2={target.x}
+                    y2={target.y}
+                  >
+                    <stop offset="0%" stopColor={origin.color} stopOpacity={1} />
+                    <stop offset="30%" stopColor={origin.color} stopOpacity={0.95} />
+                    <stop offset="70%" stopColor={target.color} stopOpacity={0.95} />
+                    <stop offset="100%" stopColor={target.color} stopOpacity={1} />
+                  </linearGradient>
+                );
+              })}
+            </defs>
+
+            {/* 1. Draw The 22 Paths */}
             {TREE_PATHS.map(([fromId, toId, pathLabel], idx) => {
               const sFrom = SEPHIROT.find((s) => s.id === fromId)!;
               const sTo = SEPHIROT.find((s) => s.id === toId)!;
-              const isConnectedToSelected =
+              const isConnected =
                 fromId === selectedSephirahId || toId === selectedSephirahId;
 
+              if (isConnected) {
+                return (
+                  <g key={`path-${idx}`} className="cursor-pointer group">
+                    <title>{pathLabel}</title>
+
+                    {/* Luminous aura line underneath */}
+                    <line
+                      x1={sFrom.x}
+                      y1={sFrom.y}
+                      x2={sTo.x}
+                      y2={sTo.y}
+                      stroke={`url(#grad-connected-${idx})`}
+                      strokeWidth={3.6}
+                      strokeLinecap="round"
+                      opacity={0.45}
+                    />
+
+                    {/* Sharp primary gradient line */}
+                    <line
+                      x1={sFrom.x}
+                      y1={sFrom.y}
+                      x2={sTo.x}
+                      y2={sTo.y}
+                      stroke={`url(#grad-connected-${idx})`}
+                      strokeWidth={1.8}
+                      strokeLinecap="round"
+                    />
+
+                    {/* Animated energy pulse stream */}
+                    <line
+                      x1={sFrom.x}
+                      y1={sFrom.y}
+                      x2={sTo.x}
+                      y2={sTo.y}
+                      stroke="#FFFFFF"
+                      strokeWidth={0.8}
+                      strokeLinecap="round"
+                      strokeDasharray="2 6"
+                      opacity={0.7}
+                      style={{
+                        animation: "pathEnergyFlow 1.6s linear infinite",
+                      }}
+                    />
+                  </g>
+                );
+              }
+
+              // Unconnected Paths: Crisp, theme-resilient lines
               return (
-                <g key={`path-${idx}`} className="group cursor-pointer">
+                <g key={`path-${idx}`} className="cursor-pointer group">
+                  <title>{pathLabel}</title>
+
+                  {/* Contrast casing for visibility in both light & dark */}
                   <line
                     x1={sFrom.x}
                     y1={sFrom.y}
                     x2={sTo.x}
                     y2={sTo.y}
-                    stroke={isConnectedToSelected ? "#E5B842" : "rgba(255,255,255,0.18)"}
-                    strokeWidth={isConnectedToSelected ? 1.2 : 0.8}
-                    strokeDasharray={isConnectedToSelected ? "none" : "none"}
-                    className="transition-colors duration-200"
+                    className="stroke-medium-750 dark:stroke-medium-800"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                  />
+
+                  {/* Defined sacred line */}
+                  <line
+                    x1={sFrom.x}
+                    y1={sFrom.y}
+                    x2={sTo.x}
+                    y2={sTo.y}
+                    className="stroke-medium-400 dark:stroke-medium-500 opacity-75 group-hover:opacity-100 transition-opacity"
+                    strokeWidth={1.0}
+                    strokeLinecap="round"
                   />
                 </g>
               );
             })}
 
-            {/* Invisible Abyss Marker (Da'ath) */}
+            {/* 2. Invisible Abyss Marker (Da'ath) */}
             <circle
               cx={50}
               cy={29}
               r={3}
               fill="none"
-              stroke="rgba(168, 85, 247, 0.4)"
-              strokeWidth={0.6}
-              strokeDasharray="1 1"
+              stroke="#A855F7"
+              strokeWidth={0.7}
+              strokeDasharray="1.2 1.2"
+              className="opacity-70"
             />
             <text
               x={50}
-              y={29.8}
+              y={29.9}
               textAnchor="middle"
-              className="text-[2.2px] font-mono fill-purple-400/70 select-none pointer-events-none"
+              className="text-[2.2px] font-mono fill-purple-500 dark:fill-purple-300 font-semibold select-none pointer-events-none"
             >
               Da'ath
             </text>
 
-            {/* Draw The 10 Sephiroth Circles */}
+            {/* 3. Draw The 10 Sephiroth Spheres */}
             {SEPHIROT.map((sephirah) => {
               const isSelected = sephirah.id === selectedSephirahId;
+              const isHovered = sephirah.id === hoveredSephirahId;
               const noteCount = notesBySephirah.get(sephirah.id)?.length || 0;
 
               return (
                 <g
                   key={`sephirah-${sephirah.id}`}
                   onClick={() => setSelectedSephirahId(sephirah.id)}
-                  className="cursor-pointer group"
+                  onMouseEnter={() => setHoveredSephirahId(sephirah.id)}
+                  onMouseLeave={() => setHoveredSephirahId(null)}
+                  className="cursor-pointer"
                 >
-                  {/* Glowing selection aura */}
+                  {/* SELECTION AURA: Constant & Intense Pulsing in Sephirah's Own Color */}
                   {isSelected && (
+                    <>
+                      {/* Outward wave expanding */}
+                      <circle
+                        cx={sephirah.x}
+                        cy={sephirah.y}
+                        r={8.6}
+                        fill="none"
+                        stroke={sephirah.color}
+                        style={{
+                          animation: "sephirahPulseWave 1.8s cubic-bezier(0.2, 0, 0.4, 1) infinite",
+                        }}
+                      />
+
+                      {/* Intense glowing aura */}
+                      <circle
+                        cx={sephirah.x}
+                        cy={sephirah.y}
+                        r={7.4}
+                        fill={sephirah.color}
+                        fillOpacity={0.25}
+                        stroke={sephirah.color}
+                        style={{
+                          animation: "sephirahIntenseGlow 1.2s ease-in-out infinite alternate",
+                          filter: `drop-shadow(0 0 5px ${sephirah.color})`,
+                        }}
+                      />
+
+                      {/* Concentric dashed ring */}
+                      <circle
+                        cx={sephirah.x}
+                        cy={sephirah.y}
+                        r={6.0}
+                        fill="none"
+                        stroke="#FFFFFF"
+                        strokeWidth={0.8}
+                        strokeDasharray="1 1"
+                        className="opacity-90"
+                      />
+                    </>
+                  )}
+
+                  {/* HOVER AURA: Responsive Pulse in Sephirah's Own Color */}
+                  {isHovered && !isSelected && (
                     <circle
                       cx={sephirah.x}
                       cy={sephirah.y}
                       r={7.2}
-                      fill="none"
-                      stroke="#FFFFFF"
-                      strokeWidth={0.8}
+                      fill={sephirah.color}
+                      fillOpacity={0.2}
+                      stroke={sephirah.color}
+                      strokeWidth={1.4}
                       className="animate-pulse"
+                      style={{
+                        filter: `drop-shadow(0 0 4px ${sephirah.color})`,
+                      }}
                     />
                   )}
 
-                  {/* Outer circle ring */}
+                  {/* Outer Sphere Ring (Dark base) */}
                   <circle
                     cx={sephirah.x}
                     cy={sephirah.y}
-                    r={5.5}
-                    fill="#18181B"
-                    stroke={isSelected ? "#FFFFFF" : sephirah.color}
-                    strokeWidth={isSelected ? 1.4 : 1.0}
-                    className="transition-transform duration-200 group-hover:scale-110"
+                    r={5.2}
+                    className="fill-medium-900 dark:fill-[#121214]"
+                    stroke={isSelected ? sephirah.color : isHovered ? sephirah.color : "rgb(var(--color-medium-700))"}
+                    strokeWidth={isSelected ? 1.6 : isHovered ? 1.2 : 0.8}
                   />
 
-                  {/* Inner color dot */}
+                  {/* Inner Colored Core */}
                   <circle
                     cx={sephirah.x}
                     cy={sephirah.y}
-                    r={4}
+                    r={4.2}
                     fill={sephirah.color}
-                    fillOpacity={0.85}
+                    fillOpacity={isSelected ? 1 : isHovered ? 0.95 : 0.88}
+                    stroke={
+                      sephirah.id === 1
+                        ? "#94A3B8"
+                        : isSelected
+                        ? "#FFFFFF"
+                        : "rgba(0,0,0,0.25)"
+                    }
+                    strokeWidth={sephirah.id === 1 ? 0.8 : isSelected ? 0.6 : 0.4}
                   />
 
-                  {/* Sephirah Hebrew & Latin Label */}
+                  {/* Sephirah Number Label */}
                   <text
                     x={sephirah.x}
                     y={sephirah.y + 1.2}
@@ -425,8 +607,8 @@ export function TreeOfLifeView({
                     x={sephirah.x}
                     y={sephirah.y + 7.8}
                     textAnchor="middle"
-                    fill={isSelected ? "#FFFFFF" : "#A1A1AA"}
-                    className="text-[2.4px] font-mono font-semibold select-none pointer-events-none tracking-tight"
+                    fill={isSelected ? sephirah.color : isHovered ? "currentColor" : "rgb(var(--color-medium-400))"}
+                    className="text-[2.4px] font-mono font-bold select-none pointer-events-none tracking-tight transition-colors"
                   >
                     {sephirah.name}
                   </text>
@@ -434,7 +616,7 @@ export function TreeOfLifeView({
                   {/* Note Count Badge */}
                   {noteCount > 0 && (
                     <g transform={`translate(${sephirah.x + 3.2}, ${sephirah.y - 4.5})`}>
-                      <circle cx={0} cy={0} r={2.0} fill="#E5B842" />
+                      <circle cx={0} cy={0} r={2.0} fill="#E5B842" stroke="#FFFFFF" strokeWidth={0.3} />
                       <text
                         x={0}
                         y={0.7}
@@ -469,17 +651,17 @@ export function TreeOfLifeView({
               <span className="text-[10px] font-mono text-medium-400 uppercase tracking-widest block">
                 Sephirah #{selectedSephirah.id}
               </span>
-              <h3 className="text-2xl font-serif font-bold text-white flex items-center gap-2 mt-0.5">
+              <h3 className="text-2xl font-serif font-bold text-medium-100 flex items-center gap-2 mt-0.5">
                 <span>{selectedSephirah.name}</span>
                 <span className="text-sm font-normal text-medium-400">({selectedSephirah.english})</span>
               </h3>
-              <span className="font-serif text-lg text-amber-300 block mt-0.5">
+              <span className="font-serif text-lg text-amber-400 dark:text-amber-300 block mt-0.5">
                 {selectedSephirah.hebrew}
               </span>
             </div>
 
             <div
-              className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center font-bold text-xs"
+              className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center font-bold text-xs shadow-md"
               style={{ backgroundColor: selectedSephirah.color, color: selectedSephirah.textColor }}
             >
               {selectedSephirah.id}
@@ -496,27 +678,57 @@ export function TreeOfLifeView({
             <div className="grid grid-cols-2 gap-2 text-[11px]">
               <div>
                 <span className="text-medium-400 block text-[10px]">PLANETA / ESFERA:</span>
-                <span className="text-white font-semibold">{selectedSephirah.planet}</span>
+                <span className="text-medium-100 font-semibold">{selectedSephirah.planet}</span>
               </div>
               <div>
                 <span className="text-medium-400 block text-[10px]">DEUS / ATRIBUIÇÃO:</span>
-                <span className="text-white font-semibold">{selectedSephirah.godName}</span>
+                <span className="text-medium-100 font-semibold">{selectedSephirah.godName}</span>
               </div>
               <div>
                 <span className="text-medium-400 block text-[10px]">ARCANJO:</span>
-                <span className="text-white">{selectedSephirah.archangel}</span>
+                <span className="text-medium-200">{selectedSephirah.archangel}</span>
               </div>
               <div>
                 <span className="text-medium-400 block text-[10px]">EXPERIÊNCIA:</span>
-                <span className="text-amber-300/90">{selectedSephirah.spiritualExperience}</span>
+                <span className="text-amber-400 dark:text-amber-300/90 font-medium">{selectedSephirah.spiritualExperience}</span>
               </div>
+            </div>
+          </div>
+
+          {/* Connected Paths & Progression */}
+          <div className="p-3.5 rounded-lg bg-medium-900/80 border border-medium-750 space-y-2">
+            <span className="text-[10px] text-medium-400 font-bold uppercase tracking-wider block">
+              Caminhos & Ligações ({connectedPaths.length})
+            </span>
+            <div className="space-y-1.5">
+              {connectedPaths.map((cp, cIdx) => (
+                <div
+                  key={`cp-${cIdx}`}
+                  onClick={() => setSelectedSephirahId(cp.target.id)}
+                  className="flex items-center justify-between p-2 rounded bg-medium-850/60 hover:bg-medium-800 border border-medium-750/70 cursor-pointer transition-colors group"
+                >
+                  <div className="min-w-0 pr-2">
+                    <span className="text-[11px] font-mono text-medium-300 group-hover:text-medium-100 font-semibold block truncate">
+                      {cp.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[10px] font-mono text-medium-400">→ {cp.target.name}</span>
+                    <div
+                      className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm"
+                      style={{ backgroundColor: cp.target.color }}
+                      title={`Ir para ${cp.target.name}`}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Action: Create Note under this Sephirah */}
           <button
             onClick={() => onNewNoteUnderSephirah(selectedSephirah.name)}
-            className="w-full py-2.5 px-4 rounded-lg bg-white hover:bg-medium-200 text-black font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-sm font-sans"
+            className="w-full py-2.5 px-4 rounded-lg bg-medium-100 hover:bg-medium-200 text-medium-900 font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-sm font-sans"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Criar Nova Nota sob {selectedSephirah.name}</span>
@@ -546,11 +758,11 @@ export function TreeOfLifeView({
                       <span className="text-[10px] font-mono text-medium-400 block">
                         {normalizeCategory(note.type)} · {new Date(note.date).toLocaleDateString("pt-BR")}
                       </span>
-                      <h4 className="text-xs font-semibold text-white truncate group-hover:text-amber-300 transition-colors">
+                      <h4 className="text-xs font-semibold text-medium-100 truncate group-hover:text-amber-400 dark:group-hover:text-amber-300 transition-colors">
                         {note.title}
                       </h4>
                     </div>
-                    <ArrowRight className="w-3.5 h-3.5 text-medium-500 group-hover:text-white shrink-0 transition-transform group-hover:translate-x-0.5" />
+                    <ArrowRight className="w-3.5 h-3.5 text-medium-500 group-hover:text-medium-100 shrink-0 transition-transform group-hover:translate-x-0.5" />
                   </div>
                 ))}
               </div>
