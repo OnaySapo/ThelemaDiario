@@ -8,6 +8,10 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { GraphView } from "@/components/GraphView";
 import { HomeView } from "@/components/HomeView";
 import { DashboardView } from "@/components/DashboardView";
+import { TreeOfLifeView, SEPHIROT } from "@/components/TreeOfLifeView";
+import { RitualTimerModal } from "@/components/RitualTimerModal";
+import { AltarModeModal } from "@/components/AltarModeModal";
+import { AstrologicalCoordinates } from "@/lib/astronomy";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { getDefaultTemplateForCategory } from "@/lib/templates";
 import { applyTheme, getStoredTheme } from "@/lib/theme";
@@ -16,10 +20,13 @@ import { Network } from "lucide-react";
 export default function Home() {
   const [entries, setEntries] = useState<MagickEntry[]>([]);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"home" | "article" | "dashboard">("home");
+  const [viewMode, setViewMode] = useState<"home" | "article" | "dashboard" | "tree">("home");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isTimerModalOpen, setIsTimerModalOpen] = useState(false);
+  const [isAltarModalOpen, setIsAltarModalOpen] = useState(false);
+  const [astroData, setAstroData] = useState<AstrologicalCoordinates | null>(null);
   const [loading, setLoading] = useState(true);
   const [isZenMode, setIsZenMode] = useState(false);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
@@ -61,10 +68,23 @@ export default function Home() {
     }
   };
 
+  const loadAstro = async () => {
+    try {
+      const res = await fetch("/api/astronomy");
+      const data = await res.json();
+      if (data.success) {
+        setAstroData(data);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar dados astrais:", err);
+    }
+  };
+
   useEffect(() => {
     const { theme, mode } = getStoredTheme();
     applyTheme(theme, mode);
     loadEntries();
+    loadAstro();
   }, []);
 
   // Currently selected entry
@@ -217,6 +237,20 @@ export default function Home() {
     }
   };
 
+  // Create note under a specific Sephirah from Tree of Life
+  const handleNewNoteUnderSephirah = (sephirahName: string) => {
+    const sephirah = SEPHIROT.find((s) => s.name === sephirahName);
+    const title = `Operação em ${sephirahName} (${sephirah ? sephirah.transliteration : ""})`;
+    const content = `## Aspiração & Operação Mágicka em ${sephirahName}\n\n**Sephirah:** ${sephirahName} (${sephirah?.transliteration || ""}) — ${sephirah?.english || ""}\n**Força Planetária:** ${sephirah?.planet || ""}\n**Nome Divino:** ${sephirah?.godName || ""}\n**Arcanjo:** ${sephirah?.archangel || ""}\n**Experiência Espiritual:** ${sephirah?.spiritualExperience || ""}\n\n### 1. Invocação & Alinhamento\n\n\n### 2. Visão Astral / Ação Ritualística\n\n\n### 3. Registro de Fenômenos & Fechamento\n`;
+    handleNewNote("Prática", content, title);
+  };
+
+  // Log practice note from Ritual Timer
+  const handleLogPracticeNote = (category: string, title: string, content: string) => {
+    handleNewNote(category as CategoryName, content, title);
+    setIsTimerModalOpen(false);
+  };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-medium-900 text-medium-100 antialiased font-sans">
       {/* 1. Left Sidebar (Obsidian Tree Navigator) */}
@@ -241,10 +275,13 @@ export default function Home() {
           currentView={viewMode}
           onOpenHome={() => setViewMode("home")}
           onOpenDashboard={() => setViewMode("dashboard")}
+          onOpenTree={() => setViewMode("tree")}
+          onOpenTimer={() => setIsTimerModalOpen(true)}
+          onOpenAltar={() => setIsAltarModalOpen(true)}
         />
       </div>
 
-      {/* 2. Center Canvas (Home / Dashboard / Article) */}
+      {/* 2. Center Canvas (Home / Dashboard / Tree / Article) */}
       <main className="flex-1 h-full min-w-0 bg-medium-900 overflow-hidden flex flex-col transition-all duration-300">
         {viewMode === "home" ? (
           <HomeView
@@ -255,6 +292,9 @@ export default function Home() {
             }}
             onNewNote={(cat, content, title) => handleNewNote(cat, content, title)}
             onOpenDashboard={() => setViewMode("dashboard")}
+            onOpenTree={() => setViewMode("tree")}
+            onOpenTimer={() => setIsTimerModalOpen(true)}
+            onOpenAltar={() => setIsAltarModalOpen(true)}
           />
         ) : viewMode === "dashboard" ? (
           <DashboardView
@@ -264,6 +304,15 @@ export default function Home() {
               setViewMode("article");
             }}
             onBackToHome={() => setViewMode("home")}
+          />
+        ) : viewMode === "tree" ? (
+          <TreeOfLifeView
+            entries={entries}
+            onSelectEntry={(entry) => {
+              setSelectedEntryId(entry.id);
+              setViewMode("article");
+            }}
+            onNewNoteUnderSephirah={handleNewNoteUnderSephirah}
           />
         ) : (
           <ArticleView
@@ -301,6 +350,20 @@ export default function Home() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         entries={entries}
+      />
+
+      {/* Ritual Timer & Dharana Modal */}
+      <RitualTimerModal
+        isOpen={isTimerModalOpen}
+        onClose={() => setIsTimerModalOpen(false)}
+        onLogPracticeNote={handleLogPracticeNote}
+      />
+
+      {/* Altar Mode Fullscreen Projection Modal */}
+      <AltarModeModal
+        isOpen={isAltarModalOpen}
+        onClose={() => setIsAltarModalOpen(false)}
+        astroData={astroData}
       />
 
       {/* 4. Fullscreen Expanded Graph Modal (Visão Geral) */}

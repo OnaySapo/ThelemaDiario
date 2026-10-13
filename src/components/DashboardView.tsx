@@ -164,6 +164,28 @@ export function DashboardView({
       .sort((a, b) => (sortMode === "recurrent" ? b.count - a.count : b.avgRating - a.avgRating));
   }, [filteredEntries, sortMode]);
 
+  // Planetary Day Success Correlations
+  const planetaryDayStats = useMemo(() => {
+    const map = new Map<string, { count: number; totalRating: number }>();
+    for (const e of filteredEntries) {
+      if (!e.planetary_day) continue;
+      const day = e.planetary_day.trim();
+      const rating = e.success_rating !== undefined ? e.success_rating : 5;
+      const cur = map.get(day) || { count: 0, totalRating: 0 };
+      cur.count += 1;
+      cur.totalRating += rating;
+      map.set(day, cur);
+    }
+
+    return Array.from(map.entries())
+      .map(([day, data]) => ({
+        day,
+        count: data.count,
+        avgRating: Number((data.totalRating / data.count).toFixed(1)),
+      }))
+      .sort((a, b) => (sortMode === "recurrent" ? b.count - a.count : b.avgRating - a.avgRating));
+  }, [filteredEntries, sortMode]);
+
   // General KPIs
   const kpis = useMemo(() => {
     let totalScore = 0;
@@ -438,97 +460,155 @@ export function DashboardView({
       </section>
 
       {/* ========================================================
-          4. CORRELAÇÕES ASTRAIS & LUNARES DE SUCESSO
+          4. CORRELAÇÕES ASTRAIS & LUNARES DE SUCESSO (LIBER 777)
           ======================================================== */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Signos Lunares de Maior Sucesso */}
-        <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 space-y-4 shadow-sm">
-          <div className="flex items-center justify-between border-b border-medium-750 pb-3">
-            <div className="flex items-center gap-2">
-              <IconeLuaThelema className="w-4 h-4 text-white" size={16} />
-              <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                Eficácia por Signo Lunar (☽)
-              </h3>
-            </div>
-            <span className="text-[10px] font-mono text-medium-400">
-              {sortMode === "recurrent" ? "Mais Usados" : "Maior Nota"}
-            </span>
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <h2 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+              Correlações Astrais de Sucesso (Liber 777 & Eficácia Empírica)
+            </h2>
           </div>
-
-          <div className="space-y-2">
-            {moonSignStats.length === 0 ? (
-              <p className="text-xs text-medium-500 italic py-2">
-                Sem registros com signo lunar anotado.
-              </p>
-            ) : (
-              moonSignStats.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="p-2.5 rounded-lg bg-medium-900 border border-medium-750 flex items-center justify-between gap-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <ZodiacIcon sign={item.sign} className="w-4 h-4 text-white" size={16} />
-                    <span className="text-xs font-sans font-semibold text-white">
-                      {item.sign}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3 font-mono text-xs">
-                    <span className="text-medium-400 text-[11px]">
-                      {item.count} {item.count === 1 ? "nota" : "notas"}
-                    </span>
-                    <span className="flex items-center gap-1 text-white font-bold bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
-                      <Star className="w-3 h-3 fill-white text-white" />
-                      {item.avgRating}/10
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <span className="text-[10px] font-mono text-medium-400">
+            {sortMode === "recurrent" ? "Ordenado por Recorrência" : "Ordenado por Maior Nota de Sucesso"}
+          </span>
         </div>
 
-        {/* Fases da Lua de Maior Sucesso */}
-        <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 space-y-4 shadow-sm">
-          <div className="flex items-center justify-between border-b border-medium-750 pb-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-white" />
-              <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                Eficácia por Fase Lunar
-              </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* 1. Signos Lunares de Maior Sucesso */}
+          <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-medium-750 pb-3">
+              <div className="flex items-center gap-2">
+                <IconeLuaThelema className="w-4 h-4 text-white" size={16} />
+                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                  Signo Lunar (☽)
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-medium-400">
+                {moonSignStats.length} signos
+              </span>
             </div>
-            <span className="text-[10px] font-mono text-medium-400">
-              {sortMode === "recurrent" ? "Mais Usados" : "Maior Nota"}
-            </span>
+
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {moonSignStats.length === 0 ? (
+                <p className="text-xs text-medium-500 italic py-2">
+                  Sem registros com signo lunar anotado.
+                </p>
+              ) : (
+                moonSignStats.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2.5 rounded-lg bg-medium-900 border border-medium-750 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-2">
+                      <ZodiacIcon sign={item.sign} className="w-4 h-4 text-white" size={16} />
+                      <span className="text-xs font-sans font-semibold text-white">
+                        {item.sign}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 font-mono text-xs">
+                      <span className="text-medium-400 text-[11px]">
+                        {item.count} {item.count === 1 ? "nota" : "notas"}
+                      </span>
+                      <span className="flex items-center gap-1 text-white font-bold bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
+                        <Star className="w-3 h-3 fill-white text-white" />
+                        {item.avgRating}/10
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
 
-          <div className="space-y-2">
-            {moonPhaseStats.length === 0 ? (
-              <p className="text-xs text-medium-500 italic py-2">
-                Sem registros com fase da lua anotada.
-              </p>
-            ) : (
-              moonPhaseStats.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="p-2.5 rounded-lg bg-medium-900 border border-medium-750 flex items-center justify-between gap-3"
-                >
-                  <span className="text-xs font-sans font-semibold text-white">
-                    {item.phase}
-                  </span>
+          {/* 2. Fases da Lua de Maior Sucesso */}
+          <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-medium-750 pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-white" />
+                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                  Fase Lunar (Fase)
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-medium-400">
+                {moonPhaseStats.length} fases
+              </span>
+            </div>
 
-                  <div className="flex items-center gap-3 font-mono text-xs">
-                    <span className="text-medium-400 text-[11px]">
-                      {item.count} {item.count === 1 ? "nota" : "notas"}
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {moonPhaseStats.length === 0 ? (
+                <p className="text-xs text-medium-500 italic py-2">
+                  Sem registros com fase lunar anotada.
+                </p>
+              ) : (
+                moonPhaseStats.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2.5 rounded-lg bg-medium-900 border border-medium-750 flex items-center justify-between gap-3"
+                  >
+                    <span className="text-xs font-sans font-semibold text-white">
+                      {item.phase}
                     </span>
-                    <span className="flex items-center gap-1 text-white font-bold bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
-                      <Star className="w-3 h-3 fill-white text-white" />
-                      {item.avgRating}/10
-                    </span>
+
+                    <div className="flex items-center gap-3 font-mono text-xs">
+                      <span className="text-medium-400 text-[11px]">
+                        {item.count} {item.count === 1 ? "nota" : "notas"}
+                      </span>
+                      <span className="flex items-center gap-1 text-white font-bold bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
+                        <Star className="w-3 h-3 fill-white text-white" />
+                        {item.avgRating}/10
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* 3. Dias Planetários de Maior Sucesso */}
+          <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-medium-750 pb-3">
+              <div className="flex items-center gap-2">
+                <IconeSolThelema className="w-4 h-4 text-white" size={16} />
+                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                  Dia Planetário
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-medium-400">
+                {planetaryDayStats.length} dias
+              </span>
+            </div>
+
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {planetaryDayStats.length === 0 ? (
+                <p className="text-xs text-medium-500 italic py-2">
+                  Sem registros com dia planetário anotado.
+                </p>
+              ) : (
+                planetaryDayStats.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2.5 rounded-lg bg-medium-900 border border-medium-750 flex items-center justify-between gap-3"
+                  >
+                    <span className="text-xs font-sans font-semibold text-white">
+                      {item.day}
+                    </span>
+
+                    <div className="flex items-center gap-3 font-mono text-xs">
+                      <span className="text-medium-400 text-[11px]">
+                        {item.count} {item.count === 1 ? "nota" : "notas"}
+                      </span>
+                      <span className="flex items-center gap-1 text-white font-bold bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
+                        <Star className="w-3 h-3 fill-white text-white" />
+                        {item.avgRating}/10
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </section>

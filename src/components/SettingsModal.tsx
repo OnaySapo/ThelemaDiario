@@ -17,6 +17,7 @@ import {
   Navigation,
   Archive,
   Globe,
+  Search,
 } from "lucide-react";
 import { MagickEntry } from "@/lib/types";
 import { EstrelaDeThelema } from "@/components/ThelemicIcons";
@@ -27,6 +28,47 @@ import {
   applyTheme,
   getStoredTheme,
 } from "@/lib/theme";
+
+const CITY_PRESETS = [
+  { name: "São Paulo, SP (Brasil)", lat: -23.5505, lng: -46.6333 },
+  { name: "Rio de Janeiro, RJ (Brasil)", lat: -22.9068, lng: -43.1729 },
+  { name: "Brasília, DF (Brasil)", lat: -15.7975, lng: -47.8919 },
+  { name: "Belo Horizonte, MG (Brasil)", lat: -19.9167, lng: -43.9345 },
+  { name: "Curitiba, PR (Brasil)", lat: -25.4284, lng: -49.2733 },
+  { name: "Porto Alegre, RS (Brasil)", lat: -30.0346, lng: -51.2177 },
+  { name: "Salvador, BA (Brasil)", lat: -12.9777, lng: -38.5016 },
+  { name: "Recife, PE (Brasil)", lat: -8.0476, lng: -34.8770 },
+  { name: "Fortaleza, CE (Brasil)", lat: -3.7319, lng: -38.5267 },
+  { name: "Manaus, AM (Brasil)", lat: -3.1190, lng: -60.0217 },
+  { name: "Belém, PA (Brasil)", lat: -1.4558, lng: -48.4902 },
+  { name: "Goiânia, GO (Brasil)", lat: -16.6869, lng: -49.2648 },
+  { name: "Florianópolis, SC (Brasil)", lat: -27.5954, lng: -48.5480 },
+  { name: "Campinas, SP (Brasil)", lat: -22.9099, lng: -47.0626 },
+  { name: "Vitória, ES (Brasil)", lat: -20.3155, lng: -40.3128 },
+  { name: "Natal, RN (Brasil)", lat: -5.7945, lng: -35.2110 },
+  { name: "João Pessoa, PB (Brasil)", lat: -7.1195, lng: -34.8450 },
+  { name: "Maceió, AL (Brasil)", lat: -9.6498, lng: -35.7089 },
+  { name: "Aracaju, SE (Brasil)", lat: -10.9472, lng: -37.0731 },
+  { name: "Teresina, PI (Brasil)", lat: -5.0920, lng: -42.8038 },
+  { name: "São Luís, MA (Brasil)", lat: -2.5307, lng: -44.3068 },
+  { name: "Campo Grande, MS (Brasil)", lat: -20.4697, lng: -54.6201 },
+  { name: "Cuiabá, MT (Brasil)", lat: -15.6010, lng: -56.0974 },
+  { name: "Palmas, TO (Brasil)", lat: -10.2491, lng: -48.3243 },
+  { name: "Porto Velho, RO (Brasil)", lat: -8.7619, lng: -63.9039 },
+  { name: "Rio Branco, AC (Brasil)", lat: -9.9753, lng: -67.8249 },
+  { name: "Boa Vista, RR (Brasil)", lat: 2.8235, lng: -60.6758 },
+  { name: "Macapá, AP (Brasil)", lat: 0.0356, lng: -51.0705 },
+  { name: "Lisboa, Portugal", lat: 38.7223, lng: -9.1393 },
+  { name: "Porto, Portugal", lat: 41.1579, lng: -8.6291 },
+  { name: "Londres, Reino Unido", lat: 51.5074, lng: -0.1278 },
+  { name: "Cairo, Egito", lat: 30.0444, lng: 31.2357 },
+  { name: "Roma, Itália", lat: 41.9028, lng: 12.4964 },
+  { name: "Atenas, Grécia", lat: 37.9838, lng: 23.7275 },
+  { name: "Paris, França", lat: 48.8566, lng: 2.3522 },
+  { name: "Nova York, EUA", lat: 40.7128, lng: -74.0060 },
+  { name: "Los Angeles, EUA", lat: 34.0522, lng: -118.2437 },
+  { name: "Buenos Aires, Argentina", lat: -34.6037, lng: -58.3816 },
+];
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -128,6 +170,44 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
         .catch(() => {});
     }
   }, [isOpen]);
+
+  const [isSearchingCity, setIsSearchingCity] = useState(false);
+
+  const handleSelectCityPreset = (cityName: string) => {
+    const found = CITY_PRESETS.find((p) => p.name === cityName);
+    if (found) {
+      setGeoCity(found.name);
+      setGeoLat(found.lat.toFixed(4));
+      setGeoLng(found.lng.toFixed(4));
+    }
+  };
+
+  const handleSearchCityCoords = async () => {
+    if (!geoCity.trim()) return;
+    try {
+      setIsSearchingCity(true);
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+          geoCity.trim()
+        )}&limit=1`
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const found = data[0];
+        setGeoLat(parseFloat(found.lat).toFixed(4));
+        setGeoLng(parseFloat(found.lon).toFixed(4));
+        setGeoCity(found.display_name.split(",").slice(0, 2).join(",").trim());
+        setGeoSaveStatus(`Coordenadas encontradas: ${parseFloat(found.lat).toFixed(4)}, ${parseFloat(found.lon).toFixed(4)}`);
+        setTimeout(() => setGeoSaveStatus(null), 3500);
+      } else {
+        alert("Cidade não encontrada no mapa. Insira as coordenadas manualmente nos campos abaixo.");
+      }
+    } catch (e: any) {
+      alert("Não foi possível buscar as coordenadas online no momento. Digite a latitude e longitude manualmente.");
+    } finally {
+      setIsSearchingCity(false);
+    }
+  };
 
   const handleDetectLocation = () => {
     if (typeof window === "undefined" || !navigator.geolocation) {
@@ -477,22 +557,57 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
               O cálculo das <strong>Horas Planetárias Thelêmicas e Herméticas</strong> é temporal, dividindo o intervalo exato entre o Nascer e o Pôr do Sol em 12 horas diurnas e 12 noturnas. Configure suas coordenadas para máxima precisão mágica.
             </p>
 
+            {/* Seletor Rápido de Cidade por Preset */}
+            <div>
+              <label className="block text-[10px] font-mono text-medium-400 mb-1 uppercase tracking-wider">
+                1. PRESET RÁPIDO DE CAPITAIS / CIDADES HERMÉTICAS
+              </label>
+              <select
+                onChange={(e) => {
+                  if (e.target.value) handleSelectCityPreset(e.target.value);
+                }}
+                defaultValue=""
+                className="w-full bg-medium-900 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-white font-sans"
+              >
+                <option value="" disabled>
+                  Escolha uma cidade da lista para preenchimento imediato...
+                </option>
+                {CITY_PRESETS.map((p, idx) => (
+                  <option key={idx} value={p.name}>
+                    {p.name} ({p.lat > 0 ? `${p.lat}°N` : `${Math.abs(p.lat)}°S`}, {p.lng > 0 ? `${p.lng}°L` : `${Math.abs(p.lng)}°O`})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Inserção Manual / Busca de Qualquer Cidade */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <div>
-                <label className="block text-[10px] font-mono text-medium-400 mb-1">
-                  CIDADE / LOCALIDADE
+              <div className="sm:col-span-1">
+                <label className="block text-[10px] font-mono text-medium-400 mb-1 uppercase tracking-wider">
+                  2. CIDADE MANUAL
                 </label>
-                <input
-                  type="text"
-                  value={geoCity}
-                  onChange={(e) => setGeoCity(e.target.value)}
-                  placeholder="Ex: São Paulo, SP"
-                  className="w-full bg-medium-900 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-white font-sans"
-                />
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={geoCity}
+                    onChange={(e) => setGeoCity(e.target.value)}
+                    placeholder="Ex: Sorocaba, Coimbra, etc."
+                    className="flex-1 min-w-0 bg-medium-900 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-white font-sans"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSearchCityCoords}
+                    disabled={isSearchingCity}
+                    title="Buscar coordenadas no mapa online sem necessitar de permissão de GPS"
+                    className="px-2.5 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded border border-medium-700 text-xs transition-colors shrink-0"
+                  >
+                    <Search className={`w-3.5 h-3.5 ${isSearchingCity ? "animate-spin text-amber-400" : ""}`} />
+                  </button>
+                </div>
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono text-medium-400 mb-1">
+                <label className="block text-[10px] font-mono text-medium-400 mb-1 uppercase tracking-wider">
                   LATITUDE (°DECIMAL)
                 </label>
                 <input
@@ -505,7 +620,7 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono text-medium-400 mb-1">
+                <label className="block text-[10px] font-mono text-medium-400 mb-1 uppercase tracking-wider">
                   LONGITUDE (°DECIMAL)
                 </label>
                 <input

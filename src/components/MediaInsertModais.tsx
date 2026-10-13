@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { X, Upload, Link, Image as ImageIcon, Video, Check, Loader2, Play } from "lucide-react";
+import { X, Upload, Link, Image as ImageIcon, Video, Check, Loader2, Play, Sparkles } from "lucide-react";
+import { compressImageFile } from "@/lib/mediaCompressor";
 
 // ==========================================
 // 1. MODAL DE INSERÇÃO DE IMAGEM
@@ -17,7 +18,9 @@ export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModal
   const [imageUrl, setImageUrl] = useState("");
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [uploadProgressMsg, setUploadProgressMsg] = useState("");
   const [uploadError, setUploadError] = useState("");
+  const [compressionInfo, setCompressionInfo] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   if (!isOpen) return null;
@@ -25,9 +28,24 @@ export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModal
   const handleFileUpload = async (file: File) => {
     setUploading(true);
     setUploadError("");
+    setCompressionInfo(null);
+    setUploadProgressMsg("Otimizando e comprimindo imagem sem perda de qualidade...");
+
     try {
+      // Otimização e compressão automática inteligente
+      const compResult = await compressImageFile(file);
+      const fileToSend = compResult.file;
+
+      if (compResult.compressionRatio > 0) {
+        const origKB = (compResult.originalSize / 1024).toFixed(0);
+        const compKB = (compResult.compressedSize / 1024).toFixed(0);
+        setCompressionInfo(`Otimizado com sucesso: de ${origKB}KB para ${compKB}KB (-${compResult.compressionRatio}% de peso)`);
+      }
+
+      setUploadProgressMsg("Enviando arquivo otimizado para o diário...");
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fileToSend);
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -47,6 +65,7 @@ export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModal
       setUploadError(err.message || "Erro de conexão ao enviar imagem.");
     } finally {
       setUploading(false);
+      setUploadProgressMsg("");
     }
   };
 
@@ -148,7 +167,9 @@ export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModal
                 {uploading ? (
                   <div className="flex flex-col items-center justify-center gap-2">
                     <Loader2 className="w-6 h-6 text-white animate-spin" />
-                    <span className="text-xs font-mono text-medium-300">Enviando imagem para o diário...</span>
+                    <span className="text-xs font-mono text-medium-300">
+                      {uploadProgressMsg || "Processando e enviando imagem..."}
+                    </span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-2">
@@ -157,11 +178,18 @@ export function ImageInsertModal({ isOpen, onClose, onInsert }: ImageInsertModal
                       Clique para escolher uma imagem do seu computador
                     </span>
                     <span className="text-[10px] font-mono text-medium-400">
-                      PNG, JPG, WEBP, GIF, SVG
+                      PNG, JPG, WEBP, GIF, SVG · Otimização e compressão automática
                     </span>
                   </div>
                 )}
               </div>
+
+              {compressionInfo && (
+                <div className="mt-2.5 p-2 rounded-md bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-2 text-emerald-300 text-[11px] font-mono">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>{compressionInfo}</span>
+                </div>
+              )}
 
               {uploadError && (
                 <p className="text-xs text-red-400 font-mono mt-2">{uploadError}</p>

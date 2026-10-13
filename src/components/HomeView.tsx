@@ -39,6 +39,7 @@ import {
   Flame,
   Award,
   Layers,
+  Bell,
 } from "lucide-react";
 
 interface HomeViewProps {
@@ -46,6 +47,9 @@ interface HomeViewProps {
   onSelectEntry: (entry: MagickEntry) => void;
   onNewNote: (prefilledCategory?: CategoryName, prefilledContent?: string, prefilledTitle?: string) => void;
   onOpenDashboard: () => void;
+  onOpenTree?: () => void;
+  onOpenTimer?: () => void;
+  onOpenAltar?: () => void;
 }
 
 export function HomeView({
@@ -53,6 +57,9 @@ export function HomeView({
   onSelectEntry,
   onNewNote,
   onOpenDashboard,
+  onOpenTree,
+  onOpenTimer,
+  onOpenAltar,
 }: HomeViewProps) {
   // Live Clock & Astronomy
   const [now, setNow] = useState(new Date());
@@ -331,6 +338,80 @@ export function HomeView({
               </button>
             </div>
           </div>
+        )}
+      </section>
+
+      {/* ========================================================
+          TEMPLE TOOLS (ÁRVORE DA VIDA, DHARANA TIMER, MODO ALTAR)
+          ======================================================== */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {onOpenAltar && (
+          <button
+            type="button"
+            onClick={onOpenAltar}
+            className="p-3.5 rounded-xl bg-medium-850 hover:bg-medium-800 border border-medium-700 hover:border-amber-500/50 transition-all text-left flex items-center justify-between group shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
+                <Flame className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-white block group-hover:text-amber-300 transition-colors">
+                  Modo Altar / Projeção
+                </span>
+                <span className="text-[10px] font-mono text-medium-400 block">
+                  Visão em tela cheia para rituais
+                </span>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-medium-500 group-hover:text-white transition-transform group-hover:translate-x-0.5" />
+          </button>
+        )}
+
+        {onOpenTimer && (
+          <button
+            type="button"
+            onClick={onOpenTimer}
+            className="p-3.5 rounded-xl bg-medium-850 hover:bg-medium-800 border border-medium-700 hover:border-blue-500/50 transition-all text-left flex items-center justify-between group shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-white block group-hover:text-blue-300 transition-colors">
+                  Dharana & Cronômetro
+                </span>
+                <span className="text-[10px] font-mono text-medium-400 block">
+                  Contador de quebras e sino tibetano
+                </span>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-medium-500 group-hover:text-white transition-transform group-hover:translate-x-0.5" />
+          </button>
+        )}
+
+        {onOpenTree && (
+          <button
+            type="button"
+            onClick={onOpenTree}
+            className="p-3.5 rounded-xl bg-medium-850 hover:bg-medium-800 border border-medium-700 hover:border-purple-500/50 transition-all text-left flex items-center justify-between group shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-105 transition-transform">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-white block group-hover:text-purple-300 transition-colors">
+                  Árvore da Vida (777)
+                </span>
+                <span className="text-[10px] font-mono text-medium-400 block">
+                  10 Sephiroth e os 22 Caminhos
+                </span>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-medium-500 group-hover:text-white transition-transform group-hover:translate-x-0.5" />
+          </button>
         )}
       </section>
 

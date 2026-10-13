@@ -16,6 +16,8 @@ import {
   Star,
   Home,
   BarChart2,
+  Clock,
+  Flame,
 } from "lucide-react";
 import { EstrelaDeThelema, getCategoryThelemicIcon, ZodiacIcon, IconeSolThelema } from "@/components/ThelemicIcons";
 
@@ -29,9 +31,12 @@ interface SidebarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onOpenSettings: () => void;
-  currentView?: "home" | "article" | "dashboard";
+  currentView?: "home" | "article" | "dashboard" | "tree";
   onOpenHome?: () => void;
   onOpenDashboard?: () => void;
+  onOpenTree?: () => void;
+  onOpenTimer?: () => void;
+  onOpenAltar?: () => void;
 }
 
 export function Sidebar({
@@ -47,6 +52,9 @@ export function Sidebar({
   currentView = "article",
   onOpenHome,
   onOpenDashboard,
+  onOpenTree,
+  onOpenTimer,
+  onOpenAltar,
 }: SidebarProps) {
   const categories: { name: string; label: string; icon: React.ReactNode }[] = [
     { name: "all", label: "Todas", icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
@@ -98,33 +106,74 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Navigation Quick Bar (Home / Dashboard) */}
-      <div className="p-2 border-b border-medium-700 bg-medium-850/60 grid grid-cols-2 gap-1.5">
-        <button
-          onClick={onOpenHome}
-          className={`flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all ${
-            currentView === "home"
-              ? "bg-white text-black font-semibold shadow-sm"
-              : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
-          }`}
-          title="Tela Inicial Thelêmica (Portal de Entrada)"
-        >
-          <Home className="w-3.5 h-3.5" />
-          <span>Início</span>
-        </button>
+      {/* Navigation Quick Bar (Home / Dashboard / Árvore / Dharana / Altar) */}
+      <div className="p-2 border-b border-medium-700 bg-medium-850/60 space-y-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
+          <button
+            onClick={onOpenHome}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${
+              currentView === "home"
+                ? "bg-white text-black font-semibold shadow-sm"
+                : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
+            }`}
+            title="Tela Inicial Thelêmica (Portal de Entrada)"
+          >
+            <Home className="w-3.5 h-3.5" />
+            <span>Início</span>
+          </button>
 
-        <button
-          onClick={onOpenDashboard}
-          className={`flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-md text-xs font-medium transition-all ${
-            currentView === "dashboard"
-              ? "bg-white text-black font-semibold shadow-sm"
-              : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
-          }`}
-          title="Dashboard Analítico de Frequência e Sucesso"
-        >
-          <BarChart2 className="w-3.5 h-3.5" />
-          <span>Dashboard</span>
-        </button>
+          <button
+            onClick={onOpenDashboard}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${
+              currentView === "dashboard"
+                ? "bg-white text-black font-semibold shadow-sm"
+                : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
+            }`}
+            title="Dashboard Analítico de Frequência e Sucesso"
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span>Dashboard</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-1">
+          {onOpenTree && (
+            <button
+              onClick={onOpenTree}
+              className={`flex items-center justify-center gap-1 py-1 px-1 rounded text-[11px] font-mono transition-all ${
+                currentView === "tree"
+                  ? "bg-purple-600 text-white font-semibold shadow-sm"
+                  : "bg-medium-900 hover:bg-medium-800 text-medium-300 hover:text-white border border-medium-750"
+              }`}
+              title="Árvore da Vida Cabalística (Otz Chiim / 10 Sephiroth)"
+            >
+              <Sparkles className="w-3 h-3 text-purple-400" />
+              <span>Árvore</span>
+            </button>
+          )}
+
+          {onOpenTimer && (
+            <button
+              onClick={onOpenTimer}
+              className="flex items-center justify-center gap-1 py-1 px-1 rounded text-[11px] font-mono bg-medium-900 hover:bg-medium-800 text-medium-300 hover:text-white border border-medium-750 transition-all"
+              title="Cronômetro & Temporizador de Dharana (Liber E)"
+            >
+              <Clock className="w-3 h-3 text-blue-400" />
+              <span>Dharana</span>
+            </button>
+          )}
+
+          {onOpenAltar && (
+            <button
+              onClick={onOpenAltar}
+              className="flex items-center justify-center gap-1 py-1 px-1 rounded text-[11px] font-mono bg-medium-900 hover:bg-medium-800 text-medium-300 hover:text-white border border-medium-750 transition-all"
+              title="Modo Altar em Tela Cheia para Rituais"
+            >
+              <Flame className="w-3 h-3 text-amber-400" />
+              <span>Altar</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* New Note Button & Search */}
