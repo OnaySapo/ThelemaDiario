@@ -87,6 +87,8 @@ export function ArticleView({
   // Oracle edit state
   const [editSpread, setEditSpread] = useState("Tiragem Livre");
   const [editQuery, setEditQuery] = useState("");
+  const [editQuerentName, setEditQuerentName] = useState("");
+  const [editQuerentBirthdate, setEditQuerentBirthdate] = useState("");
   const [editCards, setEditCards] = useState<CardOnTable[]>([]);
   const [editCardBackStyle, setEditCardBackStyle] = useState<"rosa_cruz" | "thelema">("rosa_cruz");
   const [hasOracleTable, setHasOracleTable] = useState<boolean>(false);
@@ -267,12 +269,16 @@ export function ArticleView({
     const hasExistingCards = !!(entry.oracle_data && entry.oracle_data.cards && entry.oracle_data.cards.length > 0);
     if (entry.oracle_data) {
       setEditQuery(entry.oracle_data.query || "");
+      setEditQuerentName(entry.oracle_data.querent_name || "");
+      setEditQuerentBirthdate(entry.oracle_data.querent_birthdate || "");
       setEditCards((entry.oracle_data.cards as CardOnTable[]) || []);
       setEditSpread(entry.oracle_data.spread_name || "Tiragem Livre");
       setEditCardBackStyle(entry.oracle_data.card_back_style || "rosa_cruz");
       setHasOracleTable(hasExistingCards);
     } else {
       setEditQuery("");
+      setEditQuerentName("");
+      setEditQuerentBirthdate("");
       setEditCards([]);
       setEditSpread("Tiragem Livre");
       setEditCardBackStyle("rosa_cruz");
@@ -321,6 +327,8 @@ export function ArticleView({
               query: editQuery.trim(),
               cards: editCards,
               card_back_style: editCardBackStyle,
+              querent_name: editQuerentName.trim(),
+              querent_birthdate: editQuerentBirthdate,
             }
           : undefined,
     });
@@ -470,6 +478,8 @@ export function ArticleView({
     editSpread,
     editQuery,
     editCardBackStyle,
+    editQuerentName,
+    editQuerentBirthdate,
     hasOracleTable,
   ]);
 
@@ -1134,6 +1144,18 @@ export function ArticleView({
                   </p>
                 )}
 
+                {entry.oracle_data.querent_name && (
+                  <p className="text-xs font-mono text-medium-300">
+                    <span className="text-medium-400">Consulente:</span>{" "}
+                    <span className="text-white font-semibold">{entry.oracle_data.querent_name}</span>
+                    {entry.oracle_data.querent_birthdate && (
+                      <span className="text-medium-400">
+                        {" "}· Nasc. {entry.oracle_data.querent_birthdate.split("-").reverse().join("/")}
+                      </span>
+                    )}
+                  </p>
+                )}
+
                 {/* Mesa com as cartas espalhadas exatamente como no altar */}
                 {entry.oracle_data.cards && entry.oracle_data.cards.length > 0 && (
                   <OracleTable
@@ -1141,6 +1163,8 @@ export function ArticleView({
                     isEditable={false}
                     query={entry.oracle_data.query}
                     spreadName={entry.oracle_data.spread_name}
+                    querentName={entry.oracle_data.querent_name}
+                    querentBirthdate={entry.oracle_data.querent_birthdate}
                     cardBackStyle={entry.oracle_data.card_back_style || "rosa_cruz"}
                     onApplyInterpretation={async (text) => {
                       const updatedContent = entry.content + "\n\n### 🔮 Palpite Hermético do Frater Auxiliar:\n" + text;
@@ -1376,6 +1400,41 @@ export function ArticleView({
                       className="w-full bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-white font-mono"
                     />
                   </div>
+                  <div>
+                    <label className="block text-[10px] font-mono text-medium-400 mb-1">
+                      NOME DA PESSOA FOCO DA TIRAGEM
+                    </label>
+                    <input
+                      type="text"
+                      value={editQuerentName}
+                      onChange={(e) => setEditQuerentName(e.target.value)}
+                      placeholder="Ex: Frater Perdurabo, Maria Silva..."
+                      className="w-full bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-white font-serif"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono text-medium-400 mb-1">
+                      DATA DE NASCIMENTO <span className="text-medium-500">(opcional · Arcanos Pessoais)</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={editQuerentBirthdate}
+                        onChange={(e) => setEditQuerentBirthdate(e.target.value)}
+                        className="flex-1 bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-white font-mono"
+                      />
+                      {editQuerentBirthdate && (
+                        <button
+                          type="button"
+                          onClick={() => setEditQuerentBirthdate("")}
+                          className="p-2 text-medium-400 hover:text-red-300 border border-medium-700 rounded-md transition-colors"
+                          title="Limpar data de nascimento"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* The Interactive Table */}
@@ -1385,6 +1444,8 @@ export function ArticleView({
                   isEditable={true}
                   query={editQuery}
                   spreadName={editSpread}
+                  querentName={editQuerentName}
+                  querentBirthdate={editQuerentBirthdate}
                   cardBackStyle={editCardBackStyle}
                   onCardBackStyleChange={setEditCardBackStyle}
                   onApplyInterpretation={(text) => {

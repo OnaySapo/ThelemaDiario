@@ -107,7 +107,8 @@ export function AltarModeModal({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col justify-between p-6 sm:p-10 select-none overflow-y-auto transition-colors duration-300 animate-in fade-in ${
+      data-altar-theme={altarTheme}
+      className={`theme-isolated altar-mode-container fixed inset-0 z-50 flex flex-col justify-between p-6 sm:p-10 select-none overflow-y-auto transition-colors duration-300 animate-in fade-in ${
         isLight
           ? "bg-gradient-to-b from-[#FAF8F5] via-[#F5F2EA] to-[#ECE7DC] text-slate-900"
           : "bg-[#07090E] text-white"
@@ -150,14 +151,15 @@ export function AltarModeModal({
             onClick={toggleAltarTheme}
             className={`px-3 py-1.5 rounded-lg border text-xs font-mono transition-all flex items-center gap-1.5 shadow-sm font-semibold ${
               isLight
-                ? "bg-amber-500/15 hover:bg-amber-500/25 border-amber-600/30 text-amber-950"
-                : "bg-neutral-800/90 hover:bg-neutral-700 border-neutral-600 text-neutral-200"
+                ? "bg-amber-100/90 hover:bg-amber-200/90 border-amber-400/60 text-amber-950"
+                : "bg-neutral-900/90 hover:bg-neutral-800 border-neutral-700 text-neutral-100"
             }`}
+            style={{ color: isLight ? "#451a03" : "#f8fafc" }}
             title="Alternar entre Modo Claro e Escuro (Atalho: T)"
           >
             {isLight ? (
               <>
-                <Sun className="w-3.5 h-3.5 text-amber-700" />
+                <Sun className="w-3.5 h-3.5 text-amber-800" />
                 <span>Modo Claro</span>
               </>
             ) : (
@@ -168,7 +170,7 @@ export function AltarModeModal({
             )}
             <kbd
               className={`text-[10px] px-1 rounded font-bold ${
-                isLight ? "bg-amber-200/80 text-amber-950" : "bg-neutral-700 text-neutral-300"
+                isLight ? "bg-amber-200/90 text-amber-950" : "bg-neutral-800 text-neutral-200 border border-neutral-700"
               }`}
             >
               T
@@ -180,15 +182,16 @@ export function AltarModeModal({
             onClick={() => playRitualKnock()}
             className={`px-3 py-1.5 rounded-lg border text-xs font-mono transition-all flex items-center gap-1.5 shadow-sm font-semibold ${
               isLight
-                ? "bg-white hover:bg-slate-100 border-slate-300 text-slate-800"
-                : "bg-neutral-900/90 hover:bg-neutral-800 border-neutral-700 text-neutral-200 hover:text-white"
+                ? "bg-[#FFFDF9] hover:bg-amber-100/70 border-amber-800/30 text-stone-900"
+                : "bg-neutral-900/90 hover:bg-neutral-800 border-neutral-700 text-neutral-100 hover:text-white"
             }`}
+            style={{ color: isLight ? "#1c1917" : "#f8fafc" }}
             title="Toque ritualístico (Atalho: K)"
           >
             <span>Bateria / Knock</span>
             <kbd
               className={`text-[10px] px-1 rounded font-bold ${
-                isLight ? "bg-slate-200 text-slate-700" : "bg-neutral-800 text-neutral-400"
+                isLight ? "bg-stone-200/90 text-stone-900" : "bg-neutral-800 text-neutral-300 border border-neutral-700"
               }`}
             >
               K
@@ -200,16 +203,17 @@ export function AltarModeModal({
             onClick={() => playCeremonialGong({ volume: 0.8 })}
             className={`px-3 py-1.5 rounded-lg border text-xs font-mono transition-all flex items-center gap-1.5 shadow-sm font-semibold ${
               isLight
-                ? "bg-amber-100 hover:bg-amber-200/80 border-amber-300 text-amber-950"
+                ? "bg-amber-100/90 hover:bg-amber-200/90 border-amber-400/60 text-amber-950"
                 : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/40 text-amber-200"
             }`}
+            style={{ color: isLight ? "#451a03" : "#fde68a" }}
             title="Gongo Cerimonial Thelêmico (Atalho: G)"
           >
             <Bell className={`w-3.5 h-3.5 ${isLight ? "text-amber-800" : "text-amber-400"}`} />
             <span>Gongo</span>
             <kbd
               className={`text-[10px] px-1 rounded font-bold ${
-                isLight ? "bg-amber-200/80 text-amber-950" : "bg-amber-950/60 text-amber-200"
+                isLight ? "bg-amber-200/90 text-amber-950" : "bg-amber-950/80 text-amber-200 border border-amber-500/40"
               }`}
             >
               G
@@ -221,9 +225,10 @@ export function AltarModeModal({
             onClick={toggleFullscreen}
             className={`p-2 rounded-lg border transition-all shadow-sm ${
               isLight
-                ? "bg-white hover:bg-slate-100 border-slate-300 text-slate-700 hover:text-slate-950"
+                ? "bg-[#FFFDF9] hover:bg-amber-100/70 border-amber-800/30 text-stone-800 hover:text-stone-950"
                 : "bg-neutral-900/90 hover:bg-neutral-800 border-neutral-700 text-neutral-300 hover:text-white"
             }`}
+            style={{ color: isLight ? "#1c1917" : "#e2e8f0" }}
             title="Alternar Tela Cheia (Atalho: F)"
           >
             {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -234,9 +239,10 @@ export function AltarModeModal({
             onClick={onClose}
             className={`p-2 rounded-lg border transition-all shadow-sm ${
               isLight
-                ? "bg-white hover:bg-red-50 border-slate-300 text-slate-600 hover:text-red-700"
+                ? "bg-[#FFFDF9] hover:bg-red-100/80 border-amber-800/30 text-stone-700 hover:text-red-700"
                 : "bg-neutral-900/90 hover:bg-red-950/40 border-neutral-700 text-neutral-400 hover:text-red-300"
             }`}
+            style={{ color: isLight ? "#1c1917" : "#cbd5e1" }}
             title="Sair do Modo Altar (Esc)"
           >
             <X className="w-4 h-4" />
@@ -251,15 +257,17 @@ export function AltarModeModal({
           <div
             className={`font-serif text-7xl sm:text-8xl md:text-9xl font-extrabold tracking-tight select-none transition-colors ${
               isLight
-                ? "text-slate-950 drop-shadow-[0_2px_4px_rgba(0,0,0,0.08)]"
-                : "text-white drop-shadow-[0_0_35px_rgba(255,255,255,0.25)]"
+                ? "text-stone-950 drop-shadow-[0_2px_4px_rgba(0,0,0,0.08)]"
+                : "text-zinc-50 drop-shadow-[0_0_35px_rgba(255,255,255,0.35)]"
             }`}
+            style={{ color: isLight ? "#0c0a09" : "#f8fafc" }}
           >
             <span>{time.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
             <span
               className={`text-3xl sm:text-4xl md:text-5xl font-mono font-bold ml-3.5 transition-colors ${
-                isLight ? "text-amber-800" : "text-amber-400/90"
+                isLight ? "text-amber-800" : "text-amber-400"
               }`}
+              style={{ color: isLight ? "#92400e" : "#fbbf24" }}
             >
               {time.getSeconds().toString().padStart(2, "0")}
             </span>
@@ -269,6 +277,7 @@ export function AltarModeModal({
             className={`text-xs font-mono font-bold uppercase tracking-[0.25em] mt-3 ${
               isLight ? "text-amber-900" : "text-amber-300"
             }`}
+            style={{ color: isLight ? "#78350f" : "#fcd34d" }}
           >
             Hora Local & Alinhamento Cósmico
           </p>
@@ -280,14 +289,14 @@ export function AltarModeModal({
           <div
             className={`p-6 rounded-2xl border-2 flex flex-col items-center text-center shadow-lg transition-all ${
               isLight
-                ? "bg-white/95 border-amber-500/25 hover:border-amber-500/60 hover:shadow-xl"
-                : "bg-neutral-900/80 border-white/10 hover:border-amber-500/40 hover:shadow-2xl backdrop-blur-md"
+                ? "bg-[#FFFDF9]/95 border-amber-500/30 hover:border-amber-500/60 hover:shadow-xl"
+                : "bg-[#0D1017] border-white/10 hover:border-amber-500/40 hover:shadow-2xl backdrop-blur-md"
             }`}
           >
             <div
               className={`w-13 h-13 rounded-full flex items-center justify-center mb-3.5 p-3 border shadow-sm ${
                 isLight
-                  ? "bg-amber-100 border-amber-300 text-amber-700"
+                  ? "bg-amber-100 border-amber-300 text-amber-800"
                   : "bg-amber-500/15 border-amber-500/30 text-amber-400"
               }`}
             >
@@ -296,16 +305,18 @@ export function AltarModeModal({
 
             <span
               className={`text-xs font-mono font-bold uppercase tracking-wider ${
-                isLight ? "text-amber-900" : "text-neutral-300"
+                isLight ? "text-amber-900" : "text-amber-300/90"
               }`}
+              style={{ color: isLight ? "#78350f" : "#fde68a" }}
             >
               {astroData?.planetaryDay || "Dies Martis"}
             </span>
 
             <h3
               className={`text-xl font-bold font-serif mt-1 ${
-                isLight ? "text-slate-950" : "text-white"
+                isLight ? "text-stone-950" : "text-zinc-50"
               }`}
+              style={{ color: isLight ? "#0c0a09" : "#f8fafc" }}
             >
               {astroData?.planetaryHour || "Hora de Mercúrio"}
             </h3>
@@ -314,7 +325,7 @@ export function AltarModeModal({
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold mt-2 border ${
                 isLight
                   ? "bg-amber-50 border-amber-200 text-amber-900"
-                  : "bg-amber-950/40 border-amber-500/30 text-amber-200"
+                  : "bg-amber-950/60 border-amber-500/40 text-amber-200"
               }`}
             >
               <span>{astroData?.isDiurnal ? "☀️ Hora Diurna" : "🌙 Hora Noturna"}</span>
@@ -324,8 +335,9 @@ export function AltarModeModal({
             {astroData?.sunrise && astroData?.sunset && (
               <span
                 className={`text-[11px] font-mono font-semibold mt-3 ${
-                  isLight ? "text-slate-600" : "text-neutral-400"
+                  isLight ? "text-stone-600" : "text-neutral-400"
                 }`}
+                style={{ color: isLight ? "#57534e" : "#a3a3a3" }}
               >
                 Nascer: {astroData.sunrise} · Ocaso: {astroData.sunset}
               </span>
@@ -336,8 +348,8 @@ export function AltarModeModal({
           <div
             className={`p-6 rounded-2xl border-2 flex flex-col items-center text-center shadow-lg transition-all ${
               isLight
-                ? "bg-white/95 border-blue-500/25 hover:border-blue-500/60 hover:shadow-xl"
-                : "bg-neutral-900/80 border-white/10 hover:border-blue-500/40 hover:shadow-2xl backdrop-blur-md"
+                ? "bg-[#FFFDF9]/95 border-blue-500/30 hover:border-blue-500/60 hover:shadow-xl"
+                : "bg-[#0D1017] border-white/10 hover:border-blue-500/40 hover:shadow-2xl backdrop-blur-md"
             }`}
           >
             <div
@@ -355,16 +367,18 @@ export function AltarModeModal({
 
             <span
               className={`text-xs font-mono font-bold uppercase tracking-wider ${
-                isLight ? "text-slate-700" : "text-neutral-300"
+                isLight ? "text-blue-950" : "text-blue-300/90"
               }`}
+              style={{ color: isLight ? "#172554" : "#93c5fd" }}
             >
               Fase Lunar
             </span>
 
             <h3
               className={`text-xl font-bold font-serif mt-1 ${
-                isLight ? "text-slate-950" : "text-white"
+                isLight ? "text-stone-950" : "text-zinc-50"
               }`}
+              style={{ color: isLight ? "#0c0a09" : "#f8fafc" }}
             >
               {astroData?.moonPhaseName || "Lua Crescente"} ({astroData?.moonIllumination || 0}%)
             </h3>
@@ -373,11 +387,11 @@ export function AltarModeModal({
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold mt-2 border ${
                 isLight
                   ? "bg-blue-50 border-blue-200 text-blue-900"
-                  : "bg-blue-950/40 border-blue-500/30 text-blue-200"
+                  : "bg-blue-950/60 border-blue-500/40 text-blue-200"
               }`}
             >
               <span>{astroData?.moonSign || "Escorpião"}</span>
-              <ZodiacIcon sign={astroData?.moonSign || "Escorpião"} className="w-3.5 h-3.5 text-blue-600 dark:text-blue-300" />
+              <ZodiacIcon sign={astroData?.moonSign || "Escorpião"} className={`w-3.5 h-3.5 ${isLight ? "text-blue-700" : "text-blue-300"}`} />
               <span>{astroData?.moonDegreeFormatted}</span>
             </div>
           </div>
@@ -386,14 +400,14 @@ export function AltarModeModal({
           <div
             className={`p-6 rounded-2xl border-2 flex flex-col items-center text-center shadow-lg transition-all ${
               isLight
-                ? "bg-white/95 border-purple-500/25 hover:border-purple-500/60 hover:shadow-xl"
-                : "bg-neutral-900/80 border-white/10 hover:border-purple-500/40 hover:shadow-2xl backdrop-blur-md"
+                ? "bg-[#FFFDF9]/95 border-purple-500/30 hover:border-purple-500/60 hover:shadow-xl"
+                : "bg-[#0D1017] border-white/10 hover:border-purple-500/40 hover:shadow-2xl backdrop-blur-md"
             }`}
           >
             <div
               className={`w-13 h-13 rounded-full flex items-center justify-center mb-3.5 p-3 border shadow-sm ${
                 isLight
-                  ? "bg-purple-100 border-purple-300 text-purple-700"
+                  ? "bg-purple-100 border-purple-300 text-purple-800"
                   : "bg-purple-500/15 border-purple-500/30 text-purple-400"
               }`}
             >
@@ -402,16 +416,18 @@ export function AltarModeModal({
 
             <span
               className={`text-xs font-mono font-bold uppercase tracking-wider ${
-                isLight ? "text-purple-950" : "text-neutral-300"
+                isLight ? "text-purple-950" : "text-purple-300/90"
               }`}
+              style={{ color: isLight ? "#3b0764" : "#d8b4fe" }}
             >
               Liber Resh vel Helios
             </span>
 
             <h3
               className={`text-xl font-bold font-serif mt-1 ${
-                isLight ? "text-slate-950" : "text-white"
+                isLight ? "text-stone-950" : "text-zinc-50"
               }`}
+              style={{ color: isLight ? "#0c0a09" : "#f8fafc" }}
             >
               {resh?.thelemicGod || "Ra (Leste)"}
             </h3>
@@ -420,7 +436,7 @@ export function AltarModeModal({
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold mt-2 border ${
                 isLight
                   ? "bg-purple-50 border-purple-200 text-purple-950"
-                  : "bg-purple-950/40 border-purple-500/30 text-purple-200"
+                  : "bg-purple-950/60 border-purple-500/40 text-purple-200"
               }`}
             >
               <span>Quadrante {resh?.direction || "Leste"}</span>
@@ -430,8 +446,9 @@ export function AltarModeModal({
 
             <span
               className={`text-[11px] font-mono font-semibold mt-3 ${
-                isLight ? "text-slate-600" : "text-neutral-400"
+                isLight ? "text-stone-600" : "text-neutral-400"
               }`}
+              style={{ color: isLight ? "#57534e" : "#a3a3a3" }}
             >
               Próxima: {resh?.nextStation} (~{resh?.minutesToNext} min)
             </span>
@@ -444,21 +461,23 @@ export function AltarModeModal({
         <div
           className={`max-w-4xl mx-auto w-full p-4 sm:p-5 rounded-xl border-2 text-center shadow-lg transition-all ${
             isLight
-              ? "bg-white/95 border-amber-600/30"
-              : "bg-neutral-900/90 border-amber-500/30 backdrop-blur-md"
+              ? "bg-[#FFFDF9]/95 border-amber-600/30"
+              : "bg-[#0D1017] border-amber-500/30 backdrop-blur-md"
           }`}
         >
           <p
             className={`text-xs font-mono font-bold uppercase tracking-widest mb-1.5 ${
               isLight ? "text-amber-950" : "text-amber-300"
             }`}
+            style={{ color: isLight ? "#451a03" : "#fcd34d" }}
           >
             Saudação do Altar ({resh.thelemicGod} — Direção {resh.direction})
           </p>
           <p
             className={`font-serif italic text-sm sm:text-base leading-relaxed max-w-2xl mx-auto font-medium ${
-              isLight ? "text-slate-900" : "text-neutral-100"
+              isLight ? "text-stone-900" : "text-zinc-100"
             }`}
+            style={{ color: isLight ? "#1c1917" : "#f4f4f5" }}
           >
             &ldquo;{resh.salutation}&rdquo;
           </p>

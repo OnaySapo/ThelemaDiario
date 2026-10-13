@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { THOTH_TAROT_DECK, ThothCard, CARD_BACKS } from "@/lib/thothTarot";
-import { playCardDealSound, playCardFlipSound } from "@/lib/audioBell";
+import { playCardDealSound, playCardFlipSound, playEnergizationDrone, playTibetanBell } from "@/lib/audioBell";
+import { getPersonalArcana } from "@/lib/tarotNumerology";
 import {
   Sparkles,
   RotateCw,
@@ -22,6 +23,8 @@ import {
   ZoomOut,
   Maximize2,
   RotateCcw,
+  Flame,
+  SkipForward,
 } from "lucide-react";
 
 export interface CardOnTable {
@@ -143,6 +146,8 @@ interface OracleTableProps {
   cardBackStyle?: "rosa_cruz" | "thelema";
   onCardBackStyleChange?: (style: "rosa_cruz" | "thelema") => void;
   onSpreadNameChange?: (name: string) => void;
+  querentName?: string;
+  querentBirthdate?: string;
 }
 
 export function OracleTable({
@@ -155,6 +160,8 @@ export function OracleTable({
   cardBackStyle = "rosa_cruz",
   onCardBackStyleChange,
   onSpreadNameChange,
+  querentName = "",
+  querentBirthdate = "",
 }: OracleTableProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
 
@@ -222,9 +229,104 @@ export function OracleTable({
     return available[Math.floor(Math.random() * available.length)];
   };
 
+  // ===================== ARCANOS PESSOAIS (NUMEROLOGIA) =====================
+  const personalArcana = useMemo(() => getPersonalArcana(querentBirthdate), [querentBirthdate]);
+  const [showPersonalArcana, setShowPersonalArcana] = useState(true);
+
+  // ===================== RITUAL DE ENERGIZAÇÃO & CHAMADO DO NOME =====================
+  const [ritualPhase, setRitualPhase] = useState<null | "invoke" | "absorb" | "shuffle">(null);
+  const [hasEnergized, setHasEnergized] = useState(false);
+  const [ritualEnabled, setRitualEnabled] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem("magick_oracle_ritual") !== "off";
+  });
+  const ritualSkipRef = useRef<(() => void) | null>(null);
+  const stopDroneRef = useRef<(() => void) | null>(null);
+
+  // Reinicia a energização quando o consulente muda
+  useEffect(() => {
+    setHasEnergized(false);
+  }, [querentName]);
+
+  // Interrompe o som caso o componente seja desmontado durante o ritual
+  useEffect(() => {
+    return () => {
+      stopDroneRef.current?.();
+    };
+  }, []);
+
+  const toggleRitualEnabled = () => {
+    setRitualEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("magick_oracle_ritual", next ? "on" : "off");
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  const ritualName = (querentName || "").trim() || "Consulente";
+
+  /**
+   * Meditação de energização: o drone sonoro respira, o nome do consulente pulsa
+   * no centro do pano e depois é absorvido pelo baralho, que se embaralha.
+   * Retorna true se o ritual foi executado (mesmo que pulado no meio).
+   */
+  const runEnergizationRitual = (): Promise<boolean> => {
+    if (!ritualEnabled || !isEditable) return Promise.resolve(false);
+
+    return new Promise<boolean>((resolve) => {
+      const timers: ReturnType<typeof setTimeout>[] = [];
+      let finished = false;
+
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        timers.forEach(clearTimeout);
+        stopDroneRef.current?.();
+        stopDroneRef.current = null;
+        ritualSkipRef.current = null;
+        setIsShuffling(false);
+        setRitualPhase(null);
+        setHasEnergized(true);
+        resolve(true);
+      };
+      ritualSkipRef.current = finish;
+
+      setRitualPhase("invoke");
+      stopDroneRef.current = playEnergizationDrone(7.2, 0.22);
+      playTibetanBell({ fundamental: 272, duration: 4.5, volume: 0.35 });
+
+      // Fase 2: o nome é absorvido pelo deck
+      timers.push(
+        setTimeout(() => {
+          setRitualPhase("absorb");
+        }, 4200)
+      );
+
+      // Fase 3: o deck embaralha com a energia do nome
+      timers.push(
+        setTimeout(() => {
+          setRitualPhase("shuffle");
+          setIsShuffling(true);
+          playCardDealSound();
+        }, 5600)
+      );
+      timers.push(setTimeout(() => playCardDealSound(), 5900));
+      timers.push(setTimeout(() => playCardDealSound(), 6200));
+      timers.push(setTimeout(() => playCardDealSound(), 6500));
+
+      timers.push(setTimeout(finish, 7000));
+    });
+  };
+
   // 1. Puxar Carta do Deck (Clicando no monte)
-  const handleDrawFromDeck = () => {
-    if (isDealing) return;
+  const handleDrawFromDeck = async () => {
+    if (isDealing || ritualPhase) return;
+    // Primeira carta numa mesa vazia: energiza antes
+    if (cards.length === 0 && !hasEnergized) {
+      await runEnergizationRitual();
+    }
     const drawn = pickRandomCard();
     playCardDealSound();
 
@@ -250,8 +352,10 @@ export function OracleTable({
   };
 
   // 2. Embaralhar o Deck com Animação e Som
-  const handleTriggerShuffle = () => {
-    if (isShuffling || isDealing) return;
+  const handleTriggerShuffle = async () => {
+    if (isShuffling || isDealing || ritualPhase) return;
+    const ritualRan = await runEnergizationRitual();
+    if (ritualRan) return; // o próprio ritual já embaralhou o deck
     setIsShuffling(true);
     playCardDealSound();
 
@@ -266,8 +370,12 @@ export function OracleTable({
 
   // 3. Aplicar Método de Tiragem (Distribui sequencialmente carta a carta viradas para baixo)
   const handleApplySpreadMethod = async (preset: SpreadPreset) => {
-    if (isDealing) return;
+    if (isDealing || ritualPhase) return;
     setIsSpreadMenuOpen(false);
+
+    // Energização & chamado do nome antes da tiragem
+    await runEnergizationRitual();
+
     setIsDealing(true);
 
     if (onSpreadNameChange) {
@@ -488,7 +596,14 @@ export function OracleTable({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: query || "Qual a corrente e a influência mágica desta operação?",
+          query:
+            (query || "Qual a corrente e a influência mágica desta operação?") +
+            (querentName?.trim() ? `\n[Consulente: ${querentName.trim()}]` : "") +
+            (personalArcana
+              ? `\n[Arcanos Pessoais — ${personalArcana
+                  .map((a) => `${a.label}: ${a.card?.name || a.number}`)
+                  .join(" | ")}]`
+              : ""),
           spreadName: spreadName || "Mesa Oracular do Altar",
           cards: cards.map((c) => ({
             position: c.position,
@@ -551,6 +666,44 @@ export function OracleTable({
         .animate-cloth-unfold {
           animation: altarClothUnfold 0.4s ease-out;
         }
+        /* ===== Ritual de Energização ===== */
+        @keyframes ritualVeilIn {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        @keyframes ritualNamePulse {
+          0%, 100% { transform: translate(-50%, -50%) scale(0.96); text-shadow: 0 0 18px rgba(250, 204, 21, 0.45), 0 0 40px rgba(168, 85, 247, 0.35); opacity: 0.85; }
+          50% { transform: translate(-50%, -50%) scale(1.08); text-shadow: 0 0 30px rgba(253, 224, 71, 0.95), 0 0 70px rgba(192, 132, 252, 0.7); opacity: 1; }
+        }
+        @keyframes ritualNameAbsorb {
+          0% { left: 50%; top: 46%; transform: translate(-50%, -50%) scale(1.08); opacity: 1; filter: blur(0px); }
+          70% { opacity: 0.9; }
+          100% { left: 72px; top: 84px; transform: translate(-50%, -50%) scale(0.12); opacity: 0; filter: blur(2px); }
+        }
+        @keyframes ritualBreathRing {
+          0% { transform: translate(-50%, -50%) scale(0.35); opacity: 0; }
+          30% { opacity: 0.7; }
+          100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
+        }
+        @keyframes ritualBreathText {
+          0%, 100% { opacity: 0.35; letter-spacing: 0.3em; }
+          50% { opacity: 1; letter-spacing: 0.55em; }
+        }
+        @keyframes ritualDeckGlow {
+          0%, 100% { box-shadow: 0 0 18px rgba(234, 179, 8, 0.45), 0 0 0 rgba(168, 85, 247, 0); }
+          50% { box-shadow: 0 0 45px rgba(253, 224, 71, 0.95), 0 0 80px rgba(168, 85, 247, 0.6); }
+        }
+        @keyframes ritualSparkFall {
+          0% { transform: translate(0, 0) scale(1); opacity: 1; }
+          100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
+        }
+        .ritual-veil { animation: ritualVeilIn 0.8s ease-out forwards; }
+        .ritual-name-pulse { animation: ritualNamePulse 2s ease-in-out infinite; }
+        .ritual-name-absorb { animation: ritualNameAbsorb 1.4s cubic-bezier(0.55, 0, 0.75, 0.35) forwards; }
+        .ritual-ring { animation: ritualBreathRing 4s ease-out infinite; }
+        .ritual-breath-text { animation: ritualBreathText 4s ease-in-out infinite; }
+        .ritual-deck-glow { animation: ritualDeckGlow 1.1s ease-in-out infinite; }
+        .animate-deck-shuffle-loop { animation: deckRiffleShuffle 0.45s ease-in-out infinite; }
       `}</style>
 
       {/* BARRA SUPERIOR DE FERRAMENTAS DO ALTAR */}
@@ -617,6 +770,23 @@ export function OracleTable({
             <Shuffle className={`w-3.5 h-3.5 ${isShuffling ? "animate-spin text-amber-400" : ""}`} />
             <span>{isShuffling ? "Embaralhando..." : "Embaralhar Deck"}</span>
           </button>
+
+          {/* Ritual de Energização (liga/desliga) */}
+          {isEditable && (
+            <button
+              type="button"
+              onClick={toggleRitualEnabled}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all font-mono text-[11px] ${
+                ritualEnabled
+                  ? "bg-purple-500/15 hover:bg-purple-500/25 text-purple-200 border-purple-500/40"
+                  : "bg-medium-800 hover:bg-medium-750 text-medium-400 border-medium-700"
+              }`}
+              title="Meditação de energização e chamado do nome antes de embaralhar/tirar"
+            >
+              <Flame className={`w-3.5 h-3.5 ${ritualEnabled ? "text-purple-300" : ""}`} />
+              <span>Energização: {ritualEnabled ? "On" : "Off"}</span>
+            </button>
+          )}
 
           {/* Botão Revelar / Ocultar Todas */}
           {cards.length > 0 && (
@@ -693,7 +863,7 @@ export function OracleTable({
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUpGlobal}
         onMouseLeave={handleMouseUpGlobal}
-        className="relative w-full h-[540px] rounded-2xl border-2 border-amber-600/40 overflow-hidden shadow-[0_16px_45px_rgba(0,0,0,0.9),inset_0_0_60px_rgba(217,119,6,0.12)] animate-cloth-unfold select-none bg-[#05030A]"
+        className="theme-isolated relative w-full h-[540px] rounded-2xl border-2 border-amber-600/40 overflow-hidden shadow-[0_16px_45px_rgba(0,0,0,0.9),inset_0_0_60px_rgba(217,119,6,0.12)] animate-cloth-unfold select-none bg-[#05030A]"
         style={{
           backgroundImage: `
             radial-gradient(ellipse at 40% 30%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
@@ -756,8 +926,8 @@ export function OracleTable({
             {/* Carta do topo do monte (virada em ângulo) */}
             <div
               className={`relative w-20 sm:w-24 h-32 sm:h-38 rounded-lg overflow-hidden border-2 border-amber-500/80 bg-medium-950 p-1 shadow-2xl transition-all duration-300 transform -rotate-6 group-hover:-rotate-3 group-hover:scale-105 group-hover:border-amber-400 group-hover:shadow-[0_0_25px_rgba(234,179,8,0.4)] ${
-                isShuffling ? "animate-deck-shuffle" : ""
-              }`}
+                ritualPhase === "shuffle" ? "animate-deck-shuffle-loop" : isShuffling ? "animate-deck-shuffle" : ""
+              } ${ritualPhase ? "ritual-deck-glow border-amber-300" : ""}`}
             >
               <img
                 src={currentBack.imageUrl}
@@ -780,13 +950,156 @@ export function OracleTable({
         </div>
 
         {/* Notificação de Mesa Vazia */}
-        {cards.length === 0 && !isDealing && (
+        {cards.length === 0 && !isDealing && !ritualPhase && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-medium-400 font-mono text-xs pointer-events-none z-10">
             <Sparkles className="w-8 h-8 text-amber-400/60 mb-2 animate-pulse" />
-            <span className="text-medium-100 font-semibold text-sm">Pano Oracular Estendido</span>
-            <span className="text-[11px] text-medium-400 mt-1 max-w-sm">
+            <span className="text-amber-100 font-semibold text-sm">Pano Oracular Estendido</span>
+            <span className="text-[11px] text-slate-400 mt-1 max-w-sm">
               Clique no <strong>Baralho</strong> no canto superior esquerdo para puxar uma lâmina aleatória ou escolha um <strong>Método de Tiragem</strong> no menu.
             </span>
+          </div>
+        )}
+
+        {/* ARCANOS PESSOAIS DO CONSULENTE (Numerologia: Nascimento, Ano e Mês) */}
+        {personalArcana && (
+          <div className="absolute top-4 right-4 z-30 select-none">
+            <div className="bg-black/75 backdrop-blur-md border border-amber-500/40 rounded-xl p-2 shadow-2xl w-[118px]">
+              <button
+                type="button"
+                onClick={() => setShowPersonalArcana((v) => !v)}
+                className="w-full flex items-center justify-between text-[8.5px] font-mono uppercase tracking-wider text-amber-300 font-bold mb-1"
+                title="Mostrar/ocultar Arcanos Pessoais"
+              >
+                <span>Arcanos Pessoais</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${showPersonalArcana ? "" : "-rotate-90"}`} />
+              </button>
+              {querentName?.trim() && (
+                <div className="text-[9px] font-serif italic text-amber-100/90 truncate mb-1.5" title={querentName}>
+                  {querentName}
+                </div>
+              )}
+              {showPersonalArcana && (
+                <div className="flex flex-col gap-2">
+                  {personalArcana.map((arc) => (
+                    <div
+                      key={arc.key}
+                      onClick={() =>
+                        arc.card &&
+                        handleOpenZoom({
+                          position: arc.label,
+                          cardId: arc.card.id,
+                          cardName: arc.card.name,
+                          imageUrl: arc.card.imageUrl,
+                          imageFile: arc.card.imageFile,
+                          isFlipped: true,
+                        })
+                      }
+                      className="group cursor-pointer flex flex-col items-center"
+                      title={`${arc.label}\n${arc.card?.name || ""}\n${arc.calculation}\n(Clique para ampliar)`}
+                    >
+                      <span className="text-[7.5px] font-mono text-amber-200 text-center leading-tight mb-0.5 font-semibold">
+                        {arc.label}
+                      </span>
+                      <div
+                        className={`w-14 h-[88px] rounded-md overflow-hidden border-2 shadow-lg transition-all group-hover:scale-105 ${
+                          arc.key === "birth"
+                            ? "border-amber-400 group-hover:shadow-[0_0_16px_rgba(251,191,36,0.7)]"
+                            : arc.key === "year"
+                            ? "border-purple-400 group-hover:shadow-[0_0_16px_rgba(192,132,252,0.7)]"
+                            : "border-sky-400 group-hover:shadow-[0_0_16px_rgba(56,189,248,0.7)]"
+                        }`}
+                      >
+                        {arc.card?.imageUrl ? (
+                          <img src={arc.card.imageUrl} alt={arc.card.name} className="w-full h-full object-cover pointer-events-none" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-amber-200 font-serif text-lg bg-black">
+                            {arc.number}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[8px] font-mono text-slate-300 text-center leading-tight mt-0.5 line-clamp-2">
+                        {arc.card?.name.split(" (")[0] || `Atu ${arc.number}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* RITUAL DE ENERGIZAÇÃO & CHAMADO DO NOME */}
+        {ritualPhase && (
+          <div className="absolute inset-0 z-[35] pointer-events-none">
+            {/* Véu de meditação */}
+            <div
+              className="absolute inset-0 ritual-veil"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 46%, rgba(88, 28, 135, 0.45) 0%, rgba(10, 5, 20, 0.88) 55%, rgba(0, 0, 0, 0.94) 100%)",
+              }}
+            />
+
+            {/* Anéis de respiração */}
+            {ritualPhase === "invoke" &&
+              [0, 1.33, 2.66].map((delay) => (
+                <div
+                  key={`ring-${delay}`}
+                  className="absolute left-1/2 top-[46%] w-72 h-72 rounded-full border-2 border-amber-300/50 ritual-ring"
+                  style={{ animationDelay: `${delay}s`, boxShadow: "0 0 30px rgba(250,204,21,0.25), inset 0 0 30px rgba(168,85,247,0.25)" }}
+                />
+              ))}
+
+            {/* Nome do consulente pulsando / sendo absorvido pelo deck */}
+            {(ritualPhase === "invoke" || ritualPhase === "absorb") && (
+              <div
+                className={`absolute left-1/2 top-[46%] whitespace-nowrap font-serif font-bold text-4xl sm:text-5xl text-amber-100 ${
+                  ritualPhase === "invoke" ? "ritual-name-pulse" : "ritual-name-absorb"
+                }`}
+              >
+                {ritualName}
+              </div>
+            )}
+
+            {/* Legenda meditativa */}
+            {ritualPhase === "invoke" && (
+              <div className="absolute left-0 right-0 top-[60%] flex flex-col items-center gap-2 text-center px-6">
+                <span className="text-[11px] font-mono uppercase text-purple-200 ritual-breath-text">
+                  Inspire · Expire
+                </span>
+                <span className="text-xs font-serif italic text-amber-200/90 max-w-md">
+                  {querentName?.trim()
+                    ? `Invocando a corrente de ${ritualName}...`
+                    : "Concentre-se na pergunta e energize o baralho..."}
+                </span>
+                {query?.trim() && (
+                  <span className="text-[11px] font-serif text-slate-300/80 max-w-md line-clamp-2">“{query}”</span>
+                )}
+              </div>
+            )}
+
+            {ritualPhase === "absorb" && (
+              <div className="absolute left-0 right-0 top-[60%] text-center text-xs font-serif italic text-amber-200/90">
+                O nome entra no baralho...
+              </div>
+            )}
+
+            {ritualPhase === "shuffle" && (
+              <div className="absolute left-0 right-0 top-[50%] text-center text-xs font-mono uppercase tracking-[0.3em] text-amber-200">
+                Embaralhando com a energia de {ritualName}
+              </div>
+            )}
+
+            {/* Botão Pular */}
+            <button
+              type="button"
+              onClick={() => ritualSkipRef.current?.()}
+              className="pointer-events-auto absolute bottom-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-black/70 hover:bg-black/90 text-slate-300 hover:text-white border border-slate-600 text-[11px] font-mono transition-colors"
+              title="Pular a energização"
+            >
+              <SkipForward className="w-3.5 h-3.5" />
+              <span>Pular</span>
+            </button>
           </div>
         )}
 

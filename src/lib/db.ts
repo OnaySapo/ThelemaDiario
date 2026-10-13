@@ -112,6 +112,12 @@ export function getDatabase(): DatabaseSync {
     if (!hasAiInterp) {
       db.exec("ALTER TABLE oracle_records ADD COLUMN ai_interpretation TEXT;");
     }
+    if (!oracleCols.some((c) => c.name === "querent_name")) {
+      db.exec("ALTER TABLE oracle_records ADD COLUMN querent_name TEXT;");
+    }
+    if (!oracleCols.some((c) => c.name === "querent_birthdate")) {
+      db.exec("ALTER TABLE oracle_records ADD COLUMN querent_birthdate TEXT;");
+    }
   } catch (err) {
     console.warn("Aviso ao verificar migrações do banco:", err);
   }
@@ -352,6 +358,8 @@ export function getAllEntries(filters?: { type?: string; tag?: string; search?: 
         card_back_style: oracle.card_back_style || "rosa_cruz",
         ai_interpretation: oracle.ai_interpretation || "",
         confirmation_notes: oracle.confirmation_notes,
+        querent_name: oracle.querent_name || "",
+        querent_birthdate: oracle.querent_birthdate || "",
       };
     }
 
@@ -402,6 +410,8 @@ export function getEntryById(id: string): MagickEntry | null {
       card_back_style: oracle.card_back_style || "rosa_cruz",
       ai_interpretation: oracle.ai_interpretation || "",
       confirmation_notes: oracle.confirmation_notes,
+      querent_name: oracle.querent_name || "",
+      querent_birthdate: oracle.querent_birthdate || "",
     };
   }
 
@@ -517,8 +527,8 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
   if (entry.oracle_data) {
     db.prepare("DELETE FROM oracle_records WHERE entry_id = ?").run(entryId);
     db.prepare(`
-      INSERT INTO oracle_records (entry_id, system, spread_name, query, cards_json, card_back_style, ai_interpretation, confirmation_notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO oracle_records (entry_id, system, spread_name, query, cards_json, card_back_style, ai_interpretation, confirmation_notes, querent_name, querent_birthdate)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       entryId,
       entry.oracle_data.system || "thoth_tarot",
@@ -527,7 +537,9 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
       JSON.stringify(entry.oracle_data.cards || []),
       entry.oracle_data.card_back_style || "rosa_cruz",
       entry.oracle_data.ai_interpretation || "",
-      entry.oracle_data.confirmation_notes || ""
+      entry.oracle_data.confirmation_notes || "",
+      entry.oracle_data.querent_name || "",
+      entry.oracle_data.querent_birthdate || ""
     );
   }
 

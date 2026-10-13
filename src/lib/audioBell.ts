@@ -192,3 +192,74 @@ export function playCardFlipSound() {
   osc.start(now);
   osc.stop(now + 0.08);
 }
+
+/**
+ * Drone meditativo de energização (tônica grave + quinta + oitava com "respiração"
+ * lenta via LFO). Usado no chamado do nome do consulente antes da tiragem.
+ * Retorna uma função para interromper o som suavemente.
+ */
+export function playEnergizationDrone(durationSec = 6, volume = 0.22): () => void {
+  const ctx = getAudioContext();
+  if (!ctx) return () => {};
+  const now = ctx.currentTime;
+
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0001, now);
+  master.gain.exponentialRampToValueAtTime(volume, now + 1.2);
+  master.gain.setValueAtTime(volume, now + Math.max(1.3, durationSec - 1.4));
+  master.gain.exponentialRampToValueAtTime(0.0001, now + durationSec);
+
+  // Filtro passa-baixa para timbre quente
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(900, now);
+  filter.connect(master);
+  master.connect(ctx.destination);
+
+  // LFO de respiração (pulsação ~0.5 Hz) sobre o volume
+  const breath = ctx.createGain();
+  breath.gain.setValueAtTime(0.75, now);
+  breath.connect(filter);
+  const lfo = ctx.createOscillator();
+  const lfoGain = ctx.createGain();
+  lfo.frequency.setValueAtTime(0.5, now);
+  lfoGain.gain.setValueAtTime(0.25, now);
+  lfo.connect(lfoGain);
+  lfoGain.connect(breath.gain);
+  lfo.start(now);
+  lfo.stop(now + durationSec + 0.2);
+
+  const base = 136.1; // "OM" (frequência do ano terrestre)
+  const voices = [
+    { f: base, g: 0.55, type: "sine" as OscillatorType, detune: 0 },
+    { f: base, g: 0.25, type: "triangle" as OscillatorType, detune: 6 },
+    { f: base * 1.5, g: 0.22, type: "sine" as OscillatorType, detune: -4 },
+    { f: base * 2, g: 0.14, type: "sine" as OscillatorType, detune: 3 },
+    { f: base * 3, g: 0.05, type: "sine" as OscillatorType, detune: 0 },
+  ];
+  const oscs: OscillatorNode[] = [];
+  voices.forEach((v) => {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = v.type;
+    o.frequency.setValueAtTime(v.f, now);
+    o.detune.setValueAtTime(v.detune, now);
+    g.gain.setValueAtTime(v.g, now);
+    o.connect(g);
+    g.connect(breath);
+    o.start(now);
+    o.stop(now + durationSec + 0.2);
+    oscs.push(o);
+  });
+
+  return () => {
+    try {
+      const t = ctx.currentTime;
+      master.gain.cancelScheduledValues(t);
+      master.gain.setValueAtTime(Math.max(0.0001, master.gain.value), t);
+      master.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+      oscs.forEach((o) => o.stop(t + 0.45));
+      lfo.stop(t + 0.45);
+    } catch (e) {}
+  };
+}

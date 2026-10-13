@@ -41,6 +41,8 @@ export interface MagickEntry {
     card_back_style?: "rosa_cruz" | "thelema";
     ai_interpretation?: string;
     confirmation_notes?: string;
+    querent_name?: string; // Nome da pessoa foco da tiragem
+    querent_birthdate?: string; // AAAA-MM-DD (opcional)
   };
   created_at?: string;
   updated_at?: string;

@@ -65,6 +65,8 @@ export function EntryEditorModal({
   const [oracleSystem, setOracleSystem] = useState("thoth_tarot");
   const [spreadId, setSpreadId] = useState("three_time");
   const [oracleQuery, setOracleQuery] = useState("");
+  const [oracleQuerentName, setOracleQuerentName] = useState("");
+  const [oracleQuerentBirthdate, setOracleQuerentBirthdate] = useState("");
   const [oracleCards, setOracleCards] = useState<
     Array<{ position: string; cardId: string; cardName: string; notes?: string }>
   >([]);
@@ -98,6 +100,8 @@ export function EntryEditorModal({
       if (initialEntry.oracle_data) {
         setOracleSystem(initialEntry.oracle_data.system || "thoth_tarot");
         setOracleQuery(initialEntry.oracle_data.query || "");
+        setOracleQuerentName(initialEntry.oracle_data.querent_name || "");
+        setOracleQuerentBirthdate(initialEntry.oracle_data.querent_birthdate || "");
         setOracleCards(initialEntry.oracle_data.cards || []);
         setConfirmationNotes(initialEntry.oracle_data.confirmation_notes || "");
       }
@@ -106,6 +110,8 @@ export function EntryEditorModal({
       setType("ritual");
       setTitle("");
       setContent("");
+      setOracleQuerentName("");
+      setOracleQuerentBirthdate("");
       const now = new Date();
       setDate(now.toISOString().slice(0, 16));
       setSuccessRating(8);
@@ -225,6 +231,8 @@ export function EntryEditorModal({
               system: oracleSystem,
               spread_name: TAROT_SPREADS.find((s) => s.id === spreadId)?.name || "Tiragem",
               query: oracleQuery.trim(),
+              querent_name: oracleQuerentName.trim(),
+              querent_birthdate: oracleQuerentBirthdate,
               cards: oracleCards,
               confirmation_notes: confirmationNotes.trim(),
             }
@@ -404,6 +412,31 @@ export function EntryEditorModal({
                     onChange={(e) => setOracleQuery(e.target.value)}
                     placeholder="Ex: Qual a melhor conduta para a operação mágica em curso?"
                     className="w-full bg-forest-800 border border-forest-700 rounded-lg px-3 py-2 text-xs text-parchment-100 placeholder-parchment-500 focus:outline-none focus:border-moss-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-parchment-400 mb-1">
+                    Nome da Pessoa Foco da Tiragem
+                  </label>
+                  <input
+                    type="text"
+                    value={oracleQuerentName}
+                    onChange={(e) => setOracleQuerentName(e.target.value)}
+                    placeholder="Ex: Frater Perdurabo, Maria Silva..."
+                    className="w-full bg-forest-800 border border-forest-700 rounded-lg px-3 py-2 text-xs text-parchment-100 placeholder-parchment-500 focus:outline-none focus:border-moss-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-parchment-400 mb-1">
+                    Data de Nascimento <span className="text-parchment-500">(opcional · Arcanos Pessoais)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={oracleQuerentBirthdate}
+                    onChange={(e) => setOracleQuerentBirthdate(e.target.value)}
+                    className="w-full bg-forest-800 border border-forest-700 rounded-lg px-3 py-2 text-xs text-parchment-100 focus:outline-none focus:border-moss-500 font-mono"
                   />
                 </div>
               </div>

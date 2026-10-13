@@ -336,38 +336,50 @@
 /* =========================================================================
    ADAPTAÇÕES DINÂMICAS PARA MODO CLARO (LIGHT)
    Evita texto invisível ou quebra de contraste quando o usuário escolhe tema claro
+   (Protege contêineres autônomos com tema isolado como o Modo Altar)
    ========================================================================= */
 
-[data-mode="light"] .text-white {
+[data-mode="light"] .text-white:not(.theme-isolated *):not(.theme-isolated) {
   color: var(--theme-heading-color) !important;
 }
 
-[data-mode="light"] .fill-white {
+[data-mode="light"] .fill-white:not(.theme-isolated *):not(.theme-isolated) {
   fill: var(--theme-heading-color) !important;
 }
 
-[data-mode="light"] .border-white {
+[data-mode="light"] .border-white:not(.theme-isolated *):not(.theme-isolated) {
   border-color: var(--theme-heading-color) !important;
 }
 
-[data-mode="light"] .accent-white {
+[data-mode="light"] .accent-white:not(.theme-isolated *):not(.theme-isolated) {
   accent-color: var(--theme-heading-color) !important;
 }
 
-[data-mode="light"] .bg-white {
+[data-mode="light"] .bg-white:not(.theme-isolated *):not(.theme-isolated) {
   background-color: var(--theme-primary-btn-bg) !important;
 }
 
-[data-mode="light"] .text-black {
+[data-mode="light"] .text-black:not(.theme-isolated *):not(.theme-isolated) {
   color: var(--theme-primary-btn-text) !important;
 }
 
-[data-mode="light"] .hover\:text-white:hover {
+[data-mode="light"] .hover\:text-white:hover:not(.theme-isolated *):not(.theme-isolated) {
   color: var(--theme-heading-color) !important;
 }
 
-[data-mode="light"] .hover\:bg-medium-200:hover {
+[data-mode="light"] .hover\:bg-medium-200:hover:not(.theme-isolated *):not(.theme-isolated) {
   background-color: rgb(var(--color-medium-750)) !important;
+}
+
+/* Isolamento do Modo Altar */
+.altar-mode-container {
+  color-scheme: light dark;
+}
+.altar-mode-container[data-altar-theme="dark"] {
+  color: #f8fafc;
+}
+.altar-mode-container[data-altar-theme="light"] {
+  color: #0c0a09;
 }
 
 body {
