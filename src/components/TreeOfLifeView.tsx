@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { MagickEntry, normalizeCategory } from "@/lib/types";
+import { THOTH_TAROT_DECK, ThothCard } from "@/lib/thothTarot";
 import {
   Sparkles,
   BookOpen,
@@ -14,6 +15,9 @@ import {
   Compass,
   Eye,
   EyeOff,
+  ZoomIn,
+  Maximize2,
+  FileText,
 } from "lucide-react";
 import { EstrelaDeThelema } from "@/components/ThelemicIcons";
 
@@ -274,10 +278,12 @@ export interface TreePathData {
   tarotName: string;
   astrological: string;
   label: string;
+  atuId: string; // Identificador da carta no Thoth Tarot Deck
+  study: string; // Estudo hermético e meditação iniciática do caminho
   tOffset?: number; // Posição calculada (0 a 1) para evitar sobreposição em cruzamentos
 }
 
-// Os 22 Caminhos canônicos da Árvore da Vida com os Arcanos Maiores e Letras Hebraicas de Liber 777
+// Os 22 Caminhos canônicos da Árvore da Vida com os Arcanos Maiores, Estudos e Letras de Liber 777
 export const TREE_PATHS: TreePathData[] = [
   {
     pathNumber: 11,
@@ -287,8 +293,10 @@ export const TREE_PATHS: TreePathData[] = [
     hebrewName: "Aleph",
     tarotNumber: "0",
     tarotName: "O Louco",
-    astrological: "Ar (Elemento Ar)",
+    astrological: "Ar / Urano (Elemento Ar Primordial)",
     label: "11. Aleph · 0 · O Louco",
+    atuId: "atu_0",
+    study: "O 11º Caminho é chamado de 'Inteligência Cintilante'. É o sopro inicial da Coroa (Kether) fluindo como pura Vontade Dinâmica em direção a Chokmah. Representa o salto destemido no Abismo, a inocência divina além da lógica humana e o silêncio de Harpocrate antes da manifestação de qualquer dualidade.",
     tOffset: 0.5,
   },
   {
@@ -301,6 +309,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "O Mago",
     astrological: "Mercúrio (☿)",
     label: "12. Beth · I · O Mago",
+    atuId: "atu_1",
+    study: "O 12º Caminho é a 'Inteligência da Transparência'. Liga a Unidade suprema de Kether ao Entendimento formador de Binah. É a manifestação do Verbo (Logos), onde Tahuti (Thoth) maneja as armas elementais e articula a Verdadeira Vontade através da magia e da ciência da consciência.",
     tOffset: 0.5,
   },
   {
@@ -313,7 +323,9 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "A Sacerdotisa",
     astrological: "Lua (☽)",
     label: "13. Gimel · II · A Sacerdotisa",
-    tOffset: 0.63, // Posicionado abaixo de Da'ath e acima do cruzamento Chesed-Geburah
+    atuId: "atu_2",
+    study: "O 13º Caminho é a 'Inteligência Condutora da Unidade'. É o raio vertical que atravessa o Abismo conectando Kether a Tiphareth através do véu de Da'ath. Gimel (o Camelo) transporta o magista através do deserto espiritual pelo caminho da memória cósmica, da intuição pura e do desvelamento de Ísis.",
+    tOffset: 0.63,
   },
   {
     pathNumber: 14,
@@ -325,6 +337,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "A Imperatriz",
     astrological: "Vênus (♀)",
     label: "14. Daleth · III · A Imperatriz",
+    atuId: "atu_3",
+    study: "O 14º Caminho é a 'Inteligência Iluminadora', cruzando a fronteira horizontal suprema entre o Pai (Chokmah) e a Mãe (Binah). Daleth (a Porta) é a porta da Luz e do Amor Universal sob Vontade, unindo a força criativa à matriz receptiva que dá nascimento ao Universo manifestado.",
     tOffset: 0.5,
   },
   {
@@ -337,6 +351,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "O Imperador",
     astrological: "Áries (♈)",
     label: "15. Heh · IV · O Imperador",
+    atuId: "atu_4",
+    study: "O 15º Caminho é a 'Inteligência Constitutiva'. Liga a sabedoria transcendental de Chokmah à harmonia solar de Tiphareth. Simboliza a autoridade divina, a energia ígnea de Áries e a mente soberana que governa a matéria e estabelece as leis universais sob a Vontade Pura.",
     tOffset: 0.48,
   },
   {
@@ -349,6 +365,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "O Hierofante",
     astrological: "Touro (♉)",
     label: "16. Vau · V · O Hierofante",
+    atuId: "atu_5",
+    study: "O 16º Caminho é a 'Inteligência Eterna'. Desce pelo Pilar da Misericórdia de Chokmah para Chesed. Vau (o Prego ou Elo) é o instrutor sagrado dos mistérios ocultos que ancora a sabedoria primordial nas ordens e templos humanos, promovendo a união com o Sagrado Anjo Guardião.",
     tOffset: 0.5,
   },
   {
@@ -361,6 +379,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "Os Enamorados",
     astrological: "Gêmeos (♊)",
     label: "17. Zayin · VI · Os Enamorados",
+    atuId: "atu_6",
+    study: "O 17º Caminho é a 'Inteligência da Disposição'. Conecta a Mãe Severa Binah ao Coração Solar Tiphareth. Zayin (a Espada) corta as amarras da dualidade e preside o Casamento Alquímico do Rei Vermelho e da Rainha Branca, onde a separação se dissolve no amor sob vontade.",
     tOffset: 0.48,
   },
   {
@@ -373,6 +393,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "A Carruagem",
     astrological: "Câncer (♋)",
     label: "18. Cheth · VII · A Carruagem",
+    atuId: "atu_7",
+    study: "O 18º Caminho é a 'Inteligência da Casa de Influência'. Desce pelo Pilar da Severidade de Binah até Geburah. Cheth (a Cerca ou Muralha) representa a concentração total da Vontade, o guerreiro que transporta o Santo Graal contendo o Sangue dos Santos sob a proteção de Nuit.",
     tOffset: 0.5,
   },
   {
@@ -381,10 +403,12 @@ export const TREE_PATHS: TreePathData[] = [
     toId: 5,
     hebrewLetter: "ט",
     hebrewName: "Teth",
-    tarotNumber: "VIII",
-    tarotName: "A Força / Ajuste",
+    tarotNumber: "XI",
+    tarotName: "O Desejo / Força (Lust)",
     astrological: "Leão (♌)",
-    label: "19. Teth · VIII · A Força / Ajuste",
+    label: "19. Teth · XI · O Desejo (Lust)",
+    atuId: "atu_11",
+    study: "O 19º Caminho é a 'Inteligência do Segredo de Todas as Atividades Espirituais'. Liga Chesed (Misericórdia) a Geburah (Severidade) sobre o Véu de Paroketh. Crowley atribui a este caminho Atu XI (Lust), onde Babalon cavalga a Grande Besta em êxtase sagrado, domando a força leonina pelo amor cósmico.",
     tOffset: 0.5,
   },
   {
@@ -397,6 +421,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "O Eremita",
     astrological: "Virgem (♍)",
     label: "20. Yod · IX · O Eremita",
+    atuId: "atu_9",
+    study: "O 20º Caminho é a 'Inteligência da Vontade'. Desce da graça de Chesed para o centro de Tiphareth. Yod (a Mão ou a Semente de Fogo) é o guia silencioso que caminha com a lâmpada da verdade oculta, semeando a luz interior e protegendo o ovo cósmico da realização espiritual.",
     tOffset: 0.5,
   },
   {
@@ -409,6 +435,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "A Roda da Fortuna",
     astrological: "Júpiter (♃)",
     label: "21. Kaph · X · A Roda da Fortuna",
+    atuId: "atu_10",
+    study: "O 21º Caminho é a 'Inteligência da Conciliação e Recompensa'. Desce no Pilar da Misericórdia de Chesed para Netzach. Kaph (a Palma da Mão) rege as marés de expansão, karma e ciclos universais onde Hermanúbis, Tifão e a Esfinge giram em equilíbrio dinâmico perpétuo.",
     tOffset: 0.5,
   },
   {
@@ -417,10 +445,12 @@ export const TREE_PATHS: TreePathData[] = [
     toId: 6,
     hebrewLetter: "ל",
     hebrewName: "Lamed",
-    tarotNumber: "XI",
-    tarotName: "A Justiça",
+    tarotNumber: "VIII",
+    tarotName: "O Ajustamento (Adjustment)",
     astrological: "Libra (♎)",
-    label: "22. Lamed · XI · A Justiça",
+    label: "22. Lamed · VIII · Ajustamento",
+    atuId: "atu_8",
+    study: "O 22º Caminho é a 'Inteligência Fiel'. Desce da força purificadora de Geburah para Tiphareth. Lamed (o Aguilhão) representa a Balança de Ma'at e a Justiça Cósmica: não uma penalidade rígida, mas a dança contínua de compensações perfeitas e harmonia do Grande Trabalho.",
     tOffset: 0.5,
   },
   {
@@ -431,8 +461,10 @@ export const TREE_PATHS: TreePathData[] = [
     hebrewName: "Mem",
     tarotNumber: "XII",
     tarotName: "O Enforcado",
-    astrological: "Água (Elemento Água)",
+    astrological: "Elemento Água (Águas Primordiais)",
     label: "23. Mem · XII · O Enforcado",
+    atuId: "atu_12",
+    study: "O 23º Caminho é a 'Inteligência Estável'. Desce no Pilar da Severidade de Geburah para Hod. Mem (a Água) simboliza o sacrifício do ego pessoal nas águas do infinito, a rendição iluminada onde a consciência se inverte para perceber o mundo sob a ótica do espírito.",
     tOffset: 0.5,
   },
   {
@@ -445,6 +477,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "A Morte",
     astrological: "Escorpião (♏)",
     label: "24. Nun · XIII · A Morte",
+    atuId: "atu_13",
+    study: "O 24º Caminho é a 'Inteligência Imaginativa'. Liga Tiphareth à paixão e vitória de Netzach. Nun (o Peixe) rege a metamorfose alquímica: a dissolução das formas perecíveis para que a essência renasça triunfante. A Morte é a ceifeira que transmuta a vida em níveis superiores.",
     tOffset: 0.52,
   },
   {
@@ -457,7 +491,9 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "A Arte (Temperança)",
     astrological: "Sagitário (♐)",
     label: "25. Samekh · XIV · A Arte",
-    tOffset: 0.32, // Acima da horizontal Netzach-Hod (A Torre), sem qualquer sobreposição!
+    atuId: "atu_14",
+    study: "O 25º Caminho é a 'Inteligência da Prova'. É o eixo central vertical que une Tiphareth (o Sol) a Yesod (a Lua). Samekh (o Suporte ou Flecha de Sagitário) é a grande Obra Alquímica onde o Fogo e a Água se fundem no caldeirão para gerar o ouro filosófico do Adepto.",
+    tOffset: 0.32,
   },
   {
     pathNumber: 26,
@@ -469,6 +505,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "O Diabo",
     astrological: "Capricórnio (♑)",
     label: "26. Ayin · XV · O Diabo",
+    atuId: "atu_15",
+    study: "O 26º Caminho é a 'Inteligência Renovadora'. Une Tiphareth à mente mercurial de Hod. Ayin (o Olho) representa Baphomet, o bode de Mendes e o riso de Pã: a força cósmica geradora, o êxtase criativo que não teme a matéria e a energia divina oculta sob a ilusão do mundo profano.",
     tOffset: 0.52,
   },
   {
@@ -481,6 +519,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "A Torre",
     astrological: "Marte (♂)",
     label: "27. Peh · XVI · A Torre",
+    atuId: "atu_16",
+    study: "O 27º Caminho é a 'Inteligência Excitante', cruzando a fronteira horizontal entre Netzach e Hod. Peh (a Boca) é o raio libertador do Olho de Hórus que implode a fortaleza do falso ego e destrói as ilusões obsoletas, abrindo passagem para a manifestação da luz pura.",
     tOffset: 0.5,
   },
   {
@@ -493,6 +533,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "A Estrela",
     astrological: "Aquário (♒)",
     label: "28. Tzaddi · XVII · A Estrela",
+    atuId: "atu_17",
+    study: "O 28º Caminho é a 'Inteligência Natural'. Liga a emoção de Netzach à esfera astral de Yesod. Tzaddi é a deusa Nuit curvada sobre o universo vertendo as águas da sabedoria celeste e proclamando: 'Todo homem e toda mulher é uma estrela'. É a esperança e a comunhão com o infinito.",
     tOffset: 0.5,
   },
   {
@@ -505,6 +547,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "A Lua",
     astrological: "Peixes (♓)",
     label: "29. Qoph · XVIII · A Lua",
+    atuId: "atu_18",
+    study: "O 29º Caminho é a 'Inteligência Corpórea'. Desce de Netzach até a densidade material de Malkuth. Qoph (a Nuca) preside a travessia das miragens astrais e da Noite Escura da Alma, onde o escaravelho Khephra conduz a semente do sol divino através das águas do subconsciente.",
     tOffset: 0.5,
   },
   {
@@ -517,6 +561,8 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "O Sol",
     astrological: "Sol (☉)",
     label: "30. Resh · XIX · O Sol",
+    atuId: "atu_19",
+    study: "O 30º Caminho é a 'Inteligência Coletiva'. Liga o intelecto de Hod ao fundamento astral de Yesod. Resh (a Cabeça) é a alvorada de Ra-Hoor-Khuit, a vitória triunfante da luz espiritual onde as crianças divinas dançam no círculo sagrado sob a bênção dos doze raios solares.",
     tOffset: 0.5,
   },
   {
@@ -527,8 +573,10 @@ export const TREE_PATHS: TreePathData[] = [
     hebrewName: "Shin",
     tarotNumber: "XX",
     tarotName: "O Aeon (Julgamento)",
-    astrological: "Fogo / Espírito (Elemento Fogo)",
+    astrological: "Elemento Fogo / Espírito (Aeon de Hórus)",
     label: "31. Shin · XX · O Aeon",
+    atuId: "atu_20",
+    study: "O 31º Caminho é a 'Inteligência Perpétua'. Desce de Hod até Malkuth. Shin (o Dente de Três Pontas) representa o Fogo Sagrado do Espírito que queima os grilhões do passado, proclamando a nova era da humanidade: o despertar da criança coroada e triunfante sob Nuit e Hadit.",
     tOffset: 0.5,
   },
   {
@@ -541,7 +589,9 @@ export const TREE_PATHS: TreePathData[] = [
     tarotName: "O Universo",
     astrological: "Saturno / Terra (♄)",
     label: "32. Tau · XXI · O Universo",
-    tOffset: 0.5, // Totalmente espaçado entre Yesod e Malkuth
+    atuId: "atu_21",
+    study: "O 32º Caminho é a 'Inteligência Administrativa'. Representa o primeiro portal iniciático na Árvore da Vida, a transição entre o mundo material denso (Malkuth, O Reino) e a esfera formativa astral e lunar (Yesod, O Fundamento). Governado por Saturno e atribuído à letra Tau (a marca que sela a Criação), retrata a Dançarina Cósmica em êxtase supremo com a serpente de Hadit, cercada pelos quatro querubins. É a superação da inércia física através da dança harmoniosa com as leis do Cosmos.",
+    tOffset: 0.5,
   },
 ];
 
@@ -561,6 +611,7 @@ export function TreeOfLifeView({
   const [selectedPathNumber, setSelectedPathNumber] = useState<number | null>(null);
   const [hoveredPathNumber, setHoveredPathNumber] = useState<number | null>(null);
   const [showTarotBadges, setShowTarotBadges] = useState<boolean>(true);
+  const [zoomedCardImage, setZoomedCardImage] = useState<{ url: string; title: string; subtitle: string } | null>(null);
 
   // Mapeia notas para cada Sephirah
   const notesBySephirah = useMemo(() => {
@@ -599,6 +650,18 @@ export function TreeOfLifeView({
     return TREE_PATHS.find((p) => p.pathNumber === selectedPathNumber) || null;
   }, [selectedPathNumber]);
 
+  // Busca a lâmina de Thoth correspondente ao caminho selecionado
+  const selectedThothCard = useMemo(() => {
+    if (!selectedPath) return null;
+    return (
+      THOTH_TAROT_DECK.find((c) => c.id === selectedPath.atuId) ||
+      THOTH_TAROT_DECK.find(
+        (c) => c.suit === "major" && c.number === selectedPath.tarotNumber
+      ) ||
+      null
+    );
+  }, [selectedPath]);
+
   // Caminhos conectados à Sephirah selecionada
   const connectedPaths = useMemo(() => {
     return TREE_PATHS.filter(
@@ -612,6 +675,30 @@ export function TreeOfLifeView({
       };
     });
   }, [selectedSephirah]);
+
+  // Notas vinculadas ao caminho selecionado
+  const pathNotes = useMemo(() => {
+    if (!selectedPath) return [];
+    const query1 = selectedPath.tarotName.toLowerCase();
+    const query2 = selectedPath.hebrewName.toLowerCase();
+    const query3 = `caminho ${selectedPath.pathNumber}`;
+
+    return entries.filter((entry) => {
+      const text = `${entry.title} ${entry.content}`.toLowerCase();
+      return text.includes(query1) || text.includes(query2) || text.includes(query3);
+    });
+  }, [entries, selectedPath]);
+
+  // Fechar modal de zoom com Esc
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && zoomedCardImage) {
+        setZoomedCardImage(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [zoomedCardImage]);
 
   return (
     <div className="flex-1 h-full bg-medium-900 flex flex-col md:flex-row overflow-hidden">
@@ -668,10 +755,10 @@ export function TreeOfLifeView({
                   0% { stroke-dashoffset: 24; }
                   100% { stroke-dashoffset: 0; }
                 }
-                @keyframes tarotBadgePulse {
-                  0% { transform: scale(1); }
-                  50% { transform: scale(1.12); }
-                  100% { transform: scale(1); }
+                @keyframes tarotBadgePulseGlow {
+                  0% { r: 2.7px; opacity: 0.95; stroke-width: 0.8px; }
+                  50% { r: 4.4px; opacity: 0.25; stroke-width: 0.4px; }
+                  100% { r: 2.7px; opacity: 0.95; stroke-width: 0.8px; }
                 }
               `}</style>
 
@@ -758,7 +845,7 @@ export function TreeOfLifeView({
               const isPathSelected = path.pathNumber === selectedPathNumber;
               const isPathHovered = path.pathNumber === hoveredPathNumber;
 
-              // Ponto do Badge ao longo do caminho
+              // Ponto geométrico fixo do Badge no SVG (0..100 x 0..148)
               const t = path.tOffset ?? 0.5;
               const badgeX = sFrom.x + (sTo.x - sFrom.x) * t;
               const badgeY = sFrom.y + (sTo.y - sFrom.y) * t;
@@ -841,30 +928,69 @@ export function TreeOfLifeView({
                     </>
                   )}
 
-                  {/* 2. Badge dos Arcanos Maiores ao longo do Caminho */}
+                  {/* 2. Badge dos Arcanos Maiores ao longo do Caminho (Ancorado com segurança no SVG nativo) */}
                   {showTarotBadges && (
                     <g
                       transform={`translate(${badgeX}, ${badgeY})`}
-                      className="transition-transform duration-200"
-                      style={{
-                        transform: isPathHovered || isPathSelected ? `translate(${badgeX}px, ${badgeY}px) scale(1.22)` : undefined,
-                        transformOrigin: `${badgeX}px ${badgeY}px`,
-                      }}
+                      className="cursor-pointer"
                     >
-                      {/* Sombra do Badge */}
+                      {/* EFEITO DE PULSO COM BRILHO SUAVE QUANDO SELECIONADO */}
+                      {isPathSelected && (
+                        <>
+                          {/* Onda pulsante de brilho constante */}
+                          <circle
+                            cx={0}
+                            cy={0}
+                            r={3.8}
+                            fill="none"
+                            stroke="#F59E0B"
+                            strokeWidth={0.8}
+                            style={{
+                              animation: "tarotBadgePulseGlow 1.8s ease-in-out infinite",
+                              filter: "drop-shadow(0 0 5px rgba(245, 158, 11, 0.8))",
+                            }}
+                          />
+                          {/* Halo de luz suave viva */}
+                          <circle
+                            cx={0}
+                            cy={0}
+                            r={3.2}
+                            fill="#F59E0B"
+                            fillOpacity={0.22}
+                            stroke="#F59E0B"
+                            strokeWidth={0.4}
+                          />
+                        </>
+                      )}
+
+                      {/* Brilho suave em Hover */}
+                      {isPathHovered && !isPathSelected && (
+                        <circle
+                          cx={0}
+                          cy={0}
+                          r={3.0}
+                          fill="#F59E0B"
+                          fillOpacity={0.2}
+                          stroke="#FFFFFF"
+                          strokeWidth={0.4}
+                          className="animate-pulse"
+                        />
+                      )}
+
+                      {/* Sombra base do Badge */}
                       <circle
                         cx={0}
                         cy={0}
-                        r={2.4}
+                        r={isPathSelected ? 2.7 : 2.4}
                         fill="#0A0A0C"
                         filter="url(#badgeShadow)"
                       />
 
-                      {/* Borda / Aro do Arcano */}
+                      {/* Borda / Aro Metálico do Arcano */}
                       <circle
                         cx={0}
                         cy={0}
-                        r={2.3}
+                        r={isPathSelected ? 2.6 : 2.3}
                         fill="#18181B"
                         stroke={
                           isPathSelected
@@ -875,7 +1001,7 @@ export function TreeOfLifeView({
                             ? "#E2E8F0"
                             : "#71717A"
                         }
-                        strokeWidth={isPathSelected ? 0.65 : isPathHovered ? 0.55 : 0.4}
+                        strokeWidth={isPathSelected ? 0.75 : isPathHovered ? 0.55 : 0.4}
                       />
 
                       {/* Letra Hebraica sutil em segundo plano */}
@@ -885,7 +1011,7 @@ export function TreeOfLifeView({
                         textAnchor="middle"
                         dominantBaseline="central"
                         fill={isPathSelected ? "#F59E0B" : "#A1A1AA"}
-                        fillOpacity={0.22}
+                        fillOpacity={0.25}
                         className="text-[2.2px] font-serif select-none pointer-events-none"
                       >
                         {path.hebrewLetter}
@@ -1134,10 +1260,10 @@ export function TreeOfLifeView({
       {/* 2. Painel Lateral do Inspetor: Detalhes da Sephirah ou Caminho Selecionado */}
       <div className="w-full md:w-96 border-t md:border-t-0 md:border-l border-medium-700 bg-medium-850 flex flex-col h-auto md:h-full overflow-hidden shadow-2xl">
         {selectedPath ? (
-          /* Visualização de Detalhes do Caminho Selecionado */
+          /* Visualização Completa de Detalhes do Caminho Selecionado (Com Imagem, Estudo e Descrição) */
           <div className="flex flex-col h-full overflow-hidden">
             {/* Cabeçalho do Caminho */}
-            <div className="p-6 border-b border-medium-700 bg-medium-900/60 relative">
+            <div className="p-5 border-b border-medium-700 bg-medium-900/60 relative">
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
@@ -1149,7 +1275,7 @@ export function TreeOfLifeView({
                     <span>{selectedPath.tarotNumber} · {selectedPath.tarotName}</span>
                   </h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="font-serif text-lg text-amber-400 dark:text-amber-300">
+                    <span className="font-serif text-xl text-amber-400 dark:text-amber-300 font-bold">
                       {selectedPath.hebrewLetter}
                     </span>
                     <span className="text-xs font-mono text-medium-300">
@@ -1169,11 +1295,47 @@ export function TreeOfLifeView({
               </div>
             </div>
 
-            {/* Conteúdo do Caminho */}
-            <div className="p-6 overflow-y-auto flex-1 space-y-4 text-xs font-mono">
+            {/* Conteúdo Rico do Caminho: Imagem, Descrição, Estudo e Notas */}
+            <div className="p-5 overflow-y-auto flex-1 space-y-4 text-xs font-mono">
+              {/* IMAGEM DA CARTA DE THOTH EM ALTA DEFINIÇÃO */}
+              {selectedThothCard && (
+                <div className="flex flex-col items-center p-3 rounded-xl bg-medium-900 border border-amber-500/40 shadow-lg relative group">
+                  <div
+                    onClick={() =>
+                      setZoomedCardImage({
+                        url: selectedThothCard.imageUrl,
+                        title: selectedPath.tarotName,
+                        subtitle: `${selectedPath.tarotNumber} · ${selectedPath.hebrewName} (${selectedPath.hebrewLetter}) — Caminho #${selectedPath.pathNumber}`,
+                      })
+                    }
+                    className="relative w-36 h-56 rounded-lg overflow-hidden border-2 border-amber-500/60 shadow-xl cursor-pointer hover:border-amber-400 transition-all group/card"
+                    title="Clique para ver a pintura em alta resolução"
+                  >
+                    <img
+                      src={selectedThothCard.imageUrl}
+                      alt={selectedThothCard.name}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover/card:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/card:opacity-100 flex flex-col items-center justify-center transition-opacity text-white text-center p-2">
+                      <ZoomIn className="w-6 h-6 text-amber-300 mb-1" />
+                      <span className="text-[10px] font-mono font-bold text-amber-200">
+                        Ampliar Lâmina
+                      </span>
+                    </div>
+                  </div>
+
+                  {selectedThothCard.thelemicTitle && (
+                    <span className="text-[11px] font-serif italic text-amber-300/90 text-center mt-2.5 px-2">
+                      &ldquo;{selectedThothCard.thelemicTitle}&rdquo;
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* CONEXÃO ENTRE AS ESFERAS */}
               <div className="p-3.5 rounded-lg bg-medium-900/80 border border-medium-750 space-y-2">
                 <span className="text-[10px] text-medium-400 font-bold uppercase tracking-wider block">
-                  Conexão entre as Esferas
+                  Ponte entre as Esferas
                 </span>
                 <div className="flex items-center justify-between p-2 rounded bg-medium-850 border border-medium-700">
                   {(() => {
@@ -1190,7 +1352,7 @@ export function TreeOfLifeView({
                           className="flex items-center gap-2 hover:text-amber-300 transition-colors"
                         >
                           <div
-                            className="w-4 h-4 rounded-full border border-white/20"
+                            className="w-4 h-4 rounded-full border border-white/20 shadow-sm"
                             style={{ backgroundColor: s1.color }}
                           />
                           <span className="font-bold text-white">{s1.name} (#{s1.id})</span>
@@ -1205,7 +1367,7 @@ export function TreeOfLifeView({
                           className="flex items-center gap-2 hover:text-amber-300 transition-colors"
                         >
                           <div
-                            className="w-4 h-4 rounded-full border border-white/20"
+                            className="w-4 h-4 rounded-full border border-white/20 shadow-sm"
                             style={{ backgroundColor: s2.color }}
                           />
                           <span className="font-bold text-white">{s2.name} (#{s2.id})</span>
@@ -1216,9 +1378,34 @@ export function TreeOfLifeView({
                 </div>
               </div>
 
+              {/* DESCRIÇÃO CANÔNICA DE ALEISTER CROWLEY */}
+              {selectedThothCard?.description && (
+                <div className="p-3.5 rounded-lg bg-medium-900/80 border border-medium-750 space-y-1.5">
+                  <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider block flex items-center gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>O Livro de Thoth (Simbolismo)</span>
+                  </span>
+                  <p className="text-xs font-serif text-medium-200 leading-relaxed italic">
+                    {selectedThothCard.description}
+                  </p>
+                </div>
+              )}
+
+              {/* ESTUDO HERMÉTICO & MEDITAÇÃO INICIÁTICA DO CAMINHO */}
+              <div className="p-3.5 rounded-lg bg-medium-900/80 border border-amber-500/30 space-y-1.5 shadow-sm">
+                <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider block flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Estudo Hermético do Caminho</span>
+                </span>
+                <p className="text-xs font-serif text-medium-100 leading-relaxed">
+                  {selectedPath.study}
+                </p>
+              </div>
+
+              {/* ATRIBUIÇÕES DE LIBER 777 */}
               <div className="p-3.5 rounded-lg bg-medium-900/80 border border-medium-750 space-y-2">
                 <span className="text-[10px] text-medium-400 font-bold uppercase tracking-wider block">
-                  Atribuições Herméticas (Liber 777)
+                  Correspondências Cabalísticas (Liber 777)
                 </span>
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div>
@@ -1233,9 +1420,16 @@ export function TreeOfLifeView({
                     <span className="text-medium-400 block text-[10px]">REGÊNCIA / FORÇA:</span>
                     <span className="text-amber-400 dark:text-amber-300 font-semibold">{selectedPath.astrological}</span>
                   </div>
+                  {selectedThothCard?.keywords && (
+                    <div className="col-span-2">
+                      <span className="text-medium-400 block text-[10px]">PALAVRAS-CHAVE:</span>
+                      <span className="text-medium-300">{selectedThothCard.keywords.join(" · ")}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
+              {/* AÇÃO: CRIAR NOTA SOBRE ESTE ARCANO */}
               <button
                 onClick={() => onNewNoteUnderSephirah(`${selectedPath.tarotName} (${selectedPath.hebrewName})`)}
                 className="w-full py-2.5 px-4 rounded-lg bg-medium-100 hover:bg-medium-200 text-medium-900 font-semibold text-xs transition-colors flex items-center justify-center gap-2 shadow-sm font-sans"
@@ -1243,6 +1437,41 @@ export function TreeOfLifeView({
                 <Plus className="w-4 h-4 stroke-[2.5]" />
                 <span>Criar Nota sobre {selectedPath.tarotName}</span>
               </button>
+
+              {/* NOTAS VINCULADAS A ESTE ARCANO / CAMINHO */}
+              <div className="space-y-2 pt-2 border-t border-medium-750">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-medium-300">
+                    Notas Vinculadas ({pathNotes.length})
+                  </span>
+                </div>
+
+                {pathNotes.length === 0 ? (
+                  <div className="p-3 rounded-lg bg-medium-900/40 border border-medium-800 text-center text-medium-500 text-xs">
+                    Nenhuma nota vinculada a este caminho ainda.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                    {pathNotes.map((note) => (
+                      <div
+                        key={note.id}
+                        onClick={() => onSelectEntry(note)}
+                        className="p-2.5 rounded-lg bg-medium-900 hover:bg-medium-800 border border-medium-750 cursor-pointer transition-colors flex items-center justify-between group"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <span className="text-[10px] font-mono text-medium-400 block">
+                            {normalizeCategory(note.type)} · {new Date(note.date).toLocaleDateString("pt-BR")}
+                          </span>
+                          <h4 className="text-xs font-semibold text-medium-100 truncate group-hover:text-amber-300 transition-colors">
+                            {note.title}
+                          </h4>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 text-medium-500 group-hover:text-medium-100 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ) : (
@@ -1386,6 +1615,46 @@ export function TreeOfLifeView({
           </div>
         )}
       </div>
+
+      {/* MODAL DE ZOOM DA PINTURA DO ARCANO EM ALTA DEFINIÇÃO */}
+      {zoomedCardImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-6 animate-in fade-in select-none"
+          onClick={() => setZoomedCardImage(null)}
+        >
+          <div
+            className="relative max-w-lg w-full flex flex-col items-center bg-medium-850 border border-amber-500/50 rounded-2xl p-4 sm:p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between pb-3 border-b border-medium-700 mb-3">
+              <div>
+                <h3 className="text-base font-serif font-bold text-white">
+                  {zoomedCardImage.title}
+                </h3>
+                <span className="text-xs font-mono text-amber-300">
+                  {zoomedCardImage.subtitle}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setZoomedCardImage(null)}
+                className="p-1 rounded text-medium-400 hover:text-white hover:bg-medium-750 transition-colors"
+                title="Fechar (Esc)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative max-h-[75vh] rounded-xl overflow-hidden border border-amber-500/40 shadow-2xl">
+              <img
+                src={zoomedCardImage.url}
+                alt={zoomedCardImage.title}
+                className="max-h-[70vh] w-auto object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
