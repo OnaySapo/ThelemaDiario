@@ -8,3 +8,4 @@ Tarot de Toth/
 public/tarot/
 *.db-shm
 *.db-wal
+public/uploads/
