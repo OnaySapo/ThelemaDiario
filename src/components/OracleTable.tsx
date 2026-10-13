@@ -1,26 +1,23 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { THOTH_TAROT_DECK, ThothCard, CARD_BACKS } from "@/lib/thothTarot";
+import { playCardDealSound, playCardFlipSound } from "@/lib/audioBell";
 import {
   Sparkles,
   RotateCw,
   Plus,
   Trash2,
-  Image as ImageIcon,
-  Move,
-  Upload,
-  Link as LinkIcon,
   X,
-  Compass,
-  Check,
   Eye,
   EyeOff,
   Bot,
   Copy,
-  BookOpen,
   Layers,
   Shuffle,
+  ChevronDown,
+  Info,
+  Check,
 } from "lucide-react";
 
 export interface CardOnTable {
@@ -36,6 +33,102 @@ export interface CardOnTable {
   notes?: string;
 }
 
+export interface SpreadPreset {
+  id: string;
+  name: string;
+  description: string;
+  slots: {
+    position: string;
+    x: number; // percentage
+    y: number; // percentage
+    rotation?: number;
+  }[];
+}
+
+export const SPREAD_PRESETS: SpreadPreset[] = [
+  {
+    id: "single",
+    name: "Carta Única (Foco do Dia / Conselho)",
+    description: "Sintonização mágica imediata com a corrente e a Verdadeira Vontade.",
+    slots: [
+      { position: "Conselho da Vontade / Arcano Regente", x: 44, y: 32 },
+    ],
+  },
+  {
+    id: "trinity",
+    name: "Três Fatos (Vontade, Oposição, Síntese)",
+    description: "Método hermético clássico: tese, antítese e síntese resolutiva.",
+    slots: [
+      { position: "1. Vontade / Força Ativa", x: 20, y: 32 },
+      { position: "2. Oposição / Influência", x: 44, y: 32 },
+      { position: "3. Síntese / Resolução", x: 68, y: 32 },
+    ],
+  },
+  {
+    id: "time_line",
+    name: "Linha Temporal (Passado, Presente, Futuro)",
+    description: "A corrente que moldou o momento e para onde as forças convergem.",
+    slots: [
+      { position: "1. A Causa no Passado", x: 20, y: 32 },
+      { position: "2. O Momento Presente", x: 44, y: 32 },
+      { position: "3. Tendência Futura", x: 68, y: 32 },
+    ],
+  },
+  {
+    id: "elements_four",
+    name: "Cruz dos 4 Elementos da Esfinge",
+    description: "Saber, Querer, Ousar e Calar através dos poderes elementais.",
+    slots: [
+      { position: "Fogo (Yod / Vontade)", x: 44, y: 10 },
+      { position: "Água (Heh / Emoção)", x: 20, y: 35 },
+      { position: "Ar (Vav / Razão)", x: 68, y: 35 },
+      { position: "Terra (Heh final / Ação)", x: 44, y: 60 },
+    ],
+  },
+  {
+    id: "thelemic_will",
+    name: "Tiragem da Verdadeira Vontade (4 Lâminas)",
+    description: "Alinhamento com a Grande Obra segundo Liber AL vel Legis.",
+    slots: [
+      { position: "1. A Verdadeira Vontade", x: 44, y: 10 },
+      { position: "2. A Ilusão / Obstáculo", x: 20, y: 35 },
+      { position: "3. A Energia Auxiliar (Hadit)", x: 68, y: 35 },
+      { position: "4. A Resolução (A Grande Obra)", x: 44, y: 60 },
+    ],
+  },
+  {
+    id: "hexagram",
+    name: "Hexagrama Thelêmico (7 Forças Planetárias)",
+    description: "Mapeamento das forças do macrocosmo operando sobre a questão.",
+    slots: [
+      { position: "1. Saturno (Estrutura / Limites)", x: 44, y: 8 },
+      { position: "2. Júpiter (Expansão / Graça)", x: 68, y: 22 },
+      { position: "3. Marte (Purificação / Energia)", x: 20, y: 22 },
+      { position: "4. Sol (O Centro / Tiphareth)", x: 44, y: 35 },
+      { position: "5. Vênus (Amor / Harmonia)", x: 68, y: 52 },
+      { position: "6. Mercúrio (Inteligência / Magia)", x: 20, y: 52 },
+      { position: "7. Lua (Inconsciente / Yesod)", x: 44, y: 65 },
+    ],
+  },
+  {
+    id: "celtic_cross",
+    name: "Cruz Céltica Expandida (10 Lâminas)",
+    description: "O mais completo e clássico método divinatório adaptado a Thoth.",
+    slots: [
+      { position: "1. O Coração da Questão", x: 28, y: 35 },
+      { position: "2. O Obstáculo Cruzado", x: 28, y: 35, rotation: 90 },
+      { position: "3. A Raiz Inconsciente", x: 28, y: 62 },
+      { position: "4. O Passado Recente", x: 12, y: 35 },
+      { position: "5. O Objetivo Consciente", x: 28, y: 10 },
+      { position: "6. O Futuro Imediato", x: 44, y: 35 },
+      { position: "7. O Consulente / Magista", x: 72, y: 65 },
+      { position: "8. Forças Ambientais", x: 72, y: 46 },
+      { position: "9. Esperanças e Temores", x: 72, y: 27 },
+      { position: "10. Desfecho Final", x: 72, y: 8 },
+    ],
+  },
+];
+
 interface OracleTableProps {
   cards: CardOnTable[];
   onChange?: (cards: CardOnTable[]) => void;
@@ -45,6 +138,7 @@ interface OracleTableProps {
   onApplyInterpretation?: (text: string) => void;
   cardBackStyle?: "rosa_cruz" | "thelema";
   onCardBackStyleChange?: (style: "rosa_cruz" | "thelema") => void;
+  onSpreadNameChange?: (name: string) => void;
 }
 
 export function OracleTable({
@@ -56,16 +150,20 @@ export function OracleTable({
   onApplyInterpretation,
   cardBackStyle = "rosa_cruz",
   onCardBackStyleChange,
+  onSpreadNameChange,
 }: OracleTableProps) {
   const tableRef = useRef<HTMLDivElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeCardIdx, setActiveCardIdx] = useState<number | null>(null);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [imageUploadIdx, setImageUploadIdx] = useState<number | null>(null);
-  const [selectedThothToAdd, setSelectedThothToAdd] = useState("");
+  const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
   const [localBackStyle, setLocalBackStyle] = useState<"rosa_cruz" | "thelema">(cardBackStyle);
+
+  // Estados de Animações
+  const [isShuffling, setIsShuffling] = useState(false);
+  const [isDealing, setIsDealing] = useState(false);
+  const [isSpreadMenuOpen, setIsSpreadMenuOpen] = useState(false);
 
   // Estados do Palpite da IA
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -82,67 +180,47 @@ export function OracleTable({
     }
   };
 
-  // Adicionar Carta do Baralho de Thoth com imagem oficial mapeada
-  const handleAddThothCard = (cardId: string) => {
-    if (!onChange) return;
-    const thoth = THOTH_TAROT_DECK.find((c) => c.id === cardId);
-    if (!thoth) return;
+  // Número de cartas restantes no baralho completo de 78
+  const remainingDeckCount = useMemo(() => {
+    const usedIds = new Set(cards.map((c) => c.cardId));
+    return Math.max(0, 78 - usedIds.size);
+  }, [cards]);
 
-    const count = cards.length;
-    const newCard: CardOnTable = {
-      position: `Posição ${count + 1}`,
-      cardId: thoth.id,
-      cardName: thoth.name,
-      imageUrl: thoth.imageUrl,
-      imageFile: thoth.imageFile,
-      x: 25 + (count % 4) * 16,
-      y: 25 + Math.floor(count / 4) * 22,
-      rotation: 0,
-      isFlipped: true,
-      notes: thoth.keywords.join(", "),
-    };
-    const updated = [...cards, newCard];
-    onChange(updated);
-    setActiveCardIdx(updated.length - 1);
-    setSelectedThothToAdd("");
+  // Embaralhar o deck com animação visual e sonora
+  const handleTriggerShuffle = () => {
+    if (isShuffling || isDealing) return;
+    setIsShuffling(true);
+    playCardDealSound();
+    setTimeout(() => {
+      playCardDealSound();
+    }, 240);
+    setTimeout(() => {
+      setIsShuffling(false);
+    }, 700);
   };
 
-  // Adicionar Carta Personalizada (Qualquer Oráculo)
-  const handleAddCustomCard = () => {
-    if (!onChange) return;
-    const count = cards.length;
-    const newCard: CardOnTable = {
-      position: `Lâmina ${count + 1}`,
-      cardId: `custom-${Date.now()}`,
-      cardName: `Nova Lâmina / Oráculo`,
-      x: 30 + (count % 3) * 16,
-      y: 30 + Math.floor(count / 3) * 22,
-      rotation: 0,
-      isFlipped: true,
-      notes: "",
-    };
-    const updated = [...cards, newCard];
-    onChange(updated);
-    setActiveCardIdx(updated.length - 1);
-  };
-
-  // Tirar Carta Aleatória do Livro de Thoth (sorteio canônico com opção aberta ou oculta)
-  const handleDrawRandomCard = (faceDown: boolean = false) => {
-    if (!onChange) return;
+  // Puxar Carta do Deck no Canto Superior Esquerdo
+  const handleDrawFromDeck = () => {
+    if (!onChange || isDealing) return;
     const existingIds = new Set(cards.map((c) => c.cardId));
     let availableDeck = THOTH_TAROT_DECK.filter((c) => !existingIds.has(c.id));
     if (availableDeck.length === 0) {
-      availableDeck = [...THOTH_TAROT_DECK];
+      alert("Todas as 78 lâminas do Livro de Thoth já foram dispostas sobre a mesa!");
+      return;
     }
+
     const randomIndex = Math.floor(Math.random() * availableDeck.length);
     const thoth = availableDeck[randomIndex];
 
+    // Distribuir na mesa em posição orgânica
     const count = cards.length;
-    const posX = Math.min(Math.max(20 + (count % 4) * 17, 8), 76);
-    const posY = Math.min(Math.max(20 + Math.floor(count / 4) * 22, 12), 65);
+    const col = count % 4;
+    const row = Math.floor(count / 4);
+    const posX = Math.min(Math.max(24 + col * 17, 20), 75);
+    const posY = Math.min(Math.max(16 + row * 24, 10), 65);
 
     const newCard: CardOnTable = {
-      position: `Lâmina ${count + 1}`,
+      position: `Lâmina #${count + 1}`,
       cardId: thoth.id,
       cardName: thoth.name,
       imageUrl: thoth.imageUrl,
@@ -150,16 +228,86 @@ export function OracleTable({
       x: posX,
       y: posY,
       rotation: 0,
-      isFlipped: !faceDown,
+      isFlipped: false, // Inicia virada para baixo no pano de altar!
       notes: thoth.keywords.join(", "),
     };
 
     const updated = [...cards, newCard];
     onChange(updated);
     setActiveCardIdx(updated.length - 1);
+    playCardDealSound();
   };
 
-  // Girar carta em 90 graus
+  // Aplicar Tiragem Padrão com animação carta a carta
+  const handleApplySpreadMethod = (spread: SpreadPreset) => {
+    if (!onChange || isDealing) return;
+    setIsDealing(true);
+    setIsSpreadMenuOpen(false);
+
+    if (onSpreadNameChange) {
+      onSpreadNameChange(spread.name);
+    }
+
+    // Embaralhar e retirar cartas únicas do deck
+    const shuffled = [...THOTH_TAROT_DECK].sort(() => Math.random() - 0.5);
+    const chosenCards = shuffled.slice(0, spread.slots.length);
+
+    let dealtSoFar: CardOnTable[] = [];
+    onChange([]);
+
+    spread.slots.forEach((slot, idx) => {
+      setTimeout(() => {
+        const thoth = chosenCards[idx];
+        const newCard: CardOnTable = {
+          position: slot.position,
+          cardId: thoth.id,
+          cardName: thoth.name,
+          imageUrl: thoth.imageUrl,
+          imageFile: thoth.imageFile,
+          x: slot.x,
+          y: slot.y,
+          rotation: slot.rotation || 0,
+          isFlipped: false, // Todas viradas para baixo!
+          notes: thoth.keywords.join(", "),
+        };
+        dealtSoFar = [...dealtSoFar, newCard];
+        onChange([...dealtSoFar]);
+        playCardDealSound();
+
+        if (idx === spread.slots.length - 1) {
+          setIsDealing(false);
+          setActiveCardIdx(0);
+        }
+      }, (idx + 1) * 280);
+    });
+  };
+
+  // Virar / Desvelar Carta específica (com animação 3D e som)
+  const handleCardClick = (idx: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveCardIdx(idx);
+
+    if (cards[idx].isFlipped === false && onChange) {
+      const updated = [...cards];
+      updated[idx] = { ...updated[idx], isFlipped: true };
+      onChange(updated);
+      playCardFlipSound();
+    }
+  };
+
+  // Virar todas as cartas (Reveal all / Hide all)
+  const handleToggleFlipAll = () => {
+    if (!onChange || cards.length === 0) return;
+    const anyHidden = cards.some((c) => c.isFlipped === false);
+    const updated = cards.map((c) => ({
+      ...c,
+      isFlipped: anyHidden ? true : false,
+    }));
+    onChange(updated);
+    playCardFlipSound();
+  };
+
+  // Girar carta selecionada em 90 graus
   const handleRotateCard = (idx: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!onChange) return;
@@ -172,80 +320,7 @@ export function OracleTable({
     onChange(updated);
   };
 
-  // Virar carta (Face-up / Face-down)
-  const handleToggleFlipCard = (idx: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (!onChange) return;
-    const updated = [...cards];
-    const isCurrentlyFlipped = updated[idx].isFlipped !== false;
-    updated[idx] = {
-      ...updated[idx],
-      isFlipped: !isCurrentlyFlipped,
-    };
-    onChange(updated);
-  };
-
-  // Virar todas as cartas (Reveal all or hide all)
-  const handleToggleFlipAll = () => {
-    if (!onChange || cards.length === 0) return;
-    const anyHidden = cards.some((c) => c.isFlipped === false);
-    const updated = cards.map((c) => ({
-      ...c,
-      isFlipped: anyHidden ? true : false,
-    }));
-    onChange(updated);
-  };
-
-  // Alterar URL da imagem diretamente
-  const handlePromptImageUrl = (idx: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (!onChange) return;
-    const current = cards[idx].imageUrl || "";
-    const url = prompt("Insira a URL direta da imagem da carta:", current);
-    if (url !== null) {
-      const updated = [...cards];
-      updated[idx] = { ...updated[idx], imageUrl: url.trim() || undefined };
-      onChange(updated);
-    }
-  };
-
-  // Disparar upload de imagem local
-  const triggerLocalImageUpload = (idx: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    setImageUploadIdx(idx);
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  // Processar arquivo de imagem local e converter para DataURL
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || imageUploadIdx === null || !onChange) return;
-
-    const reader = new FileReader();
-    reader.onload = (loadEvent) => {
-      const dataUrl = loadEvent.target?.result as string;
-      if (dataUrl) {
-        const updated = [...cards];
-        updated[imageUploadIdx] = { ...updated[imageUploadIdx], imageUrl: dataUrl };
-        onChange(updated);
-      }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  };
-
-  // Remover Imagem da Carta
-  const handleRemoveImage = (idx: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (!onChange) return;
-    const updated = [...cards];
-    updated[idx] = { ...updated[idx], imageUrl: undefined, imageFile: undefined };
-    onChange(updated);
-  };
-
-  // Remover carta
+  // Remover carta da mesa
   const handleRemoveCard = (idx: number, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!onChange) return;
@@ -260,19 +335,10 @@ export function OracleTable({
 
   // Iniciar Drag no Altar
   const handleMouseDown = (idx: number, e: React.MouseEvent) => {
+    setMouseDownPos({ x: e.clientX, y: e.clientY });
     setActiveCardIdx(idx);
 
-    // Se clicou na carta e ela estiver virada para baixo no modo de leitura, vire-a!
-    if (!isEditable && cards[idx].isFlipped === false && onChange) {
-      const updated = [...cards];
-      updated[idx] = { ...updated[idx], isFlipped: true };
-      onChange(updated);
-      return;
-    }
-
     if (!isEditable || !tableRef.current) return;
-
-    const rect = tableRef.current.getBoundingClientRect();
     const cardEl = e.currentTarget as HTMLElement;
     const cardRect = cardEl.getBoundingClientRect();
 
@@ -283,6 +349,23 @@ export function OracleTable({
     setDraggingIdx(idx);
   };
 
+  const handleCardMouseUp = (idx: number, e: React.MouseEvent) => {
+    if (mouseDownPos) {
+      const dist = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
+      if (dist < 6) {
+        // Foi clique simples: se a carta estiver virada para baixo, virar em 3D!
+        if (cards[idx].isFlipped === false && onChange) {
+          const updated = [...cards];
+          updated[idx] = { ...updated[idx], isFlipped: true };
+          onChange(updated);
+          playCardFlipSound();
+        }
+      }
+    }
+    setDraggingIdx(null);
+    setMouseDownPos(null);
+  };
+
   const handleMouseMove = (e: React.MouseEvent) => {
     if (draggingIdx === null || !tableRef.current || !onChange) return;
     const rect = tableRef.current.getBoundingClientRect();
@@ -290,7 +373,6 @@ export function OracleTable({
     const mouseX = e.clientX - rect.left - dragOffset.x;
     const mouseY = e.clientY - rect.top - dragOffset.y;
 
-    // Converter para porcentagem com limites seguros dentro da mesa
     const pctX = Math.min(Math.max((mouseX / rect.width) * 100, 2), 85);
     const pctY = Math.min(Math.max((mouseY / rect.height) * 100, 2), 75);
 
@@ -303,76 +385,9 @@ export function OracleTable({
     onChange(updated);
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUpGlobal = () => {
     setDraggingIdx(null);
-  };
-
-  // Presets de Geometria Sagrada na Mesa
-  const applyPresetLayout = (layout: "line" | "cross" | "hexagram" | "celtic") => {
-    if (!onChange || cards.length === 0) return;
-    const updated = [...cards];
-
-    if (layout === "line") {
-      const step = 80 / (updated.length + 1);
-      updated.forEach((c, i) => {
-        c.x = Math.round(10 + (i + 1) * step);
-        c.y = 35;
-        c.rotation = 0;
-      });
-    } else if (layout === "cross") {
-      const positions = [
-        { x: 44, y: 10 }, // Topo
-        { x: 22, y: 35 }, // Esquerda
-        { x: 66, y: 35 }, // Direita
-        { x: 44, y: 60 }, // Base
-      ];
-      updated.forEach((c, i) => {
-        if (positions[i]) {
-          c.x = positions[i].x;
-          c.y = positions[i].y;
-          c.rotation = 0;
-        }
-      });
-    } else if (layout === "hexagram") {
-      const positions = [
-        { x: 44, y: 35, rot: 0 },  // Centro (Sol / Tiphareth)
-        { x: 44, y: 8,  rot: 0 },  // Saturno (Topo)
-        { x: 70, y: 20, rot: 0 },  // Júpiter (Alto Direita)
-        { x: 70, y: 55, rot: 0 },  // Vênus (Baixo Direita)
-        { x: 44, y: 68, rot: 0 },  // Lua (Base)
-        { x: 18, y: 55, rot: 0 },  // Mercúrio (Baixo Esquerda)
-        { x: 18, y: 20, rot: 0 },  // Marte (Alto Esquerda)
-      ];
-      updated.forEach((c, i) => {
-        if (positions[i]) {
-          c.x = positions[i].x;
-          c.y = positions[i].y;
-          c.rotation = positions[i].rot;
-        }
-      });
-    } else if (layout === "celtic") {
-      const positions = [
-        { x: 28, y: 35, rot: 0 },   // 1. Centro
-        { x: 28, y: 35, rot: 90 },  // 2. Cruzada
-        { x: 28, y: 65, rot: 0 },   // 3. Base / Inconsciente
-        { x: 10, y: 35, rot: 0 },   // 4. Passado
-        { x: 28, y: 8,  rot: 0 },   // 5. Coroa / Meta
-        { x: 46, y: 35, rot: 0 },   // 6. Futuro Imediato
-        { x: 72, y: 68, rot: 0 },   // 7. O Próprio
-        { x: 72, y: 48, rot: 0 },   // 8. Ambiente / Outros
-        { x: 72, y: 28, rot: 0 },   // 9. Esperanças / Temores
-        { x: 72, y: 8,  rot: 0 },   // 10. Desfecho Final
-      ];
-      updated.forEach((c, i) => {
-        if (positions[i]) {
-          c.x = positions[i].x;
-          c.y = positions[i].y;
-          c.rotation = positions[i].rot;
-        }
-      });
-    }
-
-    onChange(updated);
+    setMouseDownPos(null);
   };
 
   // Pedir Palpite do Frater Auxiliar (IA)
@@ -420,135 +435,118 @@ export function OracleTable({
     }
   };
 
-  // Card Ativo Selecionado
   const activeCard = activeCardIdx !== null ? cards[activeCardIdx] : null;
+  const activeThoth = activeCard ? THOTH_TAROT_DECK.find((c) => c.id === activeCard.cardId) : null;
 
   return (
     <div className="space-y-3 select-none">
-      {/* Hidden File Input for local image uploading */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept="image/*"
-        className="hidden"
-      />
+      {/* Estilos e Animações CSS para o Pano e as Cartas */}
+      <style>{`
+        @keyframes altarClothUnfold {
+          0% {
+            opacity: 0;
+            transform: scaleY(0.18) scaleX(0.85);
+            filter: blur(8px);
+          }
+          60% {
+            opacity: 0.95;
+            transform: scaleY(1.02) scaleX(1.01);
+            filter: blur(0px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0px);
+          }
+        }
+        @keyframes deckRiffleShuffle {
+          0% { transform: rotate(-6deg) scale(1); }
+          25% { transform: rotate(-14deg) translateX(-12px) scale(1.06); }
+          50% { transform: rotate(10deg) translateX(12px) scale(1.06); }
+          75% { transform: rotate(-8deg) translateY(-6px) scale(1.03); }
+          100% { transform: rotate(-6deg) scale(1); }
+        }
+        .animate-cloth-unfold {
+          animation: altarClothUnfold 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-deck-shuffle {
+          animation: deckRiffleShuffle 0.65s ease-in-out infinite;
+        }
+      `}</style>
 
-      {/* Barra de Ferramentas Superior da Mesa */}
-      <div className="p-3 bg-medium-850 rounded-lg border border-medium-700 flex flex-wrap items-center justify-between gap-3 text-xs">
-        {/* Lado Esquerdo: Adicionar Cartas (Modo Edição) */}
-        {isEditable ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={selectedThothToAdd}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val) handleAddThothCard(val);
-              }}
-              className="bg-medium-800 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white max-w-[210px] truncate"
-            >
-              <option value="">+ Adicionar Lâmina de Thoth...</option>
-              <optgroup label="Arcanos Maiores (22 Atus)">
-                {THOTH_TAROT_DECK.filter((c) => c.suit === "major").map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.number ? `${c.number}. ` : ""}{c.name}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Paus (Fogo - 14 Lâminas)">
-                {THOTH_TAROT_DECK.filter((c) => c.suit === "wands").map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Copas (Água - 14 Lâminas)">
-                {THOTH_TAROT_DECK.filter((c) => c.suit === "cups").map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Espadas (Ar - 14 Lâminas)">
-                {THOTH_TAROT_DECK.filter((c) => c.suit === "swords").map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Discos (Terra - 14 Lâminas)">
-                {THOTH_TAROT_DECK.filter((c) => c.suit === "disks").map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-
-            <button
-              type="button"
-              onClick={handleAddCustomCard}
-              className="flex items-center gap-1 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-xs border border-medium-700 transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Personalizada</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleDrawRandomCard(false)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-xs border border-medium-700 transition-colors font-medium"
-              title="Tirar uma lâmina aleatória do Livro de Thoth sobre o altar"
-            >
-              <Shuffle className="w-3.5 h-3.5 text-white" />
-              <span>Tirar Aleatória</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleDrawRandomCard(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white rounded text-xs border border-medium-700 transition-colors"
-              title="Tirar uma lâmina oculta (virada para baixo) para revelação cega"
-            >
-              <EyeOff className="w-3.5 h-3.5" />
-              <span>Tirar Oculta</span>
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-xs font-mono text-medium-300">
-            <Sparkles className="w-4 h-4 text-white" />
-            <span className="font-semibold text-white">Altar de Consulta Oracular</span>
-            <span>({cards.length} {cards.length === 1 ? "lâmina" : "lâminas"})</span>
-          </div>
-        )}
-
-        {/* Lado Direito: Versos das Cartas + Revelar + Palpite IA */}
+      {/* Barra de Ferramentas da Mesa Oracular */}
+      <div className="p-3 bg-medium-850 rounded-xl border border-medium-700 flex flex-wrap items-center justify-between gap-2.5 text-xs">
+        {/* Esquerda: Botão de Métodos de Tiragem + Ações Rápidas */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Seletor de Verso (2 Tipos) */}
-          <div className="flex items-center gap-1.5 bg-medium-800 px-2 py-1 rounded border border-medium-700">
-            <Layers className="w-3.5 h-3.5 text-medium-400" />
-            <span className="text-[10px] font-mono text-medium-400">Verso:</span>
-            <select
-              value={cardBackStyle || localBackStyle}
-              onChange={(e) => handleBackStyleChange(e.target.value as any)}
-              className="bg-transparent text-white text-[11px] font-mono focus:outline-none cursor-pointer"
+          {/* BOTÃO DE MÉTODOS DE TIRAGEM COM DROPDOWN */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsSpreadMenuOpen(!isSpreadMenuOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg text-xs shadow-sm transition-all"
+              title="Escolher um método canônico de tiragem para dispor as lâminas automaticamente"
             >
-              <option value="rosa_cruz">Rosa-Cruz</option>
-              <option value="thelema">Thelema</option>
-            </select>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Métodos de Tiragem</span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+            </button>
+
+            {isSpreadMenuOpen && (
+              <div className="absolute left-0 top-full mt-2 w-72 bg-medium-850 border border-medium-700 rounded-xl p-2 shadow-2xl z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-2 py-1.5 border-b border-medium-750 text-[10px] font-mono text-medium-400 font-bold uppercase tracking-wider flex items-center justify-between">
+                  <span>Métodos Tradicionais</span>
+                  <X
+                    className="w-3 h-3 cursor-pointer hover:text-white"
+                    onClick={() => setIsSpreadMenuOpen(false)}
+                  />
+                </div>
+                {SPREAD_PRESETS.map((spread) => (
+                  <button
+                    key={spread.id}
+                    type="button"
+                    onClick={() => handleApplySpreadMethod(spread)}
+                    className="w-full text-left p-2 rounded-lg hover:bg-medium-800 transition-colors group flex flex-col"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-xs text-medium-100 group-hover:text-amber-300">
+                        {spread.name}
+                      </span>
+                      <span className="text-[10px] font-mono text-purple-400 bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-800/40">
+                        {spread.slots.length} {spread.slots.length === 1 ? "carta" : "cartas"}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-medium-400 line-clamp-1 mt-0.5 font-mono">
+                      {spread.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+
+          {/* Botão Embaralhar */}
+          <button
+            type="button"
+            onClick={handleTriggerShuffle}
+            disabled={isShuffling || isDealing}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-medium-200 hover:text-white rounded-lg border border-medium-700 transition-all font-mono text-[11px]"
+            title="Embaralhar o monte de 78 cartas de Thoth"
+          >
+            <Shuffle className={`w-3.5 h-3.5 ${isShuffling ? "animate-spin text-amber-400" : ""}`} />
+            <span>{isShuffling ? "Embaralhando..." : "Embaralhar Deck"}</span>
+          </button>
 
           {/* Botão Revelar / Ocultar Todas */}
           {cards.length > 0 && (
             <button
               type="button"
               onClick={handleToggleFlipAll}
-              className="flex items-center gap-1 px-2.5 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700 transition-colors"
-              title="Alternar entre mostrar a face ou o verso de todas as lâminas"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-medium-200 hover:text-white rounded-lg border border-medium-700 transition-all font-mono text-[11px]"
+              title="Revelar ou ocultar todas as lâminas sobre o altar"
             >
               {cards.some((c) => c.isFlipped === false) ? (
                 <>
-                  <Eye className="w-3.5 h-3.5" />
+                  <Eye className="w-3.5 h-3.5 text-amber-400" />
                   <span>Revelar Todas</span>
                 </>
               ) : (
@@ -559,51 +557,47 @@ export function OracleTable({
               )}
             </button>
           )}
+        </div>
 
-          {/* Presets de Alinhamento (No modo edição) */}
-          {isEditable && (
-            <div className="hidden sm:flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => applyPresetLayout("line")}
-                className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
-                title="Alinhar em Linha"
-              >
-                Linha
-              </button>
-              <button
-                type="button"
-                onClick={() => applyPresetLayout("cross")}
-                className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
-                title="Cruz (4)"
-              >
-                Cruz
-              </button>
-              <button
-                type="button"
-                onClick={() => applyPresetLayout("hexagram")}
-                className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
-                title="Hexagrama (7)"
-              >
-                Hexagrama
-              </button>
-              <button
-                type="button"
-                onClick={() => applyPresetLayout("celtic")}
-                className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] font-mono border border-medium-700"
-                title="Cruz Céltica (10)"
-              >
-                Céltica
-              </button>
-            </div>
+        {/* Direita: Verso + Limpar + Palpite da IA */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Seletor de Verso (Rosa Cruz ou Thelema) */}
+          <div className="flex items-center gap-1.5 bg-medium-800 px-2.5 py-1 rounded-lg border border-medium-700">
+            <Layers className="w-3.5 h-3.5 text-medium-400" />
+            <span className="text-[10px] font-mono text-medium-400">Verso:</span>
+            <select
+              value={cardBackStyle || localBackStyle}
+              onChange={(e) => handleBackStyleChange(e.target.value as any)}
+              className="bg-transparent text-medium-100 text-[11px] font-mono focus:outline-none cursor-pointer"
+            >
+              <option value="rosa_cruz">Rosa-Cruz</option>
+              <option value="thelema">Thelema</option>
+            </select>
+          </div>
+
+          {/* Limpar Mesa */}
+          {cards.length > 0 && isEditable && (
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm("Deseja recolher todas as cartas de volta ao baralho?")) {
+                  onChange?.([]);
+                  setActiveCardIdx(null);
+                }
+              }}
+              className="p-1.5 text-medium-400 hover:text-red-400 rounded-lg hover:bg-medium-800 transition-colors"
+              title="Recolher todas as lâminas e limpar a mesa"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           )}
 
-          {/* BOTÃO MÁGICO DE PALPITE DA IA */}
+          {/* Botão Palpite da IA (Frater Auxiliar) */}
           <button
             type="button"
             onClick={handleRequestAiInterpretation}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-medium-200 text-black font-semibold rounded text-xs transition-colors shadow-sm"
-            title="Pedir palpite e interpretação hermética da tiragem ao Frater Auxiliar"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-medium-200 text-black font-semibold rounded-lg text-xs transition-colors shadow-sm"
+            title="Pedir interpretação hermética da tiragem ao Frater Auxiliar"
           >
             <Bot className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>Palpite da IA</span>
@@ -611,67 +605,120 @@ export function OracleTable({
         </div>
       </div>
 
-      {/* O Pano de Mesa do Altar (Canvas Interativo) */}
+      {/* PANO ORACULAR DO ALTAR (CANVAS COM VELUDO E FILIGRANAS) */}
       <div
         ref={tableRef}
         onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        className="relative w-full h-[470px] bg-[#111111] rounded-xl border-2 border-medium-700 overflow-hidden shadow-2xl"
+        onMouseUp={handleMouseUpGlobal}
+        onMouseLeave={handleMouseUpGlobal}
+        className="relative w-full h-[520px] rounded-2xl border-2 border-amber-600/40 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.85),inset_0_0_50px_rgba(217,119,6,0.1)] animate-cloth-unfold select-none bg-[#0a0812]"
         style={{
           backgroundImage: `
-            radial-gradient(circle at center, rgba(255, 255, 255, 0.06) 0%, transparent 75%),
-            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)
+            radial-gradient(circle at center, rgba(168, 85, 247, 0.08) 0%, rgba(10, 8, 18, 0.95) 75%),
+            linear-gradient(rgba(234, 179, 8, 0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(234, 179, 8, 0.04) 1px, transparent 1px)
           `,
-          backgroundSize: "100% 100%, 35px 35px, 35px 35px",
+          backgroundSize: "100% 100%, 36px 36px, 36px 36px",
         }}
       >
-        {/* Geometria Sagrada no Centro do Altar */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-25">
-          <div className="w-80 h-80 rounded-full border border-dashed border-white/60 flex items-center justify-center">
-            <div className="w-56 h-56 rounded-full border border-white/40 flex items-center justify-center">
-              <Sparkles className="w-16 h-16 text-white" />
+        {/* Cantoneiras Douradas do Pano de Altar nos 4 Cantos */}
+        <div className="absolute top-2 left-2 w-8 h-8 border-t-2 border-l-2 border-amber-500/50 rounded-tl pointer-events-none" />
+        <div className="absolute top-2 right-2 w-8 h-8 border-t-2 border-r-2 border-amber-500/50 rounded-tr pointer-events-none" />
+        <div className="absolute bottom-2 left-2 w-8 h-8 border-b-2 border-l-2 border-amber-500/50 rounded-bl pointer-events-none" />
+        <div className="absolute bottom-2 right-2 w-8 h-8 border-b-2 border-r-2 border-amber-500/50 rounded-br pointer-events-none" />
+
+        {/* Marca d'água geométrica central do Pano de Altar */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+          <div className="w-96 h-96 rounded-full border border-dashed border-amber-500/50 flex items-center justify-center">
+            <div className="w-64 h-64 rounded-full border border-amber-400/40 flex items-center justify-center">
+              <Sparkles className="w-20 h-20 text-amber-300" />
             </div>
           </div>
         </div>
 
-        {/* Estado Vazio */}
-        {cards.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-medium-400 font-mono text-xs">
-            <Sparkles className="w-8 h-8 text-medium-500 mb-2" />
-            <span>Nenhuma lâmina sobre a mesa oracular.</span>
-            {isEditable && (
-              <span className="text-[11px] text-medium-500 mt-1">
-                Selecione uma lâmina de Thoth no menu superior para dispor sobre o altar.
-              </span>
-            )}
+        {/* DECK 3D INTERATIVO NO CANTO SUPERIOR ESQUERDO */}
+        <div className="absolute top-4 left-4 z-30 select-none">
+          <div
+            onClick={handleDrawFromDeck}
+            className="group relative cursor-pointer"
+            title="Baralho de Thoth — Clique para Tirar uma Lâmina"
+          >
+            {/* Camadas inferiores do baralho (espessura 3D de 78 cartas) */}
+            <div className="absolute -bottom-2 -right-2 w-20 sm:w-24 h-32 sm:h-38 rounded-lg bg-black/80 border border-amber-900/40 shadow-2xl" />
+            <div className="absolute -bottom-1 -right-1 w-20 sm:w-24 h-32 sm:h-38 rounded-lg bg-[#181512] border border-amber-700/50 shadow-md" />
+
+            {/* Carta do topo do monte (virada em ângulo) */}
+            <div
+              className={`relative w-20 sm:w-24 h-32 sm:h-38 rounded-lg overflow-hidden border-2 border-amber-500/80 bg-medium-950 p-1 shadow-2xl transition-all duration-300 transform -rotate-6 group-hover:-rotate-3 group-hover:scale-105 group-hover:border-amber-400 group-hover:shadow-[0_0_25px_rgba(234,179,8,0.4)] ${
+                isShuffling ? "animate-deck-shuffle" : ""
+              }`}
+            >
+              <img
+                src={currentBack.imageUrl}
+                alt="Baralho de Thoth"
+                className="w-full h-full object-cover rounded pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/15 transition-colors flex flex-col items-center justify-between p-1.5 text-center">
+                <span className="text-[8px] font-mono font-bold text-amber-200 bg-black/80 px-1 py-0.5 rounded border border-amber-500/40 shadow-sm">
+                  {remainingDeckCount} no deck
+                </span>
+                <div className="w-6 h-6 rounded-full bg-amber-500/90 text-black flex items-center justify-center font-bold text-xs shadow-md group-hover:scale-110 transition-transform">
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                </div>
+                <span className="text-[7.5px] font-mono text-white bg-black/80 px-1 rounded uppercase tracking-wider font-semibold">
+                  Tirar Carta
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Notificação / Estado da Mesa */}
+        {cards.length === 0 && !isDealing && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-medium-400 font-mono text-xs pointer-events-none">
+            <Sparkles className="w-8 h-8 text-amber-400/60 mb-2 animate-pulse" />
+            <span className="text-medium-200 font-semibold text-sm">Pano Oracular Estendido</span>
+            <span className="text-[11px] text-medium-400 mt-1 max-w-sm">
+              Clique no <strong>Baralho</strong> no canto superior esquerdo para puxar uma lâmina aleatória ou escolha um <strong>Método de Tiragem</strong> no menu.
+            </span>
           </div>
         )}
 
-        {/* Renderização das Lâminas sobre a Mesa */}
+        {/* FEEDBACK DE DISTRIBUIÇÃO */}
+        {isDealing && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 bg-black/80 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-purple-500/50 text-purple-200 text-xs font-mono flex items-center gap-2 shadow-2xl animate-pulse">
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span>Distribuindo lâminas sobre o altar...</span>
+          </div>
+        )}
+
+        {/* RENDERIZAÇÃO DAS CARTAS NA MESA COM FLIP 3D */}
         {cards.map((card, idx) => {
-          const posX = card.x !== undefined ? card.x : 20 + (idx % 4) * 18;
-          const posY = card.y !== undefined ? card.y : 20 + Math.floor(idx / 4) * 22;
+          const posX = card.x !== undefined ? card.x : 24 + (idx % 4) * 18;
+          const posY = card.y !== undefined ? card.y : 20 + Math.floor(idx / 4) * 24;
           const rot = card.rotation || 0;
-          const isFlipped = card.isFlipped !== false; // true = mostrando a face, false = verso
+          const isFlipped = card.isFlipped !== false;
           const isDragging = draggingIdx === idx;
           const isSelected = activeCardIdx === idx;
           const thothInfo = THOTH_TAROT_DECK.find((tc) => tc.id === card.cardId);
 
-          // Imagem efetiva da face
           const faceImage = card.imageUrl || thothInfo?.imageUrl;
-          // Imagem do verso
           const backImage = currentBack.imageUrl;
 
           return (
             <div
-              key={idx}
+              key={`table-card-${idx}`}
               onMouseDown={(e) => handleMouseDown(idx, e)}
-              className={`absolute group select-none transition-shadow ${
+              onMouseUp={(e) => handleCardMouseUp(idx, e)}
+              onClick={(e) => handleCardClick(idx, e)}
+              className={`absolute select-none transition-shadow ${
                 isEditable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
               } ${
-                isDragging ? "z-50 scale-105 shadow-2xl" : isSelected ? "z-40 scale-102" : "z-20 hover:z-30 hover:scale-[1.03]"
+                isDragging
+                  ? "z-50 scale-105 shadow-2xl"
+                  : isSelected
+                  ? "z-40 scale-102"
+                  : "z-20 hover:z-30 hover:scale-[1.03]"
               }`}
               style={{
                 left: `${posX}%`,
@@ -680,375 +727,257 @@ export function OracleTable({
                 transformOrigin: "center center",
               }}
             >
-              {/* Carta Visual com efeito de espessura de baralho */}
+              {/* ESTRUTURA FLIP 3D DA CARTA */}
               <div
-                className={`w-28 sm:w-32 h-44 sm:h-48 rounded-lg overflow-hidden border-2 bg-medium-900 flex flex-col justify-between p-1.5 shadow-2xl transition-all ${
-                  isDragging || isSelected
-                    ? "border-white ring-2 ring-white/40"
-                    : "border-medium-600 hover:border-white"
-                }`}
+                className="w-24 sm:w-28 h-38 sm:h-44 rounded-lg shadow-xl"
+                style={{ perspective: "1000px" }}
               >
-                {/* Etiqueta da Posição */}
-                <div className="bg-black/85 backdrop-blur-sm px-1.5 py-0.5 rounded text-[9px] font-mono text-white text-center truncate font-semibold border border-medium-700">
-                  {card.position}
-                </div>
+                <div
+                  className="relative w-full h-full rounded-lg transition-transform duration-500 ease-out"
+                  style={{
+                    transformStyle: "preserve-3d",
+                    transform: isFlipped ? "rotateY(0deg)" : "rotateY(180deg)",
+                  }}
+                >
+                  {/* 1. FACE DA CARTA (ROTAÇÃO 0deg - REVELADA) */}
+                  <div
+                    className={`absolute inset-0 w-full h-full rounded-lg overflow-hidden border-2 bg-[#121018] flex flex-col justify-between p-1 shadow-2xl ${
+                      isSelected
+                        ? "border-amber-400 ring-2 ring-amber-400/40"
+                        : "border-amber-700/60 hover:border-amber-400"
+                    }`}
+                    style={{
+                      backfaceVisibility: "hidden",
+                      WebkitBackfaceVisibility: "hidden",
+                    }}
+                  >
+                    {/* Etiqueta da Posição */}
+                    <div className="bg-black/90 backdrop-blur-sm px-1 py-0.5 rounded text-[8px] font-mono text-amber-200 text-center truncate font-bold border border-amber-900/60">
+                      {card.position}
+                    </div>
 
-                {/* Centro da Carta: FACE ou VERSO */}
-                <div className="flex-1 my-1 rounded overflow-hidden flex flex-col items-center justify-center relative bg-medium-950/70 border border-medium-800">
-                  {!isFlipped ? (
-                    /* VERSO DA CARTA (ROSA CRUZ OU THELEMA) */
-                    <div className="w-full h-full relative flex items-center justify-center bg-black/60">
+                    {/* Imagem da Face de Thoth */}
+                    <div className="flex-1 my-0.5 rounded overflow-hidden flex items-center justify-center bg-black/60 relative">
+                      {faceImage ? (
+                        <img
+                          src={faceImage}
+                          alt={card.cardName}
+                          className="w-full h-full object-cover pointer-events-none"
+                        />
+                      ) : (
+                        <div className="text-center p-1">
+                          <span className="text-[11px] font-serif font-bold text-white block">
+                            {card.cardName}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Rodapé da Carta */}
+                    <div className="bg-black/85 px-1 py-0.5 rounded text-[8px] font-mono text-white text-center truncate font-semibold border border-medium-800">
+                      {card.cardName}
+                    </div>
+                  </div>
+
+                  {/* 2. VERSO DA CARTA (ROTAÇÃO 180deg - OCULTA NO ALTAR) */}
+                  <div
+                    className={`absolute inset-0 w-full h-full rounded-lg overflow-hidden border-2 border-amber-500/80 bg-medium-950 p-1 shadow-2xl flex flex-col justify-between ${
+                      isSelected ? "ring-2 ring-amber-400/50" : ""
+                    }`}
+                    style={{
+                      backfaceVisibility: "hidden",
+                      WebkitBackfaceVisibility: "hidden",
+                      transform: "rotateY(180deg)",
+                    }}
+                  >
+                    <div className="bg-black/90 px-1 py-0.5 rounded text-[8px] font-mono text-amber-300 text-center truncate font-semibold border border-amber-700/60">
+                      {card.position}
+                    </div>
+
+                    <div className="flex-1 my-0.5 rounded overflow-hidden relative flex items-center justify-center bg-black/50">
                       <img
                         src={backImage}
                         alt={currentBack.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover rounded pointer-events-none"
                       />
-                      <div className="absolute inset-0 bg-black/20 hover:bg-transparent transition-colors flex items-center justify-center">
-                        <span className="text-[9px] font-mono text-white/90 bg-black/70 px-1 py-0.5 rounded border border-white/20">
-                          {currentBack.id === "rosa_cruz" ? "Rosa-Cruz" : "Thelema"}
+                      <div className="absolute inset-0 bg-black/30 hover:bg-black/10 transition-colors flex flex-col items-center justify-center text-center p-1">
+                        <span className="text-[8px] font-mono font-bold text-amber-200 bg-black/85 px-1.5 py-0.5 rounded border border-amber-400/50 shadow-sm animate-pulse">
+                          Clique p/ Virar
                         </span>
                       </div>
                     </div>
-                  ) : faceImage ? (
-                    /* FACE DA CARTA: IMAGEM ALTA RESOLUÇÃO */
-                    <img
-                      src={faceImage}
-                      alt={card.cardName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    /* FACE DA CARTA: SÍMBOLO HERMÉTICO FALLBACK */
-                    <div className="text-center p-2">
-                      {thothInfo?.hebrewLetter && (
-                        <span className="text-2xl text-white font-serif block leading-none mb-1">
-                          {thothInfo.hebrewLetter}
-                        </span>
-                      )}
-                      <span className="text-[11px] font-sans font-bold text-white block line-clamp-2 leading-tight">
-                        {card.cardName}
-                      </span>
-                      {thothInfo?.astrologicalSign && (
-                        <span className="text-[9px] font-mono text-medium-400 block mt-1">
-                          {thothInfo.astrologicalSign}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
 
-                {/* Rodapé da Carta */}
-                <div className="flex items-center justify-between text-[9px] font-mono text-medium-400 px-0.5">
-                  <span className="truncate max-w-[70px]">
-                    {isFlipped ? card.cardName : "Oculta"}
-                  </span>
-                  <span>
-                    {rot === 90 ? "Cruzada" : rot === 180 ? "Invert." : "Direta"}
-                  </span>
+                    <div className="text-[7.5px] font-mono text-medium-400 text-center uppercase tracking-wider">
+                      Lâmina Oculta
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Botões Flutuantes Rápidos na Carta (Modo Edição) */}
-              {isEditable && (
-                <div className="absolute -top-3 -right-3 hidden group-hover:flex items-center gap-1 bg-medium-850 p-1 rounded-md border border-medium-600 shadow-xl z-50">
-                  <button
-                    type="button"
-                    onClick={(e) => handleToggleFlipCard(idx, e)}
-                    className="p-1 text-white hover:bg-medium-750 rounded"
-                    title={isFlipped ? "Virar para Baixo (Verso)" : "Revelar Carta (Face)"}
-                  >
-                    {isFlipped ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => handleRotateCard(idx, e)}
-                    className="p-1 text-white hover:bg-medium-750 rounded"
-                    title="Girar Lâmina (90°)"
-                  >
-                    <RotateCw className="w-3 h-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => triggerLocalImageUpload(idx, e)}
-                    className="p-1 text-white hover:bg-medium-750 rounded"
-                    title="Carregar Foto Personalizada"
-                  >
-                    <Upload className="w-3 h-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => handlePromptImageUrl(idx, e)}
-                    className="p-1 text-white hover:bg-medium-750 rounded"
-                    title="Inserir Link URL da Foto"
-                  >
-                    <LinkIcon className="w-3 h-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => handleRemoveCard(idx, e)}
-                    className="p-1 text-red-400 hover:bg-medium-750 rounded"
-                    title="Remover Carta"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
             </div>
           );
         })}
-
-        {/* Dica no rodapé do altar */}
-        <div className="absolute bottom-2 left-3 text-[10px] font-mono text-medium-400 pointer-events-none flex items-center gap-1.5">
-          <Sparkles className="w-3 h-3 text-white" />
-          <span>
-            {isEditable
-              ? "Arraste as lâminas livremente pela mesa como no altar. Clique em uma lâmina para editar detalhes ou virar."
-              : "Clique nas lâminas para virar/inspecionar seus atributos cabalísticos e interpretação hermética."}
-          </span>
-        </div>
       </div>
 
-      {/* Painel do Card Selecionado (Inspetor / Editor) */}
-      {activeCard && activeCardIdx !== null && (
-        <div className="p-4 rounded-xl bg-medium-850 border border-medium-700 text-xs space-y-3 shadow-lg">
-          <div className="flex items-center justify-between border-b border-medium-700 pb-2">
+      {/* PAINEL DE INSPEÇÃO DA LÂMINA ATIVA SELECIONADA */}
+      {activeCard && (
+        <div className="p-3.5 rounded-xl bg-medium-850 border border-medium-700 space-y-2 animate-in fade-in duration-150">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-medium-750 pb-2">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-white">
-                {isEditable ? "Editar Carta Selecionada" : "Lâmina Inspecionada"}
-              </span>
-              <span className="text-[10px] font-mono text-medium-400">
-                (Posição {activeCardIdx + 1} de {cards.length})
-              </span>
+              <div className="w-7 h-10 rounded border border-amber-500/50 overflow-hidden bg-black shrink-0">
+                <img
+                  src={activeCard.imageUrl || activeThoth?.imageUrl || currentBack.imageUrl}
+                  alt={activeCard.cardName}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono text-amber-400 font-bold block">
+                  {activeCard.position}
+                </span>
+                <h4 className="text-xs font-serif font-bold text-medium-100 flex items-center gap-1.5">
+                  <span>{activeCard.cardName}</span>
+                  {activeCard.isFlipped === false && (
+                    <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-950/60 text-amber-300 border border-amber-800/40">
+                      (Oculta)
+                    </span>
+                  )}
+                </h4>
+              </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setActiveCardIdx(null)}
-              className="p-1 text-medium-400 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
+
+            {/* Ações Rápidas na Carta Selecionada */}
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={(e) => handleCardClick(activeCardIdx!, e)}
+                className="px-2 py-1 bg-medium-800 hover:bg-medium-750 text-medium-200 hover:text-white rounded text-xs font-mono border border-medium-700 flex items-center gap-1 transition-colors"
+                title="Virar esta carta"
+              >
+                {activeCard.isFlipped ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3 text-amber-400" />}
+                <span>{activeCard.isFlipped ? "Ocultar" : "Revelar"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => handleRotateCard(activeCardIdx!, e)}
+                className="p-1 bg-medium-800 hover:bg-medium-750 text-medium-200 hover:text-white rounded border border-medium-700 transition-colors"
+                title="Girar 90 graus"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+              </button>
+
+              {isEditable && (
+                <button
+                  type="button"
+                  onClick={(e) => handleRemoveCard(activeCardIdx!, e)}
+                  className="p-1 text-medium-400 hover:text-red-400 rounded hover:bg-medium-800 transition-colors"
+                  title="Remover carta da mesa"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
-          {isEditable && onChange ? (
-            /* Modo Edição dos Detalhes da Carta */
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-[10px] font-mono text-medium-400 mb-1">
-                  POSIÇÃO NO ORÁCULO
-                </label>
-                <input
-                  type="text"
-                  value={activeCard.position}
-                  onChange={(e) => {
-                    const updated = [...cards];
-                    updated[activeCardIdx] = { ...updated[activeCardIdx], position: e.target.value };
-                    onChange(updated);
-                  }}
-                  className="w-full bg-medium-800 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white"
-                  placeholder="Ex: 1. A Vontade Central"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-mono text-medium-400 mb-1">
-                  NOME DA LÂMINA
-                </label>
-                <input
-                  type="text"
-                  value={activeCard.cardName}
-                  onChange={(e) => {
-                    const updated = [...cards];
-                    updated[activeCardIdx] = { ...updated[activeCardIdx], cardName: e.target.value };
-                    onChange(updated);
-                  }}
-                  className="w-full bg-medium-800 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white"
-                  placeholder="Ex: O Louco / Runa Fehu"
-                />
-              </div>
-
-              {/* Botões de Ação da Imagem, Rotação e Face */}
-              <div>
-                <label className="block text-[10px] font-mono text-medium-400 mb-1">
-                  ORIENTAÇÃO & FOTO
-                </label>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleFlipCard(activeCardIdx)}
-                    className="flex items-center gap-1 px-2 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] border border-medium-700"
-                    title="Alternar face ou verso da carta"
-                  >
-                    {activeCard.isFlipped === false ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                    <span>{activeCard.isFlipped === false ? "Revelar" : "Ocultar"}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleRotateCard(activeCardIdx)}
-                    className="flex items-center gap-1 px-2 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] border border-medium-700"
-                    title="Girar Carta (90°)"
-                  >
-                    <RotateCw className="w-3 h-3" />
-                    <span>{(activeCard.rotation || 0)}°</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => triggerLocalImageUpload(activeCardIdx)}
-                    className="flex items-center gap-1 px-2 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-[11px] border border-medium-700"
-                    title="Carregar Imagem Local"
-                  >
-                    <Upload className="w-3 h-3" />
-                  </button>
-
-                  {activeCard.imageUrl && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveImage(activeCardIdx)}
-                      className="px-2 py-1.5 text-red-400 hover:text-red-300 rounded text-[11px] border border-medium-700"
-                      title="Resetar Imagem"
-                    >
-                      Reset
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Notas de Interpretação */}
-              <div className="md:col-span-3">
-                <label className="block text-[10px] font-mono text-medium-400 mb-1">
-                  INTERPRETAÇÃO & NOTAS DESTA LÂMINA
-                </label>
-                <textarea
-                  rows={2}
-                  value={activeCard.notes || ""}
-                  onChange={(e) => {
-                    const updated = [...cards];
-                    updated[activeCardIdx] = { ...updated[activeCardIdx], notes: e.target.value };
-                    onChange(updated);
-                  }}
-                  className="w-full bg-medium-800 border border-medium-700 rounded p-2 text-xs text-white font-serif placeholder-medium-500 leading-relaxed"
-                  placeholder="Significado da carta no contexto da tiragem..."
-                />
-              </div>
-            </div>
-          ) : (
-            /* Modo Leitura dos Detalhes da Carta */
-            <div className="flex flex-col sm:flex-row gap-4 items-start">
-              {(activeCard.imageUrl || (activeCard.isFlipped === false ? currentBack.imageUrl : null)) && (
-                <div className="w-24 h-36 rounded-lg overflow-hidden border border-medium-700 shrink-0">
-                  <img
-                    src={activeCard.isFlipped === false ? currentBack.imageUrl : activeCard.imageUrl}
-                    alt={activeCard.cardName}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+          {/* Atribuições de Liber 777 e Notas */}
+          {activeThoth && (
+            <div className="text-[11px] font-mono text-medium-300 flex flex-wrap gap-x-4 gap-y-1">
+              {activeThoth.hebrewLetter && (
+                <span>
+                  <strong className="text-medium-400">Letra:</strong> {activeThoth.hebrewLetter} ({activeThoth.hebrewName})
+                </span>
               )}
-              <div className="space-y-1.5 flex-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono text-medium-400 uppercase font-semibold">
-                    {activeCard.position}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleFlipCard(activeCardIdx)}
-                    className="text-[10px] font-mono text-medium-300 hover:text-white underline"
-                  >
-                    {activeCard.isFlipped === false ? "Revelar Carta" : "Virar para Baixo"}
-                  </button>
-                </div>
-                <h4 className="text-base font-sans font-bold text-white">
-                  {activeCard.isFlipped === false ? "Lâmina Oculta no Altar" : activeCard.cardName}
-                </h4>
-                {activeCard.notes && activeCard.isFlipped !== false && (
-                  <p className="text-medium-200 font-serif italic text-xs pt-1 leading-relaxed">
-                    "{activeCard.notes}"
-                  </p>
-                )}
-              </div>
+              {activeThoth.astrologicalSign && (
+                <span>
+                  <strong className="text-medium-400">Astro/Signo:</strong> {activeThoth.astrologicalSign}
+                </span>
+              )}
+              {activeThoth.keywords && activeThoth.keywords.length > 0 && (
+                <span>
+                  <strong className="text-medium-400">Palavras-chave:</strong> {activeThoth.keywords.join(", ")}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Campo de Anotações do Praticante para a Carta */}
+          {isEditable && (
+            <div className="pt-1">
+              <input
+                type="text"
+                value={activeCard.notes || ""}
+                onChange={(e) => {
+                  if (!onChange) return;
+                  const updated = [...cards];
+                  updated[activeCardIdx!] = {
+                    ...updated[activeCardIdx!],
+                    notes: e.target.value,
+                  };
+                  onChange(updated);
+                }}
+                placeholder="Anotações pessoais ou visão astral desta lâmina nesta posição..."
+                className="w-full bg-medium-800 border border-medium-700 rounded-md px-2.5 py-1.5 text-xs text-medium-100 placeholder-medium-500 focus:outline-none focus:border-amber-400 font-sans"
+              />
             </div>
           )}
         </div>
       )}
 
-      {/* MODAL DE PALPITE HERMÉTICO DA IA */}
+      {/* MODAL DO PALPITE DA IA (FRATER AUXILIAR) */}
       {showAiModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-medium-850 border border-medium-700 rounded-xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-medium-700 flex items-center justify-between bg-medium-900">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-medium-850 border border-medium-700 rounded-2xl p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-medium-750">
               <div className="flex items-center gap-2">
-                <Bot className="w-5 h-5 text-white" />
-                <h3 className="text-sm font-sans font-bold text-white">
+                <Bot className="w-5 h-5 text-purple-400" />
+                <h3 className="text-sm font-sans font-bold text-white uppercase tracking-wider">
                   Palpite Hermético do Frater Auxiliar
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAiModal(false)}
-                className="p-1 text-medium-400 hover:text-white rounded"
+                className="text-medium-400 hover:text-white"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-4 font-serif text-sm text-medium-200 leading-relaxed">
+            <div className="flex-1 overflow-y-auto pr-1 text-xs text-medium-200 leading-relaxed font-serif whitespace-pre-line">
               {isAiLoading ? (
-                <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
-                  <Sparkles className="w-8 h-8 text-white animate-spin" />
-                  <p className="text-sm font-sans font-semibold text-white">
-                    Consultando as correntes astrais e as 78 lâminas do Livro de Thoth...
-                  </p>
-                  <p className="text-xs font-mono text-medium-400 max-w-md">
-                    Avaliando dignidades elementais, posições e correspondências cabalísticas do Liber 777.
-                  </p>
-                </div>
-              ) : aiInterpretation ? (
-                <div className="whitespace-pre-wrap leading-relaxed select-text font-serif text-sm">
-                  {aiInterpretation}
+                <div className="p-8 text-center text-medium-400 font-mono space-y-2">
+                  <Sparkles className="w-6 h-6 text-purple-400 mx-auto animate-spin" />
+                  <span>Sintetizando correspondências e correntes astrais...</span>
                 </div>
               ) : (
-                <p className="text-medium-400 italic">Nenhuma interpretação disponível.</p>
+                aiInterpretation || "Nenhuma interpretação disponível."
               )}
             </div>
 
-            {/* Modal Footer */}
-            {!isAiLoading && aiInterpretation && (
-              <div className="p-4 border-t border-medium-700 bg-medium-900 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-medium-750">
+              <button
+                type="button"
+                onClick={handleCopyAiText}
+                disabled={isAiLoading || !aiInterpretation}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-xs font-mono border border-medium-700 transition-colors"
+              >
+                {copiedSuccess ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedSuccess ? "Copiado!" : "Copiar"}</span>
+              </button>
+
+              {onApplyInterpretation && aiInterpretation && (
                 <button
                   type="button"
-                  onClick={handleCopyAiText}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-xs border border-medium-700 transition-colors"
+                  onClick={() => {
+                    onApplyInterpretation(aiInterpretation);
+                    setShowAiModal(false);
+                  }}
+                  className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded text-xs transition-colors"
                 >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>{copiedSuccess ? "Copiado!" : "Copiar Texto"}</span>
+                  Inserir no Texto da Nota
                 </button>
-
-                <div className="flex items-center gap-2">
-                  {onApplyInterpretation && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onApplyInterpretation(aiInterpretation);
-                        alert("Palpite hermético adicionado ao texto do diário com sucesso!");
-                        setShowAiModal(false);
-                      }}
-                      className="flex items-center gap-1.5 px-4 py-1.5 bg-white hover:bg-medium-200 text-black font-semibold rounded text-xs transition-colors shadow-sm"
-                    >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      <span>Inserir no Diário</span>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setShowAiModal(false)}
-                    className="px-4 py-1.5 text-medium-300 hover:text-white text-xs font-medium"
-                  >
-                    Fechar
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}

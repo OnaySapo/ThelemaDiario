@@ -89,6 +89,7 @@ export function ArticleView({
   const [editQuery, setEditQuery] = useState("");
   const [editCards, setEditCards] = useState<CardOnTable[]>([]);
   const [editCardBackStyle, setEditCardBackStyle] = useState<"rosa_cruz" | "thelema">("rosa_cruz");
+  const [hasOracleTable, setHasOracleTable] = useState<boolean>(false);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -263,19 +264,26 @@ export function ArticleView({
     setEditInfluences(entry.influences || []);
     setEditConnections(entry.connections || []);
 
+    const hasExistingCards = !!(entry.oracle_data && entry.oracle_data.cards && entry.oracle_data.cards.length > 0);
     if (entry.oracle_data) {
       setEditQuery(entry.oracle_data.query || "");
       setEditCards((entry.oracle_data.cards as CardOnTable[]) || []);
       setEditSpread(entry.oracle_data.spread_name || "Tiragem Livre");
       setEditCardBackStyle(entry.oracle_data.card_back_style || "rosa_cruz");
+      setHasOracleTable(hasExistingCards);
     } else {
       setEditQuery("");
       setEditCards([]);
       setEditSpread("Tiragem Livre");
       setEditCardBackStyle("rosa_cruz");
+      setHasOracleTable(false);
     }
 
     setIsEditing(true);
+  };
+
+  const handleToggleOracleTable = () => {
+    setHasOracleTable((prev) => !prev);
   };
 
   const handleCancelEdit = () => {
@@ -306,7 +314,7 @@ export function ArticleView({
       influences: editInfluences,
       connections: editConnections,
       oracle_data:
-        editCategory === "Oráculo"
+        hasOracleTable && editCards.length > 0
           ? {
               system: "thoth_tarot",
               spread_name: editSpread.trim() || "Mesa Oracular",
@@ -462,6 +470,7 @@ export function ArticleView({
     editSpread,
     editQuery,
     editCardBackStyle,
+    hasOracleTable,
   ]);
 
   // Reading time estimator
@@ -1317,17 +1326,29 @@ export function ArticleView({
               </div>
             </div>
 
-            {/* Oracle Spread & Table Cloth Editor (quando categoria for Oráculo) */}
-            {editCategory === "Oráculo" && (
-              <div className="p-5 rounded-xl bg-medium-850 border border-medium-700 space-y-4">
+            {/* Oracle Spread & Table Cloth Editor (quando ativado pelo botão ou notas oraculares) */}
+            {hasOracleTable && (
+              <div className="p-5 rounded-xl bg-medium-850 border border-amber-500/30 space-y-4 shadow-lg animate-in fade-in duration-300">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-medium-750 pb-2">
-                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-white" />
-                    <span>Mesa Oracular do Altar (Lâminas & Disposição)</span>
-                  </h3>
-                  <span className="text-[10px] font-mono text-medium-400">
-                    Posicione as cartas livremente pela mesa, carregue imagens e gire conforme a tiragem
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
+                      Mesa Oracular do Altar (Lâminas & Disposição)
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-mono text-medium-400 hidden sm:inline">
+                      Pano de veludo, baralho de Thoth 3D e métodos de tiragem
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setHasOracleTable(false)}
+                      className="px-2 py-1 text-[11px] font-mono text-medium-400 hover:text-red-300 hover:bg-red-950/30 border border-medium-700 hover:border-red-800/50 rounded transition-colors"
+                      title="Recolher mesa oracular (as cartas permanecerão salvas se mantidas)"
+                    >
+                      Recolher Mesa
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1541,6 +1562,20 @@ export function ArticleView({
                 title="Inserir Tabela Formatada de Correspondências"
               >
                 <Table className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleOracleTable}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all text-xs font-mono border ${
+                  hasOracleTable
+                    ? "bg-amber-500/20 text-amber-200 border-amber-500/40 shadow-sm font-semibold"
+                    : "text-medium-300 hover:text-white hover:bg-medium-750 border-transparent"
+                }`}
+                title={hasOracleTable ? "Mesa Oracular aberta (clique para recolher/fechar)" : "Inserir Mesa Oracular (Pano de Altar, Baralho de Thoth 3D & Tiragens)"}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span className="hidden sm:inline font-sans font-medium">Mesa Oracular</span>
               </button>
 
               <div className="flex-1" />
