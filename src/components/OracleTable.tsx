@@ -18,6 +18,10 @@ import {
   ChevronDown,
   Info,
   Check,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  RotateCcw,
 } from "lucide-react";
 
 export interface CardOnTable {
@@ -59,7 +63,7 @@ export const SPREAD_PRESETS: SpreadPreset[] = [
     name: "Três Fatos (Vontade, Oposição, Síntese)",
     description: "Método hermético clássico: tese, antítese e síntese resolutiva.",
     slots: [
-      { position: "1. Vontade / Força Ativa", x: 20, y: 32 },
+      { position: "1. Vontade / Situação", x: 20, y: 32 },
       { position: "2. Oposição / Influência", x: 44, y: 32 },
       { position: "3. Síntese / Resolução", x: 68, y: 32 },
     ],
@@ -165,6 +169,13 @@ export function OracleTable({
   const [isDealing, setIsDealing] = useState(false);
   const [isSpreadMenuOpen, setIsSpreadMenuOpen] = useState(false);
 
+  // Estados do Modal de Inspeção em Alta Resolução (Zoom)
+  const [inspectCard, setInspectCard] = useState<CardOnTable | null>(null);
+  const [zoomScale, setZoomScale] = useState<number>(1);
+  const [panPos, setPanPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
   // Estados do Palpite da IA
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiInterpretation, setAiInterpretation] = useState<string | null>(null);
@@ -180,209 +191,205 @@ export function OracleTable({
     }
   };
 
-  // Número de cartas restantes no baralho completo de 78
+  // Gerador determinístico de estrelas cintilantes do espaço cósmico de Nuit
+  const cosmicStars = useMemo(() => {
+    const stars = [];
+    for (let i = 0; i < 42; i++) {
+      const x = ((i * 37 + 11) % 96) + 2;
+      const y = ((i * 47 + 7) % 94) + 3;
+      const size = (i % 4 === 0) ? 2.4 : (i % 3 === 0) ? 1.8 : (i % 2 === 0) ? 1.4 : 1.0;
+      const dur = 2.0 + (i % 6) * 0.7;
+      const delay = (i % 8) * 0.4;
+      const isGold = i % 3 === 0;
+      stars.push({ id: i, x, y, size, dur, delay, isGold });
+    }
+    return stars;
+  }, []);
+
+  // Cartas restantes no baralho
   const remainingDeckCount = useMemo(() => {
     const usedIds = new Set(cards.map((c) => c.cardId));
-    return Math.max(0, 78 - usedIds.size);
+    return Math.max(0, THOTH_TAROT_DECK.length - usedIds.size);
   }, [cards]);
 
-  // Embaralhar o deck com animação visual e sonora
+  // Função para sortear carta aleatória ainda não tirada
+  const pickRandomCard = (): ThothCard => {
+    const usedIds = new Set(cards.map((c) => c.cardId));
+    const available = THOTH_TAROT_DECK.filter((c) => !usedIds.has(c.id));
+    if (available.length === 0) {
+      return THOTH_TAROT_DECK[Math.floor(Math.random() * THOTH_TAROT_DECK.length)];
+    }
+    return available[Math.floor(Math.random() * available.length)];
+  };
+
+  // 1. Puxar Carta do Deck (Clicando no monte)
+  const handleDrawFromDeck = () => {
+    if (isDealing) return;
+    const drawn = pickRandomCard();
+    playCardDealSound();
+
+    const count = cards.length;
+    const posX = 38 + ((count * 7) % 36);
+    const posY = 30 + ((count * 6) % 30);
+
+    const newCard: CardOnTable = {
+      position: `Lâmina #${count + 1}`,
+      cardId: drawn.id,
+      cardName: drawn.name,
+      imageUrl: drawn.imageUrl,
+      imageFile: drawn.imageFile,
+      x: posX,
+      y: posY,
+      rotation: 0,
+      isFlipped: false, // Inicia virada para baixo no altar
+    };
+
+    const updated = [...cards, newCard];
+    onChange?.(updated);
+    setActiveCardIdx(updated.length - 1);
+  };
+
+  // 2. Embaralhar o Deck com Animação e Som
   const handleTriggerShuffle = () => {
     if (isShuffling || isDealing) return;
     setIsShuffling(true);
     playCardDealSound();
+
     setTimeout(() => {
       playCardDealSound();
-    }, 240);
+    }, 280);
+
     setTimeout(() => {
       setIsShuffling(false);
     }, 700);
   };
 
-  // Puxar Carta do Deck no Canto Superior Esquerdo
-  const handleDrawFromDeck = () => {
-    if (!onChange || isDealing) return;
-    const existingIds = new Set(cards.map((c) => c.cardId));
-    let availableDeck = THOTH_TAROT_DECK.filter((c) => !existingIds.has(c.id));
-    if (availableDeck.length === 0) {
-      alert("Todas as 78 lâminas do Livro de Thoth já foram dispostas sobre a mesa!");
-      return;
-    }
-
-    const randomIndex = Math.floor(Math.random() * availableDeck.length);
-    const thoth = availableDeck[randomIndex];
-
-    // Distribuir na mesa em posição orgânica
-    const count = cards.length;
-    const col = count % 4;
-    const row = Math.floor(count / 4);
-    const posX = Math.min(Math.max(24 + col * 17, 20), 75);
-    const posY = Math.min(Math.max(16 + row * 24, 10), 65);
-
-    const newCard: CardOnTable = {
-      position: `Lâmina #${count + 1}`,
-      cardId: thoth.id,
-      cardName: thoth.name,
-      imageUrl: thoth.imageUrl,
-      imageFile: thoth.imageFile,
-      x: posX,
-      y: posY,
-      rotation: 0,
-      isFlipped: false, // Inicia virada para baixo no pano de altar!
-      notes: thoth.keywords.join(", "),
-    };
-
-    const updated = [...cards, newCard];
-    onChange(updated);
-    setActiveCardIdx(updated.length - 1);
-    playCardDealSound();
-  };
-
-  // Aplicar Tiragem Padrão com animação carta a carta
-  const handleApplySpreadMethod = (spread: SpreadPreset) => {
-    if (!onChange || isDealing) return;
-    setIsDealing(true);
+  // 3. Aplicar Método de Tiragem (Distribui sequencialmente carta a carta viradas para baixo)
+  const handleApplySpreadMethod = async (preset: SpreadPreset) => {
+    if (isDealing) return;
     setIsSpreadMenuOpen(false);
+    setIsDealing(true);
 
     if (onSpreadNameChange) {
-      onSpreadNameChange(spread.name);
+      onSpreadNameChange(preset.name);
     }
 
-    // Embaralhar e retirar cartas únicas do deck
-    const shuffled = [...THOTH_TAROT_DECK].sort(() => Math.random() - 0.5);
-    const chosenCards = shuffled.slice(0, spread.slots.length);
+    const usedIds = new Set<string>();
+    const newCards: CardOnTable[] = [];
 
-    let dealtSoFar: CardOnTable[] = [];
-    onChange([]);
+    // Limpa a mesa antes de começar a nova tiragem
+    onChange?.([]);
+    setActiveCardIdx(null);
 
-    spread.slots.forEach((slot, idx) => {
-      setTimeout(() => {
-        const thoth = chosenCards[idx];
-        const newCard: CardOnTable = {
-          position: slot.position,
-          cardId: thoth.id,
-          cardName: thoth.name,
-          imageUrl: thoth.imageUrl,
-          imageFile: thoth.imageFile,
-          x: slot.x,
-          y: slot.y,
-          rotation: slot.rotation || 0,
-          isFlipped: false, // Todas viradas para baixo!
-          notes: thoth.keywords.join(", "),
-        };
-        dealtSoFar = [...dealtSoFar, newCard];
-        onChange([...dealtSoFar]);
-        playCardDealSound();
+    // Distribui cada slot sequencialmente
+    for (let i = 0; i < preset.slots.length; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 240));
 
-        if (idx === spread.slots.length - 1) {
-          setIsDealing(false);
-          setActiveCardIdx(0);
-        }
-      }, (idx + 1) * 280);
-    });
-  };
+      const slot = preset.slots[i];
+      const available = THOTH_TAROT_DECK.filter((c) => !usedIds.has(c.id));
+      const drawn =
+        available.length > 0
+          ? available[Math.floor(Math.random() * available.length)]
+          : THOTH_TAROT_DECK[Math.floor(Math.random() * THOTH_TAROT_DECK.length)];
 
-  // Virar / Desvelar Carta específica (com animação 3D e som)
-  const handleCardClick = (idx: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setActiveCardIdx(idx);
+      usedIds.add(drawn.id);
+      playCardDealSound();
 
-    if (cards[idx].isFlipped === false && onChange) {
-      const updated = [...cards];
-      updated[idx] = { ...updated[idx], isFlipped: true };
-      onChange(updated);
-      playCardFlipSound();
+      const dealtCard: CardOnTable = {
+        position: slot.position,
+        cardId: drawn.id,
+        cardName: drawn.name,
+        imageUrl: drawn.imageUrl,
+        imageFile: drawn.imageFile,
+        x: slot.x,
+        y: slot.y,
+        rotation: slot.rotation || 0,
+        isFlipped: false, // Virada para baixo para revelar ritualisticamente
+      };
+
+      newCards.push(dealtCard);
+      onChange?.([...newCards]);
     }
+
+    setIsDealing(false);
   };
 
-  // Virar todas as cartas (Reveal all / Hide all)
-  const handleToggleFlipAll = () => {
-    if (!onChange || cards.length === 0) return;
-    const anyHidden = cards.some((c) => c.isFlipped === false);
-    const updated = cards.map((c) => ({
-      ...c,
-      isFlipped: anyHidden ? true : false,
-    }));
-    onChange(updated);
+  // 4. Virar Carta (Flip 3D com Som)
+  const handleToggleFlipCard = (index: number) => {
+    if (!onChange || index < 0 || index >= cards.length) return;
     playCardFlipSound();
-  };
-
-  // Girar carta selecionada em 90 graus
-  const handleRotateCard = (idx: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (!onChange) return;
     const updated = [...cards];
-    const currentRot = updated[idx].rotation || 0;
-    updated[idx] = {
-      ...updated[idx],
-      rotation: (currentRot + 90) % 360,
+    const currentStatus = updated[index].isFlipped !== false;
+    updated[index] = {
+      ...updated[index],
+      isFlipped: !currentStatus,
     };
     onChange(updated);
   };
 
-  // Remover carta da mesa
-  const handleRemoveCard = (idx: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    if (!onChange) return;
-    const updated = cards.filter((_, i) => i !== idx);
+  // 5. Virar / Revelar Todas as Cartas
+  const handleToggleFlipAll = () => {
+    if (!onChange || cards.length === 0) return;
+    playCardFlipSound();
+    const someHidden = cards.some((c) => c.isFlipped === false);
+    const updated = cards.map((c) => ({
+      ...c,
+      isFlipped: someHidden ? true : false,
+    }));
     onChange(updated);
-    if (activeCardIdx === idx) {
-      setActiveCardIdx(null);
-    } else if (activeCardIdx !== null && activeCardIdx > idx) {
-      setActiveCardIdx(activeCardIdx - 1);
-    }
   };
 
-  // Iniciar Drag no Altar
-  const handleMouseDown = (idx: number, e: React.MouseEvent) => {
+  // Manipuladores de Arrastar (Drag & Drop) na Mesa
+  const handleMouseDown = (index: number, e: React.MouseEvent) => {
+    if (!isEditable) return;
+    if (e.button !== 0) return; // Apenas botão esquerdo
+
     setMouseDownPos({ x: e.clientX, y: e.clientY });
-    setActiveCardIdx(idx);
+    setActiveCardIdx(index);
+    setDraggingIdx(index);
 
-    if (!isEditable || !tableRef.current) return;
-    const cardEl = e.currentTarget as HTMLElement;
-    const cardRect = cardEl.getBoundingClientRect();
-
-    setDragOffset({
-      x: e.clientX - cardRect.left,
-      y: e.clientY - cardRect.top,
-    });
-    setDraggingIdx(idx);
-  };
-
-  const handleCardMouseUp = (idx: number, e: React.MouseEvent) => {
-    if (mouseDownPos) {
-      const dist = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
-      if (dist < 6) {
-        // Foi clique simples: se a carta estiver virada para baixo, virar em 3D!
-        if (cards[idx].isFlipped === false && onChange) {
-          const updated = [...cards];
-          updated[idx] = { ...updated[idx], isFlipped: true };
-          onChange(updated);
-          playCardFlipSound();
-        }
-      }
+    if (tableRef.current) {
+      const rect = tableRef.current.getBoundingClientRect();
+      const card = cards[index];
+      const currentX = (card.x || 0) * (rect.width / 100);
+      const currentY = (card.y || 0) * (rect.height / 100);
+      setDragOffset({
+        x: e.clientX - rect.left - currentX,
+        y: e.clientY - rect.top - currentY,
+      });
     }
-    setDraggingIdx(null);
-    setMouseDownPos(null);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (draggingIdx === null || !tableRef.current || !onChange) return;
     const rect = tableRef.current.getBoundingClientRect();
 
-    const mouseX = e.clientX - rect.left - dragOffset.x;
-    const mouseY = e.clientY - rect.top - dragOffset.y;
+    let newX = ((e.clientX - rect.left - dragOffset.x) / rect.width) * 100;
+    let newY = ((e.clientY - rect.top - dragOffset.y) / rect.height) * 100;
 
-    const pctX = Math.min(Math.max((mouseX / rect.width) * 100, 2), 85);
-    const pctY = Math.min(Math.max((mouseY / rect.height) * 100, 2), 75);
+    // Limites da mesa
+    newX = Math.max(2, Math.min(88, newX));
+    newY = Math.max(2, Math.min(84, newY));
 
     const updated = [...cards];
     updated[draggingIdx] = {
       ...updated[draggingIdx],
-      x: Math.round(pctX),
-      y: Math.round(pctY),
+      x: Math.round(newX * 10) / 10,
+      y: Math.round(newY * 10) / 10,
     };
     onChange(updated);
+  };
+
+  const handleCardMouseUp = (index: number, e: React.MouseEvent) => {
+    if (mouseDownPos) {
+      const dist = Math.hypot(e.clientX - mouseDownPos.x, e.clientY - mouseDownPos.y);
+      if (dist < 5) {
+        // Foi um clique estático: vira a carta
+        handleToggleFlipCard(index);
+      }
+    }
+    setDraggingIdx(null);
+    setMouseDownPos(null);
   };
 
   const handleMouseUpGlobal = () => {
@@ -390,113 +397,188 @@ export function OracleTable({
     setMouseDownPos(null);
   };
 
-  // Pedir Palpite do Frater Auxiliar (IA)
+  const handleCardClick = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveCardIdx(index);
+  };
+
+  const handleRotateCard = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onChange) return;
+    const updated = [...cards];
+    const curRot = updated[index].rotation || 0;
+    updated[index] = {
+      ...updated[index],
+      rotation: (curRot + 90) % 360,
+    };
+    onChange(updated);
+  };
+
+  const handleRemoveCard = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onChange) return;
+    const updated = cards.filter((_, i) => i !== index);
+    onChange(updated);
+    if (activeCardIdx === index) {
+      setActiveCardIdx(null);
+    } else if (activeCardIdx !== null && activeCardIdx > index) {
+      setActiveCardIdx(activeCardIdx - 1);
+    }
+  };
+
+  // Abrir Modal de Zoom da Carta
+  const handleOpenZoom = (card: CardOnTable, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setInspectCard(card);
+    setZoomScale(1);
+    setPanPos({ x: 0, y: 0 });
+  };
+
+  // Controles de Pan no Zoom Modal
+  const handleZoomWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      setZoomScale((prev) => Math.min(prev + 0.25, 4.0));
+    } else {
+      setZoomScale((prev) => Math.max(prev - 0.25, 0.75));
+    }
+  };
+
+  const handlePanMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    setIsPanning(true);
+    setPanStart({ x: e.clientX - panPos.x, y: e.clientY - panPos.y });
+  };
+
+  const handlePanMouseMove = (e: React.MouseEvent) => {
+    if (!isPanning) return;
+    setPanPos({
+      x: e.clientX - panStart.x,
+      y: e.clientY - panStart.y,
+    });
+  };
+
+  const handlePanMouseUp = () => {
+    setIsPanning(false);
+  };
+
+  // Tecla Escape para fechar modal de zoom
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && inspectCard) {
+        setInspectCard(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [inspectCard]);
+
+  // Interpretação da IA (Frater Auxiliar)
   const handleRequestAiInterpretation = async () => {
     if (cards.length === 0) {
-      alert("Coloque ao menos uma lâmina no altar antes de solicitar o palpite da IA.");
+      alert("Coloque ou tire pelo menos uma carta na mesa para consultar o Frater Auxiliar.");
       return;
     }
-    setIsAiLoading(true);
     setShowAiModal(true);
+    setIsAiLoading(true);
+    setAiInterpretation(null);
+
     try {
       const res = await fetch("/api/oracle/interpret", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: query || "",
-          spreadName: spreadName || "Mesa Oracular",
+          query: query || "Qual a corrente e a influência mágica desta operação?",
+          spreadName: spreadName || "Mesa Oracular do Altar",
           cards: cards.map((c) => ({
             position: c.position,
-            cardId: c.cardId,
             cardName: c.cardName,
             rotation: c.rotation || 0,
-            notes: c.notes || "",
+            isFlipped: c.isFlipped !== false,
           })),
         }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setAiInterpretation(data.interpretation);
-      } else {
-        setAiInterpretation("Não foi possível gerar a interpretação: " + data.error);
+
+      if (!res.ok) {
+        throw new Error("Falha na comunicação com o oráculo hermético.");
       }
+      const data = await res.json();
+      setAiInterpretation(data.interpretation || "Nenhuma interpretação gerada.");
     } catch (err: any) {
-      setAiInterpretation("Erro ao comunicar com a IA: " + err.message);
+      setAiInterpretation(`Erro ao invocar o Frater Auxiliar: ${err.message}`);
     } finally {
       setIsAiLoading(false);
     }
   };
 
   const handleCopyAiText = () => {
-    if (aiInterpretation) {
-      navigator.clipboard.writeText(aiInterpretation);
-      setCopiedSuccess(true);
-      setTimeout(() => setCopiedSuccess(false), 2000);
-    }
+    if (!aiInterpretation) return;
+    navigator.clipboard.writeText(aiInterpretation);
+    setCopiedSuccess(true);
+    setTimeout(() => setCopiedSuccess(false), 2000);
   };
 
   const activeCard = activeCardIdx !== null ? cards[activeCardIdx] : null;
-  const activeThoth = activeCard ? THOTH_TAROT_DECK.find((c) => c.id === activeCard.cardId) : null;
+  const activeThoth = activeCard ? THOTH_TAROT_DECK.find((t) => t.id === activeCard.cardId) : null;
+  const inspectThoth = inspectCard ? THOTH_TAROT_DECK.find((t) => t.id === inspectCard.cardId) : null;
 
   return (
-    <div className="space-y-3 select-none">
-      {/* Estilos e Animações CSS para o Pano e as Cartas */}
+    <div className="space-y-3">
+      {/* Estilos CSS das Animações Cósmicas e do Baralho */}
       <style>{`
-        @keyframes altarClothUnfold {
-          0% {
-            opacity: 0;
-            transform: scaleY(0.18) scaleX(0.85);
-            filter: blur(8px);
-          }
-          60% {
-            opacity: 0.95;
-            transform: scaleY(1.02) scaleX(1.01);
-            filter: blur(0px);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1);
-            filter: blur(0px);
-          }
+        @keyframes cosmicSpaceDrift {
+          0% { background-position: 0px 0px, 0px 0px; }
+          100% { background-position: 120px 80px, -80px -60px; }
+        }
+        @keyframes starTwinkleGlow {
+          0%, 100% { opacity: 0.25; transform: scale(0.85); }
+          50% { opacity: 1; transform: scale(1.35); filter: drop-shadow(0 0 4px rgba(253, 224, 71, 0.9)); }
         }
         @keyframes deckRiffleShuffle {
           0% { transform: rotate(-6deg) scale(1); }
-          25% { transform: rotate(-14deg) translateX(-12px) scale(1.06); }
-          50% { transform: rotate(10deg) translateX(12px) scale(1.06); }
-          75% { transform: rotate(-8deg) translateY(-6px) scale(1.03); }
+          25% { transform: rotate(-18deg) translateX(-14px) scale(1.06); }
+          50% { transform: rotate(14deg) translateX(12px) scale(1.06); }
+          75% { transform: rotate(-10deg) translateX(-6px) scale(1.03); }
           100% { transform: rotate(-6deg) scale(1); }
         }
-        .animate-cloth-unfold {
-          animation: altarClothUnfold 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        @keyframes altarClothUnfold {
+          0% { transform: scale(0.96) translateY(-6px); opacity: 0.6; }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
         }
         .animate-deck-shuffle {
-          animation: deckRiffleShuffle 0.65s ease-in-out infinite;
+          animation: deckRiffleShuffle 0.65s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .animate-cloth-unfold {
+          animation: altarClothUnfold 0.4s ease-out;
         }
       `}</style>
 
-      {/* Barra de Ferramentas da Mesa Oracular */}
-      <div className="p-3 bg-medium-850 rounded-xl border border-medium-700 flex flex-wrap items-center justify-between gap-2.5 text-xs">
-        {/* Esquerda: Botão de Métodos de Tiragem + Ações Rápidas */}
+      {/* BARRA SUPERIOR DE FERRAMENTAS DO ALTAR */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pb-1">
+        {/* Esquerda: Métodos de Tiragem + Embaralhar + Revelar */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* BOTÃO DE MÉTODOS DE TIRAGEM COM DROPDOWN */}
+          {/* Menu Dropdown de Métodos de Tiragem */}
           <div className="relative">
             <button
               type="button"
               onClick={() => setIsSpreadMenuOpen(!isSpreadMenuOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-lg text-xs shadow-sm transition-all"
-              title="Escolher um método canônico de tiragem para dispor as lâminas automaticamente"
+              disabled={isDealing}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-500/40 rounded-lg text-xs font-mono font-semibold transition-all shadow-sm"
+              title="Escolher uma disposição de tiragem clássica"
             >
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               <span>Métodos de Tiragem</span>
-              <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+              <ChevronDown className="w-3.5 h-3.5 ml-0.5" />
             </button>
 
             {isSpreadMenuOpen && (
-              <div className="absolute left-0 top-full mt-2 w-72 bg-medium-850 border border-medium-700 rounded-xl p-2 shadow-2xl z-50 space-y-1 animate-in fade-in zoom-in-95 duration-150">
-                <div className="px-2 py-1.5 border-b border-medium-750 text-[10px] font-mono text-medium-400 font-bold uppercase tracking-wider flex items-center justify-between">
-                  <span>Métodos Tradicionais</span>
+              <div className="absolute left-0 top-full mt-1.5 w-80 bg-medium-850 border border-medium-700 rounded-xl p-2 shadow-2xl z-50 space-y-1 animate-in fade-in zoom-in-95">
+                <div className="flex items-center justify-between px-2 py-1 border-b border-medium-750 mb-1">
+                  <span className="text-[10px] font-mono uppercase text-medium-400 font-bold tracking-wider">
+                    Spreads Clássicos de Altar
+                  </span>
                   <X
-                    className="w-3 h-3 cursor-pointer hover:text-white"
+                    className="w-3.5 h-3.5 text-medium-400 hover:text-white cursor-pointer"
                     onClick={() => setIsSpreadMenuOpen(false)}
                   />
                 </div>
@@ -605,32 +687,56 @@ export function OracleTable({
         </div>
       </div>
 
-      {/* PANO ORACULAR DO ALTAR (CANVAS COM VELUDO E FILIGRANAS) */}
+      {/* PANO ORACULAR DO ALTAR (ESPAÇO SIDERAL EM MOVIMENTO COM BRILHOS DE ESTRELAS) */}
       <div
         ref={tableRef}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUpGlobal}
         onMouseLeave={handleMouseUpGlobal}
-        className="relative w-full h-[520px] rounded-2xl border-2 border-amber-600/40 overflow-hidden shadow-[0_12px_40px_rgba(0,0,0,0.85),inset_0_0_50px_rgba(217,119,6,0.1)] animate-cloth-unfold select-none bg-[#0a0812]"
+        className="relative w-full h-[540px] rounded-2xl border-2 border-amber-600/40 overflow-hidden shadow-[0_16px_45px_rgba(0,0,0,0.9),inset_0_0_60px_rgba(217,119,6,0.12)] animate-cloth-unfold select-none bg-[#05030A]"
         style={{
           backgroundImage: `
-            radial-gradient(circle at center, rgba(168, 85, 247, 0.08) 0%, rgba(10, 8, 18, 0.95) 75%),
-            linear-gradient(rgba(234, 179, 8, 0.04) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(234, 179, 8, 0.04) 1px, transparent 1px)
+            radial-gradient(ellipse at 40% 30%, rgba(99, 102, 241, 0.12) 0%, transparent 60%),
+            radial-gradient(ellipse at 75% 70%, rgba(168, 85, 247, 0.14) 0%, transparent 65%),
+            linear-gradient(rgba(234, 179, 8, 0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(234, 179, 8, 0.035) 1px, transparent 1px)
           `,
-          backgroundSize: "100% 100%, 36px 36px, 36px 36px",
+          backgroundSize: "100% 100%, 100% 100%, 42px 42px, 42px 42px",
+          animation: "cosmicSpaceDrift 60s linear infinite",
         }}
       >
-        {/* Cantoneiras Douradas do Pano de Altar nos 4 Cantos */}
-        <div className="absolute top-2 left-2 w-8 h-8 border-t-2 border-l-2 border-amber-500/50 rounded-tl pointer-events-none" />
-        <div className="absolute top-2 right-2 w-8 h-8 border-t-2 border-r-2 border-amber-500/50 rounded-tr pointer-events-none" />
-        <div className="absolute bottom-2 left-2 w-8 h-8 border-b-2 border-l-2 border-amber-500/50 rounded-bl pointer-events-none" />
-        <div className="absolute bottom-2 right-2 w-8 h-8 border-b-2 border-r-2 border-amber-500/50 rounded-br pointer-events-none" />
+        {/* Camada das Estrelas Vivas do Espaço Cósmico de Nuit */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          {cosmicStars.map((star) => (
+            <div
+              key={`star-${star.id}`}
+              className="absolute rounded-full pointer-events-none"
+              style={{
+                left: `${star.x}%`,
+                top: `${star.y}%`,
+                width: `${star.size}px`,
+                height: `${star.size}px`,
+                backgroundColor: star.isGold ? "#FDE047" : "#FFFFFF",
+                boxShadow: star.isGold
+                  ? "0 0 6px rgba(250, 204, 21, 0.8), 0 0 12px rgba(234, 179, 8, 0.4)"
+                  : "0 0 6px rgba(255, 255, 255, 0.9), 0 0 10px rgba(192, 132, 252, 0.4)",
+                animation: `starTwinkleGlow ${star.dur}s ease-in-out infinite alternate`,
+                animationDelay: `${star.delay}s`,
+              }}
+            />
+          ))}
+        </div>
 
-        {/* Marca d'água geométrica central do Pano de Altar */}
+        {/* Cantoneiras Douradas Sagradas nos 4 Cantos do Altar */}
+        <div className="absolute top-2 left-2 w-8 h-8 border-t-2 border-l-2 border-amber-500/50 rounded-tl pointer-events-none z-10" />
+        <div className="absolute top-2 right-2 w-8 h-8 border-t-2 border-r-2 border-amber-500/50 rounded-tr pointer-events-none z-10" />
+        <div className="absolute bottom-2 left-2 w-8 h-8 border-b-2 border-l-2 border-amber-500/50 rounded-bl pointer-events-none z-10" />
+        <div className="absolute bottom-2 right-2 w-8 h-8 border-b-2 border-r-2 border-amber-500/50 rounded-br pointer-events-none z-10" />
+
+        {/* Marca d'água geométrica celestial central */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-          <div className="w-96 h-96 rounded-full border border-dashed border-amber-500/50 flex items-center justify-center">
-            <div className="w-64 h-64 rounded-full border border-amber-400/40 flex items-center justify-center">
+          <div className="w-[420px] h-[420px] rounded-full border border-dashed border-amber-500/40 flex items-center justify-center">
+            <div className="w-72 h-72 rounded-full border border-amber-400/30 flex items-center justify-center">
               <Sparkles className="w-20 h-20 text-amber-300" />
             </div>
           </div>
@@ -659,7 +765,7 @@ export function OracleTable({
                 className="w-full h-full object-cover rounded pointer-events-none"
               />
               <div className="absolute inset-0 bg-black/40 group-hover:bg-black/15 transition-colors flex flex-col items-center justify-between p-1.5 text-center">
-                <span className="text-[8px] font-mono font-bold text-amber-200 bg-black/80 px-1 py-0.5 rounded border border-amber-500/40 shadow-sm">
+                <span className="text-[8px] font-mono font-bold text-amber-200 bg-black/85 px-1 py-0.5 rounded border border-amber-500/40 shadow-sm">
                   {remainingDeckCount} no deck
                 </span>
                 <div className="w-6 h-6 rounded-full bg-amber-500/90 text-black flex items-center justify-center font-bold text-xs shadow-md group-hover:scale-110 transition-transform">
@@ -673,21 +779,21 @@ export function OracleTable({
           </div>
         </div>
 
-        {/* Notificação / Estado da Mesa */}
+        {/* Notificação de Mesa Vazia */}
         {cards.length === 0 && !isDealing && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-medium-400 font-mono text-xs pointer-events-none">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-medium-400 font-mono text-xs pointer-events-none z-10">
             <Sparkles className="w-8 h-8 text-amber-400/60 mb-2 animate-pulse" />
-            <span className="text-medium-200 font-semibold text-sm">Pano Oracular Estendido</span>
+            <span className="text-medium-100 font-semibold text-sm">Pano Oracular Estendido</span>
             <span className="text-[11px] text-medium-400 mt-1 max-w-sm">
               Clique no <strong>Baralho</strong> no canto superior esquerdo para puxar uma lâmina aleatória ou escolha um <strong>Método de Tiragem</strong> no menu.
             </span>
           </div>
         )}
 
-        {/* FEEDBACK DE DISTRIBUIÇÃO */}
+        {/* Feedback de Distribuição Animada */}
         {isDealing && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 bg-black/80 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-purple-500/50 text-purple-200 text-xs font-mono flex items-center gap-2 shadow-2xl animate-pulse">
-            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 bg-black/85 backdrop-blur-md px-4 py-2 rounded-full border border-purple-500/60 text-purple-200 text-xs font-mono flex items-center gap-2 shadow-2xl animate-pulse">
+            <Sparkles className="w-4 h-4 text-purple-400 animate-spin" />
             <span>Distribuindo lâminas sobre o altar...</span>
           </div>
         )}
@@ -711,6 +817,7 @@ export function OracleTable({
               onMouseDown={(e) => handleMouseDown(idx, e)}
               onMouseUp={(e) => handleCardMouseUp(idx, e)}
               onClick={(e) => handleCardClick(idx, e)}
+              onDoubleClick={(e) => handleOpenZoom(card, e)}
               className={`absolute select-none transition-shadow ${
                 isEditable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
               } ${
@@ -729,7 +836,7 @@ export function OracleTable({
             >
               {/* ESTRUTURA FLIP 3D DA CARTA */}
               <div
-                className="w-24 sm:w-28 h-38 sm:h-44 rounded-lg shadow-xl"
+                className="w-24 sm:w-28 h-38 sm:h-44 rounded-lg shadow-2xl"
                 style={{ perspective: "1000px" }}
               >
                 <div
@@ -739,9 +846,9 @@ export function OracleTable({
                     transform: isFlipped ? "rotateY(0deg)" : "rotateY(180deg)",
                   }}
                 >
-                  {/* 1. FACE DA CARTA (ROTAÇÃO 0deg - REVELADA) */}
+                  {/* 1. FACE DA CARTA REVELADA (Apenas Imagem Pura com Indicador Superior da Casa) */}
                   <div
-                    className={`absolute inset-0 w-full h-full rounded-lg overflow-hidden border-2 bg-[#121018] flex flex-col justify-between p-1 shadow-2xl ${
+                    className={`absolute inset-0 w-full h-full rounded-lg overflow-hidden border-2 bg-[#0F0D15] flex flex-col justify-between p-1 shadow-2xl ${
                       isSelected
                         ? "border-amber-400 ring-2 ring-amber-400/40"
                         : "border-amber-700/60 hover:border-amber-400"
@@ -751,18 +858,18 @@ export function OracleTable({
                       WebkitBackfaceVisibility: "hidden",
                     }}
                   >
-                    {/* Etiqueta da Posição */}
-                    <div className="bg-black/90 backdrop-blur-sm px-1 py-0.5 rounded text-[8px] font-mono text-amber-200 text-center truncate font-bold border border-amber-900/60">
+                    {/* Indicador Superior da Casa / Posição (Luminoso e Nítido) */}
+                    <div className="bg-black/90 backdrop-blur-md px-1.5 py-0.5 rounded text-[8.5px] font-mono text-amber-200 text-center truncate font-bold border border-amber-600/50 shadow-sm z-10">
                       {card.position}
                     </div>
 
-                    {/* Imagem da Face de Thoth */}
-                    <div className="flex-1 my-0.5 rounded overflow-hidden flex items-center justify-center bg-black/60 relative">
+                    {/* Imagem Pura da Lâmina de Thoth (Preenche todo o corpo da carta) */}
+                    <div className="flex-1 my-0.5 rounded overflow-hidden flex items-center justify-center bg-black/60 relative group/cardimg">
                       {faceImage ? (
                         <img
                           src={faceImage}
                           alt={card.cardName}
-                          className="w-full h-full object-cover pointer-events-none"
+                          className="w-full h-full object-cover rounded pointer-events-none"
                         />
                       ) : (
                         <div className="text-center p-1">
@@ -771,11 +878,16 @@ export function OracleTable({
                           </span>
                         </div>
                       )}
-                    </div>
 
-                    {/* Rodapé da Carta */}
-                    <div className="bg-black/85 px-1 py-0.5 rounded text-[8px] font-mono text-white text-center truncate font-semibold border border-medium-800">
-                      {card.cardName}
+                      {/* Botão de Lupa para Exame em Alta Resolução */}
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenZoom(card, e)}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-black/80 hover:bg-amber-400 hover:text-black text-amber-200 border border-amber-500/50 opacity-0 group-hover/cardimg:opacity-100 transition-all shadow-md z-20"
+                        title="Examinar lâmina em alta resolução (Zoom)"
+                      >
+                        <ZoomIn className="w-3 h-3" />
+                      </button>
                     </div>
                   </div>
 
@@ -790,7 +902,7 @@ export function OracleTable({
                       transform: "rotateY(180deg)",
                     }}
                   >
-                    <div className="bg-black/90 px-1 py-0.5 rounded text-[8px] font-mono text-amber-300 text-center truncate font-semibold border border-amber-700/60">
+                    <div className="bg-black/90 px-1 py-0.5 rounded text-[8.5px] font-mono text-amber-300 text-center truncate font-bold border border-amber-700/60">
                       {card.position}
                     </div>
 
@@ -822,14 +934,22 @@ export function OracleTable({
       {activeCard && (
         <div className="p-3.5 rounded-xl bg-medium-850 border border-medium-700 space-y-2 animate-in fade-in duration-150">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-medium-750 pb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-10 rounded border border-amber-500/50 overflow-hidden bg-black shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div
+                onClick={() => handleOpenZoom(activeCard)}
+                className="w-8 h-12 rounded border border-amber-500/60 overflow-hidden bg-black shrink-0 cursor-pointer hover:border-amber-400 transition-all shadow-md group relative"
+                title="Clique para ampliar em alta resolução"
+              >
                 <img
                   src={activeCard.imageUrl || activeThoth?.imageUrl || currentBack.imageUrl}
                   alt={activeCard.cardName}
                   className="w-full h-full object-cover"
                 />
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <ZoomIn className="w-3.5 h-3.5 text-white" />
+                </div>
               </div>
+
               <div>
                 <span className="text-[10px] font-mono text-amber-400 font-bold block">
                   {activeCard.position}
@@ -847,6 +967,17 @@ export function OracleTable({
 
             {/* Ações Rápidas na Carta Selecionada */}
             <div className="flex items-center gap-1.5">
+              {/* Botão Examinar em Alta Resolução */}
+              <button
+                type="button"
+                onClick={() => handleOpenZoom(activeCard)}
+                className="px-2.5 py-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-500/40 rounded text-xs font-mono flex items-center gap-1.5 transition-colors shadow-sm font-semibold"
+                title="Examinar detalhes e símbolos em alta resolução"
+              >
+                <ZoomIn className="w-3.5 h-3.5 text-amber-300" />
+                <span>Alta Resolução</span>
+              </button>
+
               <button
                 type="button"
                 onClick={(e) => handleCardClick(activeCardIdx!, e)}
@@ -879,7 +1010,7 @@ export function OracleTable({
             </div>
           </div>
 
-          {/* Atribuições de Liber 777 e Notas */}
+          {/* Atribuições de Liber 777 */}
           {activeThoth && (
             <div className="text-[11px] font-mono text-medium-300 flex flex-wrap gap-x-4 gap-y-1">
               {activeThoth.hebrewLetter && (
@@ -918,6 +1049,155 @@ export function OracleTable({
                 placeholder="Anotações pessoais ou visão astral desta lâmina nesta posição..."
                 className="w-full bg-medium-800 border border-medium-700 rounded-md px-2.5 py-1.5 text-xs text-medium-100 placeholder-medium-500 focus:outline-none focus:border-amber-400 font-sans"
               />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL DE INSPEÇÃO EM ALTA RESOLUÇÃO COM ZOOM & PAN INTERATIVO */}
+      {inspectCard && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-xl flex flex-col p-4 sm:p-6 animate-in fade-in select-none"
+          onClick={() => setInspectCard(null)}
+        >
+          {/* Barra Superior do Visualizador */}
+          <div
+            className="flex items-center justify-between pb-3 border-b border-medium-700 text-white z-20"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <span className="text-[11px] font-mono text-amber-400 uppercase tracking-widest block font-bold">
+                {inspectCard.position}
+              </span>
+              <h3 className="text-base sm:text-lg font-serif font-bold text-white flex items-center gap-2">
+                <span>{inspectCard.cardName}</span>
+                {inspectThoth?.thelemicTitle && (
+                  <span className="text-xs font-mono text-medium-400 font-normal">
+                    — {inspectThoth.thelemicTitle}
+                  </span>
+                )}
+              </h3>
+            </div>
+
+            {/* Controles de Zoom */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setZoomScale((prev) => Math.max(0.75, prev - 0.25))}
+                className="p-1.5 rounded-lg bg-medium-800 hover:bg-medium-700 border border-medium-700 text-medium-200 hover:text-white transition-colors"
+                title="Diminuir Zoom (-)"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+
+              <span className="text-xs font-mono text-amber-300 w-12 text-center font-bold">
+                {Math.round(zoomScale * 100)}%
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setZoomScale((prev) => Math.min(4.0, prev + 0.25))}
+                className="p-1.5 rounded-lg bg-medium-800 hover:bg-medium-700 border border-medium-700 text-medium-200 hover:text-white transition-colors"
+                title="Aumentar Zoom (+)"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setZoomScale(1);
+                  setPanPos({ x: 0, y: 0 });
+                }}
+                className="px-2 py-1.5 rounded-lg bg-medium-800 hover:bg-medium-700 border border-medium-700 text-xs font-mono text-medium-300 hover:text-white transition-colors flex items-center gap-1"
+                title="Resetar Zoom (100%)"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>100%</span>
+              </button>
+
+              <div className="w-[1px] h-5 bg-medium-700 mx-1" />
+
+              <button
+                type="button"
+                onClick={() => setInspectCard(null)}
+                className="p-1.5 rounded-lg bg-medium-800 hover:bg-red-950/60 border border-medium-700 hover:border-red-700 text-medium-300 hover:text-red-300 transition-colors"
+                title="Fechar (Esc)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Área Central: Imagem com Suporte a Pan e Zoom */}
+          <div
+            className="flex-1 overflow-hidden relative flex items-center justify-center p-4 cursor-grab active:cursor-grabbing"
+            onWheel={handleZoomWheel}
+            onMouseDown={handlePanMouseDown}
+            onMouseMove={handlePanMouseMove}
+            onMouseUp={handlePanMouseUp}
+            onMouseLeave={handlePanMouseUp}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="transition-transform duration-75 ease-out select-none"
+              style={{
+                transform: `translate(${panPos.x}px, ${panPos.y}px) scale(${zoomScale})`,
+                transformOrigin: "center center",
+              }}
+            >
+              <img
+                src={inspectCard.imageUrl || inspectThoth?.imageUrl || currentBack.imageUrl}
+                alt={inspectCard.cardName}
+                className="max-h-[75vh] w-auto object-contain rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.95)] border-2 border-amber-500/60 pointer-events-none select-none"
+                draggable={false}
+              />
+            </div>
+
+            {/* Dica de Interação */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none bg-black/75 backdrop-blur-md px-3 py-1 rounded-full border border-medium-700 text-[11px] font-mono text-medium-400">
+              Role o scroll do mouse para Zoom · Arraste para mover
+            </div>
+          </div>
+
+          {/* Rodapé com Correspondências de Liber 777 */}
+          {inspectThoth && (
+            <div
+              className="p-3 bg-medium-850/90 border-t border-medium-700 rounded-xl text-xs font-mono text-medium-300 flex flex-wrap items-center justify-between gap-4 z-20"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+                {inspectThoth.hebrewLetter && (
+                  <span>
+                    <strong className="text-amber-400 font-bold">Letra Hebraica:</strong>{" "}
+                    {inspectThoth.hebrewLetter} ({inspectThoth.hebrewName})
+                  </span>
+                )}
+                {inspectThoth.astrologicalSign && (
+                  <span>
+                    <strong className="text-amber-400 font-bold">Astrologia:</strong>{" "}
+                    {inspectThoth.astrologicalSign}
+                  </span>
+                )}
+                {inspectThoth.sephirahPath && (
+                  <span>
+                    <strong className="text-amber-400 font-bold">Caminho da Árvore:</strong>{" "}
+                    {inspectThoth.sephirahPath}
+                  </span>
+                )}
+                {inspectThoth.keywords && inspectThoth.keywords.length > 0 && (
+                  <span>
+                    <strong className="text-medium-400">Atributos:</strong>{" "}
+                    {inspectThoth.keywords.join(" · ")}
+                  </span>
+                )}
+              </div>
+
+              {inspectCard.notes && (
+                <div className="text-[11px] font-sans italic text-medium-200">
+                  <strong>Anotação:</strong> &ldquo;{inspectCard.notes}&rdquo;
+                </div>
+              )}
             </div>
           )}
         </div>
