@@ -25,6 +25,7 @@ import {
   Table,
   Plus,
   Link as LinkIcon,
+  Link2,
   Check,
   X,
   RefreshCw,
@@ -106,6 +107,8 @@ export function ArticleView({
   // Menus Flutuantes
   const [isSymbolsMenuOpen, setIsSymbolsMenuOpen] = useState(false);
   const [isCalloutsMenuOpen, setIsCalloutsMenuOpen] = useState(false);
+  const [isNoteLinkMenuOpen, setIsNoteLinkMenuOpen] = useState(false);
+  const [noteLinkSearch, setNoteLinkSearch] = useState("");
 
   // Gravação de Áudio / Voz Nativo
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
@@ -717,9 +720,60 @@ export function ArticleView({
     );
   }
 
-  // Helper para formatar markdown inline com cores, negrito, itálico, etc.
+  // Inserir link para outra nota ([[Título da Nota]])
+  const insertNoteLink = (noteTitle: string) => {
+    insertFormatting(`[[${noteTitle}]]`, "");
+    setIsNoteLinkMenuOpen(false);
+    setNoteLinkSearch("");
+  };
+
+  // Backlinks (outras notas que mencionam a nota atual)
+  const backlinks = React.useMemo(() => {
+    if (!entry) return [];
+    const entryTitleLower = entry.title.toLowerCase();
+    const entryId = entry.id;
+
+    return allEntries.filter((other) => {
+      if (other.id === entryId) return false;
+      const contentLower = other.content.toLowerCase();
+      const mentionsTitle = contentLower.includes(`[[${entryTitleLower}`) || contentLower.includes(`[[${other.title.toLowerCase()}`);
+      const mentionsDirectly = contentLower.includes(entryTitleLower);
+      const hasConnection = (other.connections || []).some((c) => c.target_id === entryId);
+      return mentionsTitle || mentionsDirectly || hasConnection;
+    });
+  }, [entry, allEntries]);
+
+  // Manipulador de clique em links de notas dentro do artigo
+  const handleArticleClick = (e: React.MouseEvent) => {
+    const target = (e.target as HTMLElement).closest("[data-note-target]");
+    if (target) {
+      const rawTarget = target.getAttribute("data-note-target");
+      if (rawTarget) {
+        const decoded = decodeURIComponent(rawTarget).toLowerCase();
+        const found = allEntries.find(
+          (ent) =>
+            ent.id.toLowerCase() === decoded ||
+            ent.title.toLowerCase() === decoded ||
+            ent.title.toLowerCase().includes(decoded)
+        );
+        if (found) {
+          onSelectEntry(found);
+        } else {
+          alert(`A nota "${decodeURIComponent(rawTarget)}" ainda não foi encontrada no grimório.`);
+        }
+      }
+    }
+  };
+
+  // Helper para formatar markdown inline com cores, negrito, itálico, links e Wikilinks estilo Obsidian
   const renderInlineMarkdown = (line: string): string => {
     return line
+      // Wikilinks estilo Obsidian: [[Nome da Nota]] ou [[Alvo|Texto Exibido]]
+      .replace(/\[\[(.*?)(?:\|(.*?))?\]\]/g, (_, target, alias) => {
+        const textToDisplay = (alias || target).trim();
+        const noteTarget = target.trim();
+        return `<span data-note-target="${encodeURIComponent(noteTarget)}" class="inline-flex items-center gap-1 font-semibold text-amber-400 hover:text-amber-300 underline underline-offset-4 decoration-amber-400/50 hover:decoration-amber-300 cursor-pointer transition-colors px-1 py-0.5 rounded hover:bg-amber-400/10"><span class="text-[11px] opacity-70">🔗</span>${textToDisplay}</span>`;
+      })
       // Cores via HTML span
       .replace(/<span\s+style=["']color:\s*([^"';]+);?["']>(.*?)<\/span>/gi, "<span style='color: $1'>$2</span>")
       // Cores via tags amigáveis <color=...> ou <color name=...>
@@ -733,7 +787,7 @@ export function ArticleView({
       .replace(/<u>(.*?)<\/u>/gi, "<u class='underline underline-offset-4'>$1</u>")
       // Código inline
       .replace(/`([^`]+)`/g, "<code class='bg-medium-800 px-1.5 py-0.5 rounded text-xs font-mono text-medium-200 border border-medium-700'>$1</code>")
-      // Links
+      // Links normais Markdown
       .replace(/\[(.*?)\]\((.*?)\)/g, "<a href='$2' target='_blank' rel='noopener noreferrer' class='text-white underline underline-offset-2 hover:text-medium-300'>$1</a>");
   };
 
@@ -1473,7 +1527,10 @@ export function ArticleView({
             )}
 
             {/* Article Body Content */}
-            <div className="pt-4 border-t border-medium-800">
+            <div
+              onClick={handleArticleClick}
+              className="pt-4 border-t border-medium-800"
+            >
               {renderFormattedContent(entry.content)}
             </div>
 
@@ -1531,6 +1588,40 @@ export function ArticleView({
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* Backlinks (Menções e Links Reversos Estilo Obsidian) */}
+            {backlinks.length > 0 && (
+              <div className="pt-6 border-t border-medium-800 space-y-3">
+                <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-medium-400 flex items-center gap-1.5">
+                  <span className="text-amber-400">🔗</span>
+                  <span>Notas que referenciam esta nota ({backlinks.length})</span>
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {backlinks.map((srcEntry) => (
+                    <div
+                      key={srcEntry.id}
+                      onClick={() => onSelectEntry(srcEntry)}
+                      className="p-3 rounded-lg bg-medium-850 hover:bg-medium-800 border border-medium-700 hover:border-amber-500/50 cursor-pointer transition-all text-xs group"
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-mono text-medium-400 uppercase">
+                          {normalizeCategory(srcEntry.type)}
+                        </span>
+                        <span className="text-[10px] font-mono text-medium-500">
+                          {srcEntry.date ? srcEntry.date.slice(0, 10) : ""}
+                        </span>
+                      </div>
+                      <div className="font-semibold text-white group-hover:text-amber-300 transition-colors truncate">
+                        {srcEntry.title}
+                      </div>
+                      <div className="text-[11px] text-medium-400 italic line-clamp-1 mt-0.5">
+                        {srcEntry.content.replace(/\[\[(.*?)\]\]/g, "$1").slice(0, 100)}...
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -2062,6 +2153,85 @@ export function ArticleView({
                           </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Linkar Nota Estilo Obsidian ([[Nome da Nota]]) */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsNoteLinkMenuOpen(!isNoteLinkMenuOpen)}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all text-xs font-mono border ${
+                    isNoteLinkMenuOpen
+                      ? "bg-amber-500/20 text-amber-200 border-amber-500/40 shadow-sm font-semibold"
+                      : "text-medium-300 hover:text-white hover:bg-medium-750 border-transparent"
+                  }`}
+                  title="Linkar outra nota do diário (Wikilink [[Nome da Nota]])"
+                >
+                  <Link2 className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline font-sans font-medium">Linkar Nota</span>
+                </button>
+
+                {isNoteLinkMenuOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-72 bg-medium-850 border border-medium-700 rounded-xl p-3 shadow-2xl z-40 space-y-2 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-medium-750">
+                      <span className="text-[11px] font-mono font-bold text-white uppercase tracking-wider flex items-center gap-1">
+                        <Link2 className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Linkar Outra Nota</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsNoteLinkMenuOpen(false)}
+                        className="text-medium-400 hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={noteLinkSearch}
+                      onChange={(e) => setNoteLinkSearch(e.target.value)}
+                      placeholder="Buscar título da nota..."
+                      className="w-full bg-medium-800 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-amber-400 font-sans"
+                      autoFocus
+                    />
+
+                    <div className="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                      {allEntries
+                        .filter(
+                          (other) =>
+                            other.id !== entry?.id &&
+                            (noteLinkSearch === "" ||
+                              other.title.toLowerCase().includes(noteLinkSearch.toLowerCase()) ||
+                              other.type.toLowerCase().includes(noteLinkSearch.toLowerCase()))
+                        )
+                        .slice(0, 15)
+                        .map((other) => (
+                          <button
+                            key={other.id}
+                            type="button"
+                            onClick={() => insertNoteLink(other.title)}
+                            className="w-full text-left px-2 py-1.5 rounded hover:bg-amber-500/15 text-medium-200 hover:text-white text-xs transition-colors flex items-center justify-between group"
+                          >
+                            <span className="truncate group-hover:text-amber-300 font-medium">{other.title}</span>
+                            <span className="text-[9px] font-mono text-medium-400 uppercase shrink-0 ml-2">
+                              {normalizeCategory(other.type)}
+                            </span>
+                          </button>
+                        ))}
+                      {allEntries.filter(
+                        (other) =>
+                          other.id !== entry?.id &&
+                          (noteLinkSearch === "" ||
+                            other.title.toLowerCase().includes(noteLinkSearch.toLowerCase()))
+                      ).length === 0 && (
+                        <div className="text-[11px] font-mono text-medium-400 italic text-center py-2">
+                          Nenhuma nota encontrada.
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

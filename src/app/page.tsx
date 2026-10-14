@@ -12,6 +12,8 @@ import { TreeOfLifeView, SEPHIROT } from "@/components/TreeOfLifeView";
 import { RitualTimerModal } from "@/components/RitualTimerModal";
 import { AltarModeModal } from "@/components/AltarModeModal";
 import { SpotlightModal } from "@/components/SpotlightModal";
+import { QuickDreamModal } from "@/components/QuickDreamModal";
+import { GrimoireCompilerModal } from "@/components/GrimoireCompilerModal";
 import { AstrologicalCoordinates } from "@/lib/astronomy";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { getDefaultTemplateForCategory } from "@/lib/templates";
@@ -28,18 +30,25 @@ export default function Home() {
   const [isTimerModalOpen, setIsTimerModalOpen] = useState(false);
   const [isAltarModalOpen, setIsAltarModalOpen] = useState(false);
   const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
+  const [isQuickDreamOpen, setIsQuickDreamOpen] = useState(false);
+  const [isGrimoireOpen, setIsGrimoireOpen] = useState(false);
   const [astroData, setAstroData] = useState<AstrologicalCoordinates | null>(null);
   const [loading, setLoading] = useState(true);
   const [isZenMode, setIsZenMode] = useState(false);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
 
-  // Global keyboard shortcuts (Ctrl+\ for Zen Mode, Ctrl+K for Spotlight, Escape for Graph Modal)
+  // Global keyboard shortcuts (Ctrl+\ for Zen Mode, Ctrl+K for Spotlight, Alt+S for Quick Dream, Escape for Graph Modal)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       // Ctrl+K / Cmd+K para Spotlight
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsSpotlightOpen((prev) => !prev);
+      }
+      // Alt+S para Captura Rápida de Sonhos (Quick Dream)
+      if (e.altKey && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        setIsQuickDreamOpen((prev) => !prev);
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
         e.preventDefault();
@@ -221,6 +230,47 @@ export default function Home() {
     setIsTimerModalOpen(false);
   };
 
+  // Quick Dream Save Handler
+  const handleSaveDream = async (dreamEntry: Partial<MagickEntry>) => {
+    try {
+      const astroRes = await fetch("/api/astronomy");
+      const astro = await astroRes.json();
+
+      const newDream: Partial<MagickEntry> = {
+        title: dreamEntry.title || "Sonho Astral",
+        content: dreamEntry.content || "",
+        type: "Sonho",
+        date: dreamEntry.date || new Date().toISOString(),
+        thelemic_date: astro.success ? astro.thelemicDate : "",
+        sun_sign: astro.success ? astro.sunSign : "",
+        sun_degree: astro.success ? astro.sunDegree : 0,
+        moon_sign: astro.success ? astro.moonSign : "",
+        moon_degree: astro.success ? astro.moonDegree : 0,
+        moon_phase: astro.success ? astro.moonPhaseName : "",
+        moon_illumination: astro.success ? astro.moonIllumination : 0,
+        planetary_day: astro.success ? astro.planetaryDay : "",
+        planetary_hour: astro.success ? astro.planetaryHour : "",
+        tags: ["sonho", "lucidez", "astral"],
+        influences: [],
+        connections: [],
+      };
+
+      const res = await fetch("/api/entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newDream),
+      });
+      const data = await res.json();
+      if (data.success && data.entry) {
+        await loadEntries(data.entry.id);
+        setSelectedEntryId(data.entry.id);
+        setViewMode("article");
+      }
+    } catch (err) {
+      console.error("Erro ao salvar sonho rápido:", err);
+    }
+  };
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-medium-900 text-medium-100 antialiased font-sans">
       {/* 1. Left Sidebar (Obsidian Tree Navigator) */}
@@ -248,6 +298,8 @@ export default function Home() {
           onOpenTree={() => setViewMode("tree")}
           onOpenTimer={() => setIsTimerModalOpen(true)}
           onOpenAltar={() => setIsAltarModalOpen(true)}
+          onOpenQuickDream={() => setIsQuickDreamOpen(true)}
+          onOpenGrimoireCompiler={() => setIsGrimoireOpen(true)}
         />
       </div>
 
@@ -385,6 +437,20 @@ export default function Home() {
           setSelectedEntryId(entry.id);
           setViewMode("article");
         }}
+      />
+
+      {/* Quick Dream (Captura Rápida de Sonhos - Alt+S) */}
+      <QuickDreamModal
+        isOpen={isQuickDreamOpen}
+        onClose={() => setIsQuickDreamOpen(false)}
+        onSaveDream={handleSaveDream}
+      />
+
+      {/* Compilador de Grimório Thelêmico em Livro (A4 / PDF) */}
+      <GrimoireCompilerModal
+        isOpen={isGrimoireOpen}
+        onClose={() => setIsGrimoireOpen(false)}
+        entries={entries}
       />
     </div>
   );

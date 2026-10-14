@@ -18,6 +18,8 @@ import {
   BarChart2,
   Clock,
   Flame,
+  CloudMoon,
+  BookMarked,
 } from "lucide-react";
 import { EstrelaDeThelema, getCategoryThelemicIcon, ZodiacIcon, IconeSolThelema } from "@/components/ThelemicIcons";
 
@@ -37,6 +39,8 @@ interface SidebarProps {
   onOpenTree?: () => void;
   onOpenTimer?: () => void;
   onOpenAltar?: () => void;
+  onOpenQuickDream?: () => void;
+  onOpenGrimoireCompiler?: () => void;
 }
 
 export function Sidebar({
@@ -55,6 +59,8 @@ export function Sidebar({
   onOpenTree,
   onOpenTimer,
   onOpenAltar,
+  onOpenQuickDream,
+  onOpenGrimoireCompiler,
 }: SidebarProps) {
   const categories: { name: string; label: string; icon: React.ReactNode }[] = [
     { name: "all", label: "Todas", icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
@@ -171,6 +177,31 @@ export function Sidebar({
             >
               <Flame className="w-3 h-3 text-amber-400" />
               <span>Altar</span>
+            </button>
+          )}
+        </div>
+
+        {/* Linha Rápida: Quick Dream (Alt+S) & Compilador de Grimório */}
+        <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+          {onOpenQuickDream && (
+            <button
+              onClick={onOpenQuickDream}
+              className="flex items-center justify-center gap-1 py-1 px-1.5 rounded text-[11px] font-mono bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-200 hover:text-white border border-indigo-500/30 transition-all group"
+              title="Captura Rápida de Sonhos de Madrugada (Atalho: Alt + S)"
+            >
+              <CloudMoon className="w-3 h-3 text-indigo-400 group-hover:scale-110 transition-transform" />
+              <span>Sonho (Alt+S)</span>
+            </button>
+          )}
+
+          {onOpenGrimoireCompiler && (
+            <button
+              onClick={onOpenGrimoireCompiler}
+              className="flex items-center justify-center gap-1 py-1 px-1.5 rounded text-[11px] font-mono bg-amber-950/30 hover:bg-amber-900/40 text-amber-200 hover:text-white border border-amber-500/30 transition-all group"
+              title="Compilar Grimório Thelêmico em Livro (A4 / PDF)"
+            >
+              <BookMarked className="w-3 h-3 text-amber-400 group-hover:scale-110 transition-transform" />
+              <span>Grimório PDF</span>
             </button>
           )}
         </div>
