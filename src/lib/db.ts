@@ -41,10 +41,200 @@ function performAutoBackup(dbPath: string, dataDir: string) {
   }
 }
 
+const STORAGE_CONFIG_FILE = path.join(process.cwd(), "storage_config.json");
+
+export function getDefaultStorageDirectory(): string {
+  return path.join(process.cwd(), "data");
+}
+
+export function getStorageDirectory(): string {
+  // 1. Variável de ambiente (prioridade mais alta se definida)
+  if (process.env.MAGICK_DIARY_STORAGE_PATH && process.env.MAGICK_DIARY_STORAGE_PATH.trim()) {
+    const envPath = path.resolve(process.env.MAGICK_DIARY_STORAGE_PATH.trim());
+    if (!fs.existsSync(envPath)) {
+      try {
+        fs.mkdirSync(envPath, { recursive: true });
+      } catch (e) {}
+    }
+    return envPath;
+  }
+
+  // 2. Arquivo de configuração local privado (storage_config.json)
+  try {
+    if (fs.existsSync(STORAGE_CONFIG_FILE)) {
+      const content = fs.readFileSync(STORAGE_CONFIG_FILE, "utf-8");
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.storagePath && typeof parsed.storagePath === "string") {
+        const customPath = path.resolve(parsed.storagePath.trim());
+        if (!fs.existsSync(customPath)) {
+          try {
+            fs.mkdirSync(customPath, { recursive: true });
+          } catch (e) {
+            console.warn("Não foi possível acessar a pasta customizada configurada, usando padrão local:", e);
+            return getDefaultStorageDirectory();
+          }
+        }
+        return customPath;
+      }
+    }
+  } catch (err) {
+    console.warn("Erro ao ler storage_config.json:", err);
+  }
+
+  return getDefaultStorageDirectory();
+}
+
+export function getStorageInfo() {
+  const currentPath = getStorageDirectory();
+  const defaultPath = getDefaultStorageDirectory();
+  const isCustom = path.resolve(currentPath).toLowerCase() !== path.resolve(defaultPath).toLowerCase();
+  const dbFile = path.join(currentPath, "magick_diary.db");
+
+  let dbSizeBytes = 0;
+  if (fs.existsSync(dbFile)) {
+    try {
+      dbSizeBytes = fs.statSync(dbFile).size;
+    } catch (e) {}
+  }
+
+  let backupCount = 0;
+  const backupsDir = path.join(currentPath, "backups");
+  if (fs.existsSync(backupsDir)) {
+    try {
+      backupCount = fs.readdirSync(backupsDir).filter((f) => f.endsWith(".db")).length;
+    } catch (e) {}
+  }
+
+  let totalEntries = 0;
+  try {
+    const db = getDatabase();
+    const row = db.prepare("SELECT COUNT(*) as c FROM entries").get() as { c: number };
+    totalEntries = row?.c || 0;
+  } catch (e) {}
+
+  return {
+    currentPath,
+    defaultPath,
+    isCustom,
+    dbFile,
+    dbSizeBytes,
+    backupCount,
+    totalEntries,
+  };
+}
+
+export function setStorageDirectory(
+  newPath: string,
+  copyExisting: boolean = true
+): { success: boolean; message: string; activePath: string } {
+  try {
+    const trimmed = (newPath || "").trim();
+    if (!trimmed || trimmed.toUpperCase() === "DEFAULT") {
+      return resetStorageDirectory();
+    }
+
+    const resolvedPath = path.resolve(trimmed);
+
+    // Valida se diretório existe ou se pode ser criado
+    if (!fs.existsSync(resolvedPath)) {
+      fs.mkdirSync(resolvedPath, { recursive: true });
+    }
+
+    // Teste de permissão de escrita
+    const testFile = path.join(resolvedPath, `.test_write_${Date.now()}`);
+    fs.writeFileSync(testFile, "ok");
+    fs.unlinkSync(testFile);
+
+    const oldDataDir = getStorageDirectory();
+    const oldDbPath = path.join(oldDataDir, "magick_diary.db");
+    const newDbPath = path.join(resolvedPath, "magick_diary.db");
+
+    // Fecha a conexão atual do SQLite antes da troca
+    if (dbInstance) {
+      try {
+        dbInstance.close();
+      } catch (e) {}
+      dbInstance = null;
+    }
+
+    // Copiar dados se solicitado e se o novo local não tiver banco ainda
+    if (copyExisting && fs.existsSync(oldDbPath) && oldDbPath.toLowerCase() !== newDbPath.toLowerCase()) {
+      if (!fs.existsSync(newDbPath)) {
+        fs.copyFileSync(oldDbPath, newDbPath);
+      }
+
+      // Copiar também backups
+      const oldBackupsDir = path.join(oldDataDir, "backups");
+      const newBackupsDir = path.join(resolvedPath, "backups");
+      if (fs.existsSync(oldBackupsDir)) {
+        if (!fs.existsSync(newBackupsDir)) {
+          fs.mkdirSync(newBackupsDir, { recursive: true });
+        }
+        const backups = fs.readdirSync(oldBackupsDir).filter((f) => f.endsWith(".db"));
+        for (const b of backups) {
+          const dest = path.join(newBackupsDir, b);
+          if (!fs.existsSync(dest)) {
+            try {
+              fs.copyFileSync(path.join(oldBackupsDir, b), dest);
+            } catch (e) {}
+          }
+        }
+      }
+    }
+
+    // Salva configuração em storage_config.json
+    fs.writeFileSync(
+      STORAGE_CONFIG_FILE,
+      JSON.stringify({ storagePath: resolvedPath, updatedAt: new Date().toISOString() }, null, 2)
+    );
+
+    // Reabre e inicializa banco no novo local
+    getDatabase();
+
+    return {
+      success: true,
+      message: `Local do diário alterado com sucesso para: ${resolvedPath}`,
+      activePath: resolvedPath,
+    };
+  } catch (err: any) {
+    console.error("Falha ao configurar local de armazenamento:", err);
+    getDatabase();
+    return {
+      success: false,
+      message: `Erro ao alterar caminho: ${err.message}`,
+      activePath: getStorageDirectory(),
+    };
+  }
+}
+
+export function resetStorageDirectory(): { success: boolean; message: string; activePath: string } {
+  try {
+    if (fs.existsSync(STORAGE_CONFIG_FILE)) {
+      fs.unlinkSync(STORAGE_CONFIG_FILE);
+    }
+  } catch (e) {}
+
+  if (dbInstance) {
+    try {
+      dbInstance.close();
+    } catch (e) {}
+    dbInstance = null;
+  }
+
+  const defaultDir = getDefaultStorageDirectory();
+  getDatabase();
+
+  return {
+    success: true,
+    message: `Armazenamento restaurado para a pasta padrão: ${defaultDir}`,
+    activePath: defaultDir,
+  };
+}
+
 export function getDatabase(): DatabaseSync {
   if (dbInstance) return dbInstance;
 
-  const dataDir = path.join(process.cwd(), "data");
+  const dataDir = getStorageDirectory();
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }

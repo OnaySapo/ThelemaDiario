@@ -18,6 +18,11 @@ import {
   Archive,
   Globe,
   Search,
+  HardDrive,
+  FolderSync,
+  Server,
+  AlertCircle,
+  FolderOpen,
 } from "lucide-react";
 import { MagickEntry } from "@/lib/types";
 import { EstrelaDeThelema } from "@/components/ThelemicIcons";
@@ -74,12 +79,25 @@ interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   entries: MagickEntry[];
+  onReloadEntries?: () => void;
 }
 
-export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) {
+export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: SettingsModalProps) {
   // Theme States
   const [currentTheme, setCurrentTheme] = useState<ThemeId>("medium");
   const [currentMode, setCurrentMode] = useState<ThemeMode>("dark");
+
+  // Storage Vault States (Local de Armazenamento / Servidor)
+  const [storageCurrentPath, setStorageCurrentPath] = useState("");
+  const [storageDefaultPath, setStorageDefaultPath] = useState("");
+  const [isStorageCustom, setIsStorageCustom] = useState(false);
+  const [storageDbSize, setStorageDbSize] = useState(0);
+  const [storageBackupCount, setStorageBackupCount] = useState(0);
+  const [inputStoragePath, setInputStoragePath] = useState("");
+  const [copyExistingNotes, setCopyExistingNotes] = useState(true);
+  const [isChangingStorage, setIsChangingStorage] = useState(false);
+  const [storageStatusMessage, setStorageStatusMessage] = useState<string | null>(null);
+  const [storageStatusType, setStorageStatusType] = useState<"success" | "error" | null>(null);
 
   // Geolocation States
   const [geoCity, setGeoCity] = useState("São Paulo, SP");
@@ -168,8 +186,98 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
           if (data.success && data.value) setGeoLng(data.value);
         })
         .catch(() => {});
+
+      // Fetch Storage / Vault Location
+      fetch("/api/storage")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setStorageCurrentPath(data.currentPath);
+            setStorageDefaultPath(data.defaultPath);
+            setIsStorageCustom(data.isCustom);
+            setStorageDbSize(data.dbSizeBytes || 0);
+            setStorageBackupCount(data.backupCount || 0);
+            setInputStoragePath(data.currentPath);
+          }
+        })
+        .catch(() => {});
     }
   }, [isOpen]);
+
+  const handleSaveStoragePath = async () => {
+    if (!inputStoragePath.trim()) {
+      alert("Por favor, digite ou cole o caminho da pasta de destino.");
+      return;
+    }
+
+    setIsChangingStorage(true);
+    setStorageStatusMessage(null);
+    try {
+      const res = await fetch("/api/storage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: inputStoragePath.trim(),
+          copyExisting: copyExistingNotes,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStorageCurrentPath(data.activePath);
+        setIsStorageCustom(data.isCustom);
+        setStorageDbSize(data.dbSizeBytes || 0);
+        setStorageBackupCount(data.backupCount || 0);
+        setStorageStatusType("success");
+        setStorageStatusMessage(data.message || "Local de armazenamento alterado com sucesso!");
+        if (onReloadEntries) {
+          onReloadEntries();
+        }
+      } else {
+        setStorageStatusType("error");
+        setStorageStatusMessage(data.error || "Não foi possível alterar a pasta.");
+      }
+    } catch (err: any) {
+      setStorageStatusType("error");
+      setStorageStatusMessage("Erro ao conectar com o servidor: " + err.message);
+    } finally {
+      setIsChangingStorage(false);
+    }
+  };
+
+  const handleResetStoragePath = async () => {
+    if (!confirm("Deseja voltar o armazenamento para a pasta padrão local do aplicativo?")) return;
+
+    setIsChangingStorage(true);
+    setStorageStatusMessage(null);
+    try {
+      const res = await fetch("/api/storage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStorageCurrentPath(data.activePath);
+        setIsStorageCustom(false);
+        setInputStoragePath(data.activePath);
+        setStorageDbSize(data.dbSizeBytes || 0);
+        setStorageBackupCount(data.backupCount || 0);
+        setStorageStatusType("success");
+        setStorageStatusMessage("Armazenamento restaurado para a pasta padrão local!");
+        if (onReloadEntries) {
+          onReloadEntries();
+        }
+      } else {
+        setStorageStatusType("error");
+        setStorageStatusMessage(data.error || "Erro ao restaurar.");
+      }
+    } catch (err: any) {
+      setStorageStatusType("error");
+      setStorageStatusMessage(err.message);
+    } finally {
+      setIsChangingStorage(false);
+    }
+  };
 
   const [isSearchingCity, setIsSearchingCity] = useState(false);
 
@@ -718,6 +826,125 @@ export function SettingsModal({ isOpen, onClose, entries }: SettingsModalProps) 
               <div className="flex items-center gap-1.5 text-white text-xs font-mono">
                 <Check className="w-3.5 h-3.5" />
                 <span>{saveStatus}</span>
+              </div>
+            )}
+          </div>
+
+          {/* ========================================================
+              SEÇÃO: LOCAL DE ARMAZENAMENTO DAS NOTAS (VAULT / SERVIDOR)
+              ======================================================== */}
+          <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-medium-750 pb-2.5">
+              <div className="flex items-center gap-2 text-white font-semibold font-mono text-xs">
+                <HardDrive className="w-4 h-4 text-amber-400" />
+                <span>Local de Armazenamento do Diário (Vault / Servidor)</span>
+              </div>
+              <span
+                className={`text-[10px] font-mono px-2 py-0.5 rounded border font-semibold ${
+                  isStorageCustom
+                    ? "bg-purple-950/60 text-purple-300 border-purple-500/40"
+                    : "bg-medium-800 text-medium-300 border-medium-700"
+                }`}
+              >
+                {isStorageCustom ? "Pasta Customizada / Servidor" : "Pasta Padrão Local"}
+              </span>
+            </div>
+
+            <p className="text-medium-300 leading-relaxed font-sans text-xs">
+              Escolha onde o banco de dados e as anotações são gravados. Você pode apontar para uma pasta em um{" "}
+              <strong>servidor de rede</strong>, um <strong>drive compartilhado (NAS/Dropbox/Nextcloud)</strong> ou um
+              diretório seguro em outro disco rígido.
+            </p>
+
+            {/* Caminho Atual Ativo */}
+            <div className="p-2.5 rounded-lg bg-medium-900 border border-medium-750 space-y-1">
+              <div className="flex items-center justify-between text-[10px] font-mono text-medium-400">
+                <span>DIRETÓRIO ATUALMENTE EM USO:</span>
+                <span>
+                  {storageDbSize > 0 && `${(storageDbSize / (1024 * 1024)).toFixed(2)} MB · `}
+                  {storageBackupCount} backups
+                </span>
+              </div>
+              <div className="font-mono text-xs text-amber-300 break-all select-all flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>{storageCurrentPath || "Carregando caminho..."}</span>
+              </div>
+            </div>
+
+            {/* Input para Novo Caminho */}
+            <div className="space-y-2">
+              <label className="block text-[11px] font-mono text-medium-400">
+                NOVO CAMINHO DA PASTA DE DESTINO:
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={inputStoragePath}
+                  onChange={(e) => setInputStoragePath(e.target.value)}
+                  placeholder="Ex: \\192.168.1.50\Servidor\Grimorio ou D:\DiarioMagickoVault"
+                  className="flex-1 bg-medium-900 border border-medium-700 rounded px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-amber-400 font-mono"
+                />
+              </div>
+              <p className="text-[10px] text-medium-400 font-mono">
+                Dica: Você pode digitar o caminho absoluto do Windows (ex:{" "}
+                <code className="text-amber-200">D:\MinhasNotas</code>) ou endereço UNC de rede (ex:{" "}
+                <code className="text-amber-200">\\servidor\compartilhamento</code>).
+              </p>
+            </div>
+
+            {/* Checkbox: Migrar dados existentes */}
+            <label className="flex items-center gap-2 text-xs text-medium-300 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={copyExistingNotes}
+                onChange={(e) => setCopyExistingNotes(e.target.checked)}
+                className="w-4 h-4 rounded border-medium-700 bg-medium-900 text-amber-400 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+              />
+              <span>Copiar automaticamente todas as notas e backups atuais para a nova pasta</span>
+            </label>
+
+            {/* Ações e Feedback */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-medium-750">
+              <button
+                type="button"
+                onClick={handleResetStoragePath}
+                disabled={!isStorageCustom || isChangingStorage}
+                className="px-3 py-1.5 bg-medium-800 hover:bg-medium-750 disabled:opacity-40 text-medium-300 hover:text-white rounded text-xs font-mono border border-medium-700 transition-colors"
+                title="Volta o banco de dados para a pasta padrão 'data/' dentro do projeto"
+              >
+                Restaurar Padrão Local
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveStoragePath}
+                disabled={
+                  isChangingStorage ||
+                  !inputStoragePath.trim() ||
+                  inputStoragePath.trim().toLowerCase() === storageCurrentPath.toLowerCase()
+                }
+                className="px-4 py-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-black font-semibold rounded text-xs transition-colors flex items-center gap-2 shadow-sm"
+              >
+                <FolderSync className={`w-3.5 h-3.5 ${isChangingStorage ? "animate-spin" : ""}`} />
+                <span>{isChangingStorage ? "Alterando e migrando..." : "Mudar Pasta de Armazenamento"}</span>
+              </button>
+            </div>
+
+            {/* Mensagem de Status */}
+            {storageStatusMessage && (
+              <div
+                className={`flex items-start gap-2 p-2.5 rounded-lg border text-xs font-mono animate-fadeIn ${
+                  storageStatusType === "success"
+                    ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-200"
+                    : "bg-rose-950/40 border-rose-500/40 text-rose-200"
+                }`}
+              >
+                {storageStatusType === "success" ? (
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                )}
+                <span>{storageStatusMessage}</span>
               </div>
             )}
           </div>

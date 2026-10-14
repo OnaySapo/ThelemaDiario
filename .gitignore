@@ -25,3 +25,5 @@ uploads/
 .env
 .env.local
 .env*.local
+storage_config.json
+*.storage_config.json

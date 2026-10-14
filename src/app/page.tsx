@@ -372,6 +372,7 @@ export default function Home() {
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         entries={entries}
+        onReloadEntries={() => loadEntries()}
       />
 
       {/* Ritual Timer & Dharana Modal */}
