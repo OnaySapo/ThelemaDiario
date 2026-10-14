@@ -149,7 +149,7 @@ export function AltarModeModal({
           {/* Alternar Modo Claro / Escuro */}
           <button
             onClick={toggleAltarTheme}
-            className={`px-3 py-1.5 rounded-lg border text-xs font-mono transition-all flex items-center gap-1.5 shadow-sm font-semibold ${
+            className={`altar-btn px-3 py-1.5 rounded-lg border text-xs font-mono transition-all flex items-center gap-1.5 shadow-sm font-semibold ${
               isLight
                 ? "bg-amber-100/90 hover:bg-amber-200/90 border-amber-400/60 text-amber-950"
                 : "bg-neutral-900/90 hover:bg-neutral-800 border-neutral-700 text-neutral-100"
@@ -180,7 +180,7 @@ export function AltarModeModal({
           {/* Bateria / Knock */}
           <button
             onClick={() => playRitualKnock()}
-            className={`px-3 py-1.5 rounded-lg border text-xs font-mono transition-all flex items-center gap-1.5 shadow-sm font-semibold ${
+            className={`altar-btn px-3 py-1.5 rounded-lg border text-xs font-mono transition-all flex items-center gap-1.5 shadow-sm font-semibold ${
               isLight
                 ? "bg-[#FFFDF9] hover:bg-amber-100/70 border-amber-800/30 text-stone-900"
                 : "bg-neutral-900/90 hover:bg-neutral-800 border-neutral-700 text-neutral-100 hover:text-white"
@@ -201,7 +201,7 @@ export function AltarModeModal({
           {/* Gongo Cerimonial */}
           <button
             onClick={() => playCeremonialGong({ volume: 0.8 })}
-            className={`px-3 py-1.5 rounded-lg border text-xs font-mono transition-all flex items-center gap-1.5 shadow-sm font-semibold ${
+            className={`altar-btn px-3 py-1.5 rounded-lg border text-xs font-mono transition-all flex items-center gap-1.5 shadow-sm font-semibold ${
               isLight
                 ? "bg-amber-100/90 hover:bg-amber-200/90 border-amber-400/60 text-amber-950"
                 : "bg-amber-500/15 hover:bg-amber-500/25 border-amber-500/40 text-amber-200"
@@ -223,7 +223,7 @@ export function AltarModeModal({
           {/* Tela Cheia */}
           <button
             onClick={toggleFullscreen}
-            className={`p-2 rounded-lg border transition-all shadow-sm ${
+            className={`altar-btn p-2 rounded-lg border transition-all shadow-sm ${
               isLight
                 ? "bg-[#FFFDF9] hover:bg-amber-100/70 border-amber-800/30 text-stone-800 hover:text-stone-950"
                 : "bg-neutral-900/90 hover:bg-neutral-800 border-neutral-700 text-neutral-300 hover:text-white"
@@ -237,7 +237,7 @@ export function AltarModeModal({
           {/* Fechar */}
           <button
             onClick={onClose}
-            className={`p-2 rounded-lg border transition-all shadow-sm ${
+            className={`altar-btn p-2 rounded-lg border transition-all shadow-sm ${
               isLight
                 ? "bg-[#FFFDF9] hover:bg-red-100/80 border-amber-800/30 text-stone-700 hover:text-red-700"
                 : "bg-neutral-900/90 hover:bg-red-950/40 border-neutral-700 text-neutral-400 hover:text-red-300"
@@ -287,7 +287,7 @@ export function AltarModeModal({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full">
           {/* Card 1: Sol & Hora Planetária Temporal */}
           <div
-            className={`p-6 rounded-2xl border-2 flex flex-col items-center text-center shadow-lg transition-all ${
+            className={`altar-kpi-card p-6 rounded-2xl border-2 flex flex-col items-center text-center shadow-lg transition-all ${
               isLight
                 ? "bg-[#FFFDF9]/95 border-amber-500/30 hover:border-amber-500/60 hover:shadow-xl"
                 : "bg-[#0D1017] border-white/10 hover:border-amber-500/40 hover:shadow-2xl backdrop-blur-md"
@@ -346,7 +346,7 @@ export function AltarModeModal({
 
           {/* Card 2: Lua Mágicka & Iluminação */}
           <div
-            className={`p-6 rounded-2xl border-2 flex flex-col items-center text-center shadow-lg transition-all ${
+            className={`altar-kpi-card p-6 rounded-2xl border-2 flex flex-col items-center text-center shadow-lg transition-all ${
               isLight
                 ? "bg-[#FFFDF9]/95 border-blue-500/30 hover:border-blue-500/60 hover:shadow-xl"
                 : "bg-[#0D1017] border-white/10 hover:border-blue-500/40 hover:shadow-2xl backdrop-blur-md"
@@ -398,20 +398,104 @@ export function AltarModeModal({
 
           {/* Card 3: Estação de Liber Resh (Adoração Solar) */}
           <div
-            className={`p-6 rounded-2xl border-2 flex flex-col items-center text-center shadow-lg transition-all ${
+            className={`altar-kpi-card p-6 rounded-2xl border-2 flex flex-col items-center text-center shadow-lg transition-all ${
               isLight
                 ? "bg-[#FFFDF9]/95 border-purple-500/30 hover:border-purple-500/60 hover:shadow-xl"
                 : "bg-[#0D1017] border-white/10 hover:border-purple-500/40 hover:shadow-2xl backdrop-blur-md"
             }`}
           >
-            <div
-              className={`w-13 h-13 rounded-full flex items-center justify-center mb-3.5 p-3 border shadow-sm ${
-                isLight
-                  ? "bg-purple-100 border-purple-300 text-purple-800"
-                  : "bg-purple-500/15 border-purple-500/30 text-purple-400"
-              }`}
-            >
-              <Compass className="w-6 h-6 stroke-[2.2]" />
+            {/* Bússola Solar de Liber Resh */}
+            <div className="relative w-20 h-20 mb-2 flex items-center justify-center">
+              {/* Mostrador Circular com Rosa dos Ventos Thelêmica */}
+              <div
+                className={`absolute inset-0 rounded-full border-2 transition-all flex items-center justify-center shadow-inner ${
+                  isLight
+                    ? "bg-amber-50/80 border-amber-400/60"
+                    : "bg-purple-950/40 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+                }`}
+              >
+                {/* Marcadores dos 4 Quadrantes */}
+                {/* Norte: Khephra */}
+                <span
+                  className={`absolute top-1 text-[9px] font-mono font-bold transition-all ${
+                    resh?.station === "Khephra"
+                      ? "text-amber-400 scale-125 font-extrabold"
+                      : isLight
+                      ? "text-stone-400"
+                      : "text-neutral-500"
+                  }`}
+                  title="Norte: Khephra (Meia-Noite)"
+                >
+                  N
+                </span>
+
+                {/* Leste: Ra */}
+                <span
+                  className={`absolute right-1.5 text-[9px] font-mono font-bold transition-all ${
+                    resh?.station === "Ra"
+                      ? "text-amber-400 scale-125 font-extrabold"
+                      : isLight
+                      ? "text-stone-400"
+                      : "text-neutral-500"
+                  }`}
+                  title="Leste: Ra (Aurora)"
+                >
+                  L
+                </span>
+
+                {/* Sul: Hathor */}
+                <span
+                  className={`absolute bottom-1 text-[9px] font-mono font-bold transition-all ${
+                    resh?.station === "Hathor"
+                      ? "text-amber-400 scale-125 font-extrabold"
+                      : isLight
+                      ? "text-stone-400"
+                      : "text-neutral-500"
+                  }`}
+                  title="Sul: Hathor (Meio-Dia)"
+                >
+                  S
+                </span>
+
+                {/* Oeste: Tum */}
+                <span
+                  className={`absolute left-1.5 text-[9px] font-mono font-bold transition-all ${
+                    resh?.station === "Tum"
+                      ? "text-amber-400 scale-125 font-extrabold"
+                      : isLight
+                      ? "text-stone-400"
+                      : "text-neutral-500"
+                  }`}
+                  title="Oeste: Tum (Pôr do Sol)"
+                >
+                  O
+                </span>
+
+                {/* Cruz Cardinal Sutil */}
+                <div className={`w-full h-[1px] absolute ${isLight ? "bg-amber-300/40" : "bg-purple-500/30"}`} />
+                <div className={`h-full w-[1px] absolute ${isLight ? "bg-amber-300/40" : "bg-purple-500/30"}`} />
+
+                {/* Agulha Solar Thelêmica Dinâmica */}
+                <div
+                  className="absolute inset-0 flex items-center justify-center transition-transform duration-1000 ease-out"
+                  style={{
+                    transform: `rotate(${
+                      resh?.station === "Ra"
+                        ? 90
+                        : resh?.station === "Hathor"
+                        ? 180
+                        : resh?.station === "Tum"
+                        ? 270
+                        : 0
+                    }deg)`,
+                  }}
+                >
+                  {/* Ponta da Agulha (Ponta Dourada Solar apontando para o Quadrante) */}
+                  <div className="w-1.5 h-8 bg-gradient-to-t from-amber-600 via-amber-400 to-amber-200 rounded-t-full -translate-y-3.5 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+                  {/* Eixo Central da Bússola */}
+                  <div className="absolute w-3 h-3 rounded-full bg-amber-300 border border-amber-900 shadow-sm" />
+                </div>
+              </div>
             </div>
 
             <span
@@ -420,7 +504,7 @@ export function AltarModeModal({
               }`}
               style={{ color: isLight ? "#3b0764" : "#d8b4fe" }}
             >
-              Liber Resh vel Helios
+              Bússola Solar de Liber Resh
             </span>
 
             <h3
@@ -459,7 +543,7 @@ export function AltarModeModal({
       {/* 3. Rodapé: Saudação do Altar de Liber Resh */}
       {resh && (
         <div
-          className={`max-w-4xl mx-auto w-full p-4 sm:p-5 rounded-xl border-2 text-center shadow-lg transition-all ${
+          className={`altar-kpi-card max-w-4xl mx-auto w-full p-4 sm:p-5 rounded-xl border-2 text-center shadow-lg transition-all ${
             isLight
               ? "bg-[#FFFDF9]/95 border-amber-600/30"
               : "bg-[#0D1017] border-amber-500/30 backdrop-blur-md"

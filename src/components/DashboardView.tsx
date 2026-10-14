@@ -74,7 +74,7 @@ export function DashboardView({
 
     for (const e of filteredEntries) {
       if (!e.influences) continue;
-      const rating = e.success_rating !== undefined ? e.success_rating : 5;
+      const rating = e.success_rating !== undefined && e.success_rating !== null ? e.success_rating : 5;
 
       for (const inf of e.influences) {
         if (!inf.name.trim()) continue;
@@ -126,7 +126,7 @@ export function DashboardView({
     for (const e of filteredEntries) {
       if (!e.moon_sign) continue;
       const sign = e.moon_sign.trim();
-      const rating = e.success_rating !== undefined ? e.success_rating : 5;
+      const rating = e.success_rating !== undefined && e.success_rating !== null ? e.success_rating : 5;
       const cur = map.get(sign) || { count: 0, totalRating: 0 };
       cur.count += 1;
       cur.totalRating += rating;
@@ -148,7 +148,7 @@ export function DashboardView({
     for (const e of filteredEntries) {
       if (!e.moon_phase) continue;
       const phase = e.moon_phase.trim();
-      const rating = e.success_rating !== undefined ? e.success_rating : 5;
+      const rating = e.success_rating !== undefined && e.success_rating !== null ? e.success_rating : 5;
       const cur = map.get(phase) || { count: 0, totalRating: 0 };
       cur.count += 1;
       cur.totalRating += rating;
@@ -170,7 +170,7 @@ export function DashboardView({
     for (const e of filteredEntries) {
       if (!e.planetary_day) continue;
       const day = e.planetary_day.trim();
-      const rating = e.success_rating !== undefined ? e.success_rating : 5;
+      const rating = e.success_rating !== undefined && e.success_rating !== null ? e.success_rating : 5;
       const cur = map.get(day) || { count: 0, totalRating: 0 };
       cur.count += 1;
       cur.totalRating += rating;
@@ -192,7 +192,7 @@ export function DashboardView({
     let scoreCount = 0;
 
     for (const e of filteredEntries) {
-      if (e.success_rating !== undefined && e.success_rating > 0) {
+      if (e.success_rating !== undefined && e.success_rating !== null && e.success_rating > 0) {
         totalScore += e.success_rating;
         scoreCount += 1;
       }
@@ -213,7 +213,7 @@ export function DashboardView({
   // Top successful entries
   const topEntries = useMemo(() => {
     return [...filteredEntries]
-      .filter((e) => e.success_rating !== undefined)
+      .filter((e) => e.success_rating !== undefined && e.success_rating !== null)
       .sort((a, b) => (b.success_rating || 0) - (a.success_rating || 0))
       .slice(0, 5);
   }, [filteredEntries]);

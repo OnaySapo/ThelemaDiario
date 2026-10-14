@@ -41,6 +41,7 @@ export function EntryEditorModal({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 16));
+  const [hasRating, setHasRating] = useState<boolean>(true);
   const [successRating, setSuccessRating] = useState<number>(8);
   const [mentalBefore, setMentalBefore] = useState("");
   const [mentalAfter, setMentalAfter] = useState("");
@@ -79,7 +80,9 @@ export function EntryEditorModal({
       setTitle(initialEntry.title);
       setContent(initialEntry.content);
       setDate(new Date(initialEntry.date).toISOString().slice(0, 16));
-      setSuccessRating(initialEntry.success_rating ?? 7);
+      const entryHasRating = initialEntry.success_rating !== undefined && initialEntry.success_rating !== null;
+      setHasRating(entryHasRating);
+      setSuccessRating(entryHasRating ? initialEntry.success_rating! : 7);
       setMentalBefore(initialEntry.mental_state_before || "");
       setMentalAfter(initialEntry.mental_state_after || "");
       setTagsInput(initialEntry.tags?.join(", ") || "");
@@ -210,7 +213,7 @@ export function EntryEditorModal({
       title: title.trim(),
       content: content.trim(),
       date: new Date(date).toISOString(),
-      success_rating: successRating,
+      success_rating: hasRating ? successRating : null,
       thelemic_date: astroData.thelemicDate,
       sun_sign: astroData.sunSign,
       sun_degree: astroData.sunDegree,
@@ -519,22 +522,39 @@ export function EntryEditorModal({
           {/* Success Rating & Mental States */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-forest-850/40 p-4 rounded-xl border border-forest-750">
             <div>
-              <label className="block text-xs font-semibold text-parchment-300 uppercase tracking-wider mb-1 font-mono">
-                Grau de Sucesso ({successRating}/10)
-              </label>
-              <input
-                type="range"
-                min={0}
-                max={10}
-                value={successRating}
-                onChange={(e) => setSuccessRating(Number(e.target.value))}
-                className="w-full accent-moss-500 cursor-pointer"
-              />
-              <div className="flex justify-between text-[10px] text-parchment-400 font-mono mt-1">
-                <span>0 (Dispersão)</span>
-                <span>5 (Neutro)</span>
-                <span>10 (Êxtase/Vitória)</span>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-parchment-300 uppercase tracking-wider font-mono">
+                  Grau de Sucesso {hasRating ? `(${successRating}/10)` : "(Opcional)"}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setHasRating(!hasRating)}
+                  className="text-[10px] font-mono text-moss-400 hover:text-moss-300 underline transition-colors"
+                >
+                  {hasRating ? "Desativar" : "+ Ativar"}
+                </button>
               </div>
+              {hasRating ? (
+                <>
+                  <input
+                    type="range"
+                    min={0}
+                    max={10}
+                    value={successRating}
+                    onChange={(e) => setSuccessRating(Number(e.target.value))}
+                    className="w-full accent-moss-500 cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-parchment-400 font-mono mt-1">
+                    <span>0 (Dispersão)</span>
+                    <span>5 (Neutro)</span>
+                    <span>10 (Êxtase/Vitória)</span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-[11px] font-mono text-parchment-400 italic bg-forest-900/60 p-2 rounded border border-forest-750">
+                  Sem avaliação atribuída (ideal para diários comuns, sonhos ou estudos).
+                </div>
+              )}
             </div>
 
             <div>

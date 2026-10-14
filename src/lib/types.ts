@@ -6,7 +6,7 @@ export interface MagickEntry {
   title: string;
   content: string;
   date: string;
-  success_rating: number; // 0 to 10
+  success_rating?: number | null; // 0 to 10 (opcional)
   thelemic_date?: string;
   sun_sign?: string;
   sun_degree?: number;

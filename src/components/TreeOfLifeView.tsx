@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { MagickEntry, normalizeCategory } from "@/lib/types";
 import { THOTH_TAROT_DECK, ThothCard } from "@/lib/thothTarot";
+import { ThemeId, ThemeMode, getStoredTheme } from "@/lib/theme";
 import {
   Sparkles,
   BookOpen,
@@ -20,6 +21,204 @@ import {
   FileText,
 } from "lucide-react";
 import { EstrelaDeThelema } from "@/components/ThelemicIcons";
+
+// Paleta harmônica da Árvore da Vida adaptativa por tema (Dark e Light)
+export const THEME_TREE_PALETTE: Record<
+  ThemeId,
+  {
+    dark: {
+      accent: string;
+      glow: string;
+      pathLine: string;
+      pathLineHover: string;
+      badgeBorder: string;
+      badgeText: string;
+      bevelRim: string;
+      daathStroke: string;
+      daathText: string;
+    };
+    light: {
+      accent: string;
+      glow: string;
+      pathLine: string;
+      pathLineHover: string;
+      badgeBorder: string;
+      badgeText: string;
+      bevelRim: string;
+      daathStroke: string;
+      daathText: string;
+    };
+  }
+> = {
+  medium: {
+    dark: {
+      accent: "#E5B842",
+      glow: "#F59E0B",
+      pathLine: "rgba(161, 161, 170, 0.45)",
+      pathLineHover: "#FFFFFF",
+      badgeBorder: "#E5B842",
+      badgeText: "#FDE68A",
+      bevelRim: "#94A3B8",
+      daathStroke: "#A855F7",
+      daathText: "#C084FC",
+    },
+    light: {
+      accent: "#B45309",
+      glow: "#D97706",
+      pathLine: "rgba(82, 82, 91, 0.55)",
+      pathLineHover: "#18181B",
+      badgeBorder: "#B45309",
+      badgeText: "#78350F",
+      bevelRim: "#64748B",
+      daathStroke: "#7E22CE",
+      daathText: "#6B21A8",
+    },
+  },
+  "rose-pine": {
+    dark: {
+      accent: "#EBBCBA",
+      glow: "#F6C177",
+      pathLine: "rgba(144, 140, 170, 0.45)",
+      pathLineHover: "#E0DEF4",
+      badgeBorder: "#EBBCBA",
+      badgeText: "#F6C177",
+      bevelRim: "#908CAA",
+      daathStroke: "#C4A7E7",
+      daathText: "#C4A7E7",
+    },
+    light: {
+      accent: "#B4637A",
+      glow: "#EA9D34",
+      pathLine: "rgba(121, 117, 147, 0.55)",
+      pathLineHover: "#575279",
+      badgeBorder: "#B4637A",
+      badgeText: "#907AA9",
+      bevelRim: "#797593",
+      daathStroke: "#907AA9",
+      daathText: "#575279",
+    },
+  },
+  catppuccin: {
+    dark: {
+      accent: "#CBA6F7",
+      glow: "#F5C2E7",
+      pathLine: "rgba(147, 153, 178, 0.45)",
+      pathLineHover: "#CDD6F4",
+      badgeBorder: "#CBA6F7",
+      badgeText: "#F5C2E7",
+      bevelRim: "#A6ADC8",
+      daathStroke: "#CBA6F7",
+      daathText: "#CBA6F7",
+    },
+    light: {
+      accent: "#8839EF",
+      glow: "#EA76CB",
+      pathLine: "rgba(124, 127, 147, 0.55)",
+      pathLineHover: "#4C4F69",
+      badgeBorder: "#8839EF",
+      badgeText: "#7287FD",
+      bevelRim: "#6C6F85",
+      daathStroke: "#8839EF",
+      daathText: "#4C4F69",
+    },
+  },
+  nord: {
+    dark: {
+      accent: "#88C0D0",
+      glow: "#81A1C1",
+      pathLine: "rgba(118, 134, 166, 0.45)",
+      pathLineHover: "#ECEFF4",
+      badgeBorder: "#88C0D0",
+      badgeText: "#88C0D0",
+      bevelRim: "#81A1C1",
+      daathStroke: "#B48EAD",
+      daathText: "#B48EAD",
+    },
+    light: {
+      accent: "#5E81AC",
+      glow: "#88C0D0",
+      pathLine: "rgba(76, 86, 106, 0.55)",
+      pathLineHover: "#2E3440",
+      badgeBorder: "#5E81AC",
+      badgeText: "#4C566A",
+      bevelRim: "#4C566A",
+      daathStroke: "#B48EAD",
+      daathText: "#5E81AC",
+    },
+  },
+  gruvbox: {
+    dark: {
+      accent: "#FABD2F",
+      glow: "#FE8019",
+      pathLine: "rgba(168, 153, 132, 0.45)",
+      pathLineHover: "#EBDBB2",
+      badgeBorder: "#FABD2F",
+      badgeText: "#FABD2F",
+      bevelRim: "#D5C4A1",
+      daathStroke: "#D3869B",
+      daathText: "#FABD2F",
+    },
+    light: {
+      accent: "#B57614",
+      glow: "#AF3A03",
+      pathLine: "rgba(124, 111, 100, 0.55)",
+      pathLineHover: "#3C3836",
+      badgeBorder: "#B57614",
+      badgeText: "#7C6F64",
+      bevelRim: "#665C54",
+      daathStroke: "#8F3F71",
+      daathText: "#B57614",
+    },
+  },
+  dracula: {
+    dark: {
+      accent: "#BD93F9",
+      glow: "#FF79C6",
+      pathLine: "rgba(98, 114, 164, 0.45)",
+      pathLineHover: "#F8F8F2",
+      badgeBorder: "#BD93F9",
+      badgeText: "#BD93F9",
+      bevelRim: "#BD93F9",
+      daathStroke: "#FF79C6",
+      daathText: "#BD93F9",
+    },
+    light: {
+      accent: "#7D56C2",
+      glow: "#B33276",
+      pathLine: "rgba(98, 114, 164, 0.55)",
+      pathLineHover: "#282A36",
+      badgeBorder: "#7D56C2",
+      badgeText: "#4D3875",
+      bevelRim: "#6272A4",
+      daathStroke: "#B33276",
+      daathText: "#7D56C2",
+    },
+  },
+  "tokyo-night": {
+    dark: {
+      accent: "#7AA2F7",
+      glow: "#7DCFFF",
+      pathLine: "rgba(86, 95, 137, 0.45)",
+      pathLineHover: "#C0CAF5",
+      badgeBorder: "#7AA2F7",
+      badgeText: "#7DCFFF",
+      bevelRim: "#7AA2F7",
+      daathStroke: "#BB9AF7",
+      daathText: "#7DCFFF",
+    },
+    light: {
+      accent: "#2E7DE9",
+      glow: "#007197",
+      pathLine: "rgba(86, 95, 137, 0.55)",
+      pathLineHover: "#343B58",
+      badgeBorder: "#2E7DE9",
+      badgeText: "#1857A4",
+      bevelRim: "#565F89",
+      daathStroke: "#7847BD",
+      daathText: "#2E7DE9",
+    },
+  },
+};
 
 export interface SephirahData {
   id: number;
@@ -613,6 +812,38 @@ export function TreeOfLifeView({
   const [showTarotBadges, setShowTarotBadges] = useState<boolean>(true);
   const [zoomedCardImage, setZoomedCardImage] = useState<{ url: string; title: string; subtitle: string } | null>(null);
 
+  // Monitora tema e modo ativo (dark/light)
+  const [currentTheme, setCurrentTheme] = useState<{ theme: ThemeId; mode: ThemeMode }>({
+    theme: "medium",
+    mode: "dark",
+  });
+
+  useEffect(() => {
+    const updateTheme = () => {
+      const stored = getStoredTheme();
+      setCurrentTheme(stored);
+    };
+    updateTheme();
+
+    const observer = new MutationObserver(() => {
+      const theme = (document.documentElement.getAttribute("data-theme") as ThemeId) || "medium";
+      const mode = (document.documentElement.getAttribute("data-mode") as ThemeMode) || "dark";
+      setCurrentTheme({ theme, mode });
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme", "data-mode"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  const treePalette = useMemo(() => {
+    const themeSet = THEME_TREE_PALETTE[currentTheme.theme] || THEME_TREE_PALETTE.medium;
+    return themeSet[currentTheme.mode] || themeSet.dark;
+  }, [currentTheme]);
+
   // Mapeia notas para cada Sephirah
   const notesBySephirah = useMemo(() => {
     const map = new Map<number, MagickEntry[]>();
@@ -781,9 +1012,9 @@ export function TreeOfLifeView({
 
               {/* Anel Chanfrado Externo 3D (Bevel Ring) */}
               <linearGradient id="bevelRing" x1="20%" y1="0%" x2="80%" y2="100%">
-                <stop offset="0%" stopColor="#FFFFFF" stopOpacity={0.7} />
-                <stop offset="40%" stopColor="#94A3B8" stopOpacity={0.4} />
-                <stop offset="100%" stopColor="#0F172A" stopOpacity={0.9} />
+                <stop offset="0%" stopColor="#FFFFFF" stopOpacity={currentTheme.mode === "light" ? 0.95 : 0.75} />
+                <stop offset="40%" stopColor={treePalette.bevelRim} stopOpacity={currentTheme.mode === "light" ? 0.6 : 0.4} />
+                <stop offset="100%" stopColor={currentTheme.mode === "light" ? "#475569" : "#0F172A"} stopOpacity={0.9} />
               </linearGradient>
 
               {/* Gradientes Radiais 3D Específicos para cada Sephirah (Curvatura Esférica Convexa) */}
@@ -910,8 +1141,8 @@ export function TreeOfLifeView({
                         y1={sFrom.y}
                         x2={sTo.x}
                         y2={sTo.y}
-                        className="stroke-medium-750 dark:stroke-medium-800"
-                        strokeWidth={isPathHovered || isPathSelected ? 2.2 : 1.6}
+                        stroke={treePalette.pathLine}
+                        strokeWidth={isPathHovered || isPathSelected ? 2.2 : 1.4}
                         strokeLinecap="round"
                       />
                       <line
@@ -919,8 +1150,14 @@ export function TreeOfLifeView({
                         y1={sFrom.y}
                         x2={sTo.x}
                         y2={sTo.y}
-                        stroke={isPathSelected ? "#EAB308" : isPathHovered ? "#F8FAFC" : "rgb(var(--color-medium-400))"}
-                        opacity={isPathSelected ? 1 : isPathHovered ? 0.95 : 0.75}
+                        stroke={
+                          isPathSelected
+                            ? treePalette.accent
+                            : isPathHovered
+                            ? treePalette.pathLineHover
+                            : treePalette.pathLine
+                        }
+                        opacity={isPathSelected ? 1 : isPathHovered ? 0.95 : 0.65}
                         strokeWidth={isPathSelected ? 1.6 : 1.0}
                         strokeLinecap="round"
                         className="transition-all duration-200"
@@ -943,11 +1180,11 @@ export function TreeOfLifeView({
                             cy={0}
                             r={3.8}
                             fill="none"
-                            stroke="#F59E0B"
+                            stroke={treePalette.accent}
                             strokeWidth={0.8}
                             style={{
                               animation: "tarotBadgePulseGlow 1.8s ease-in-out infinite",
-                              filter: "drop-shadow(0 0 5px rgba(245, 158, 11, 0.8))",
+                              filter: `drop-shadow(0 0 5px ${treePalette.accent})`,
                             }}
                           />
                           {/* Halo de luz suave viva */}
@@ -955,9 +1192,9 @@ export function TreeOfLifeView({
                             cx={0}
                             cy={0}
                             r={3.2}
-                            fill="#F59E0B"
+                            fill={treePalette.accent}
                             fillOpacity={0.22}
-                            stroke="#F59E0B"
+                            stroke={treePalette.accent}
                             strokeWidth={0.4}
                           />
                         </>
@@ -969,7 +1206,7 @@ export function TreeOfLifeView({
                           cx={0}
                           cy={0}
                           r={3.0}
-                          fill="#F59E0B"
+                          fill={treePalette.accent}
                           fillOpacity={0.2}
                           stroke="#FFFFFF"
                           strokeWidth={0.4}
@@ -991,14 +1228,16 @@ export function TreeOfLifeView({
                         cx={0}
                         cy={0}
                         r={isPathSelected ? 2.6 : 2.3}
-                        fill="#18181B"
+                        fill={currentTheme.mode === "light" ? "#27272A" : "#18181B"}
                         stroke={
                           isPathSelected
-                            ? "#F59E0B"
+                            ? treePalette.accent
                             : isPathHovered
                             ? "#FFFFFF"
                             : isConnected
                             ? "#E2E8F0"
+                            : currentTheme.mode === "light"
+                            ? "#52525B"
                             : "#71717A"
                         }
                         strokeWidth={isPathSelected ? 0.75 : isPathHovered ? 0.55 : 0.4}
@@ -1010,7 +1249,7 @@ export function TreeOfLifeView({
                         y={0.2}
                         textAnchor="middle"
                         dominantBaseline="central"
-                        fill={isPathSelected ? "#F59E0B" : "#A1A1AA"}
+                        fill={isPathSelected ? treePalette.accent : "#A1A1AA"}
                         fillOpacity={0.25}
                         className="text-[2.2px] font-serif select-none pointer-events-none"
                       >
@@ -1025,12 +1264,12 @@ export function TreeOfLifeView({
                         dominantBaseline="central"
                         fill={
                           isPathSelected
-                            ? "#FDE68A"
+                            ? treePalette.badgeText
                             : isPathHovered
                             ? "#FFFFFF"
                             : isConnected
                             ? "#F8FAFC"
-                            : "#D4D4D8"
+                            : "#E4E4E7"
                         }
                         className="text-[1.7px] font-mono font-bold tracking-tighter select-none pointer-events-none"
                       >
@@ -1049,16 +1288,17 @@ export function TreeOfLifeView({
                 cy={38}
                 r={3.2}
                 fill="none"
-                stroke="#A855F7"
+                stroke={treePalette.daathStroke}
                 strokeWidth={0.8}
                 strokeDasharray="1.2 1.2"
-                className="opacity-70 animate-pulse"
+                className="opacity-75 animate-pulse"
               />
               <text
                 x={50}
                 y={38.8}
                 textAnchor="middle"
-                className="text-[2.2px] font-mono fill-purple-400 font-semibold select-none pointer-events-none"
+                fill={treePalette.daathText}
+                className="text-[2.2px] font-mono font-semibold select-none pointer-events-none"
               >
                 Da'ath
               </text>
@@ -1226,7 +1466,7 @@ export function TreeOfLifeView({
                   {/* Badge de Quantidade de Notas Associadas */}
                   {noteCount > 0 && (
                     <g transform={`translate(${sephirah.x + 3.4}, ${sephirah.y - 4.2})`}>
-                      <circle cx={0} cy={0} r={2.0} fill="#E5B842" stroke="#FFFFFF" strokeWidth={0.35} filter="url(#badgeShadow)" />
+                      <circle cx={0} cy={0} r={2.0} fill={treePalette.accent} stroke="#FFFFFF" strokeWidth={0.35} filter="url(#badgeShadow)" />
                       <text
                         x={0}
                         y={0.65}

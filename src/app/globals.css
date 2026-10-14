@@ -335,10 +335,10 @@
 
 /* =========================================================================
    ADAPTAÇÕES DINÂMICAS PARA MODO CLARO (LIGHT)
-   Evita texto invisível ou quebra de contraste quando o usuário escolhe tema claro
-   (Protege contêineres autônomos com tema isolado como o Modo Altar)
+   Garante contraste adequado no modo claro, sem vazar para containers isolados
    ========================================================================= */
 
+[data-mode="light"] :not(.theme-isolated):not(.theme-isolated *) > .text-white,
 [data-mode="light"] .text-white:not(.theme-isolated *):not(.theme-isolated) {
   color: var(--theme-heading-color) !important;
 }
@@ -348,7 +348,7 @@
 }
 
 [data-mode="light"] .border-white:not(.theme-isolated *):not(.theme-isolated) {
-  border-color: var(--theme-heading-color) !important;
+  border-color: var(--theme-border-color, #d4d4d8) !important;
 }
 
 [data-mode="light"] .accent-white:not(.theme-isolated *):not(.theme-isolated) {
@@ -371,15 +371,99 @@
   background-color: rgb(var(--color-medium-750)) !important;
 }
 
-/* Isolamento do Modo Altar */
+/* =========================================================================
+   BLINDAGEM TOTAL DO MODO ALTAR (INDEPENDENTE DO TEMA GERAL)
+   ========================================================================= */
 .altar-mode-container {
   color-scheme: light dark;
 }
-.altar-mode-container[data-altar-theme="dark"] {
-  color: #f8fafc;
+
+/* Altar Modo Escuro */
+.altar-mode-container[data-altar-theme="dark"],
+.altar-mode-container[data-altar-theme="dark"] * {
+  --altar-bg: #07090E;
+  --altar-card-bg: #0D1017;
+  --altar-text-primary: #F8FAFC;
+  --altar-text-secondary: #CBD5E1;
+  --altar-text-muted: #94A3B8;
+  --altar-btn-bg: rgba(23, 23, 23, 0.9);
+  --altar-btn-border: rgba(255, 255, 255, 0.16);
+  --altar-btn-text: #F8FAFC;
 }
+
+.altar-mode-container[data-altar-theme="dark"] {
+  background-color: #07090E !important;
+  color: #F8FAFC !important;
+}
+
+.altar-mode-container[data-altar-theme="dark"] .altar-title {
+  color: #FDE68A !important;
+}
+
+.altar-mode-container[data-altar-theme="dark"] .altar-btn {
+  background-color: rgba(23, 23, 23, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: #F8FAFC !important;
+}
+
+.altar-mode-container[data-altar-theme="dark"] .altar-btn:hover {
+  background-color: rgba(38, 38, 38, 0.95) !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  color: #FFFFFF !important;
+}
+
+.altar-mode-container[data-altar-theme="dark"] .altar-kpi-card {
+  background-color: #0D1017 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #F8FAFC !important;
+}
+
+.altar-mode-container[data-altar-theme="dark"] .altar-kpi-card h3 {
+  color: #F8FAFC !important;
+}
+
+/* Altar Modo Claro */
+.altar-mode-container[data-altar-theme="light"],
+.altar-mode-container[data-altar-theme="light"] * {
+  --altar-bg: #FAF8F5;
+  --altar-card-bg: #FFFDF9;
+  --altar-text-primary: #0C0A09;
+  --altar-text-secondary: #44403C;
+  --altar-text-muted: #78716C;
+  --altar-btn-bg: #FFFDF9;
+  --altar-btn-border: rgba(180, 83, 9, 0.3);
+  --altar-btn-text: #451A03;
+}
+
 .altar-mode-container[data-altar-theme="light"] {
-  color: #0c0a09;
+  background: linear-gradient(180deg, #FAF8F5 0%, #F5F2EA 50%, #ECE7DC 100%) !important;
+  color: #0C0A09 !important;
+}
+
+.altar-mode-container[data-altar-theme="light"] .altar-title {
+  color: #451A03 !important;
+}
+
+.altar-mode-container[data-altar-theme="light"] .altar-btn {
+  background-color: #FFFDF9 !important;
+  border-color: rgba(180, 83, 9, 0.35) !important;
+  color: #451A03 !important;
+}
+
+.altar-mode-container[data-altar-theme="light"] .altar-btn:hover {
+  background-color: #FEF3C7 !important;
+  border-color: rgba(180, 83, 9, 0.6) !important;
+  color: #290E02 !important;
+}
+
+.altar-mode-container[data-altar-theme="light"] .altar-kpi-card {
+  background-color: rgba(255, 253, 249, 0.95) !important;
+  border-color: rgba(217, 119, 6, 0.3) !important;
+  color: #0C0A09 !important;
+}
+
+.altar-mode-container[data-altar-theme="light"] .altar-kpi-card h3 {
+  color: #0C0A09 !important;
 }
 
 body {

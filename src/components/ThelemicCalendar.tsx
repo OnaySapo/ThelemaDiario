@@ -320,7 +320,7 @@ export function ThelemicCalendar({
                         <span>{normalizeCategory(note.type)}</span>
                       </span>
 
-                      {note.success_rating !== undefined && (
+                      {note.success_rating !== undefined && note.success_rating !== null && (
                         <span className="flex items-center gap-1 text-[10px] font-mono text-medium-300 font-semibold">
                           <Star className="w-3 h-3 fill-white text-white" />
                           {note.success_rating}/10

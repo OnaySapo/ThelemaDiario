@@ -150,6 +150,46 @@ npm start
 
 ---
 
+## 🔒 Soberania de Dados & Como Atualizar sem Perder Anotações
+
+### 🛡️ Privacidade e Armazenamento Local Individual
+* **Suas anotações são 100% privadas e individuais**: O banco de dados local (`data/magick_diary.db`), as mídias salvas e os backups diários estão explicitamente ignorados pelo Git (`.gitignore`).
+* **Nenhum diário ou anotação pessoal sobe para o GitHub**. Quem baixar o projeto do repositório terá sempre o seu próprio banco de dados local, vazio e individual, ou com seus próprios registros.
+
+### 🔄 Como Atualizar o Programa com Segurança Máxima
+Quando houver novas atualizações e melhorias no repositório, você pode atualizar sem correr risco algum de sobrescrever ou perder suas anotações antigas:
+
+#### No Windows (Mais fácil):
+Basta dar um duplo clique no script executável na raiz do projeto:
+```cmd
+atualizar.bat
+```
+O script automaticamente:
+1. Faz um backup de segurança do seu banco de dados atual em `data/backups/`;
+2. Puxa as atualizações do GitHub (`git pull origin main`);
+3. Garante que seu banco de dados original continue intacto;
+4. Atualiza os pacotes e compila a nova versão pronta para uso.
+
+#### No Linux / macOS:
+```bash
+chmod +x atualizar.sh
+./atualizar.sh
+```
+
+#### Manualmente (via Terminal):
+```bash
+# 1. Faça uma cópia do seu banco de dados por precaução
+cp data/magick_diary.db data/magick_diary_backup.db
+
+# 2. Puxe as atualizações
+git pull origin main
+
+# 3. Reinstale e recompile
+npm install
+npm run build
+npm start
+```
+
 ## 🗂️ Estrutura do Projeto
 
 ```

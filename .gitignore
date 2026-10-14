@@ -6,6 +6,22 @@ build/
 *.log
 Tarot de Toth/
 public/tarot/
-*.db-shm
+
+# Dados locais e banco de dados do usuário (NUNCA versionar)
+data/
+*.db
 *.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+backups/
+
+# Uploads e mídias pessoais
 public/uploads/
+uploads/
+
+# Ambientes locais
+.env
+.env.local
+.env*.local

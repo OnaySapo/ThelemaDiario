@@ -40,6 +40,12 @@ import {
   SlidersHorizontal,
   AlertCircle,
   CheckCircle2,
+  Mic,
+  Square,
+  Volume2,
+  Columns,
+  Info,
+  ShieldAlert,
 } from "lucide-react";
 import { ImageInsertModal, VideoInsertModal } from "@/components/MediaInsertModais";
 
@@ -72,6 +78,7 @@ export function ArticleView({
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editCategory, setEditCategory] = useState<CategoryName>("Prática");
+  const [hasRating, setHasRating] = useState<boolean>(true);
   const [editRating, setEditRating] = useState<number>(8);
   const [editDate, setEditDate] = useState("");
   const [editThelemicDate, setEditThelemicDate] = useState("");
@@ -93,6 +100,21 @@ export function ArticleView({
   const [editCardBackStyle, setEditCardBackStyle] = useState<"rosa_cruz" | "thelema">("rosa_cruz");
   const [hasOracleTable, setHasOracleTable] = useState<boolean>(false);
 
+  // Editor Layout: "edit" (padrão) ou "split" (tela dividida com preview ao vivo)
+  const [editorLayout, setEditorLayout] = useState<"edit" | "split">("edit");
+
+  // Menus Flutuantes
+  const [isSymbolsMenuOpen, setIsSymbolsMenuOpen] = useState(false);
+  const [isCalloutsMenuOpen, setIsCalloutsMenuOpen] = useState(false);
+
+  // Gravação de Áudio / Voz Nativo
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Reading Width / Margin State (with LocalStorage persistence)
@@ -104,6 +126,58 @@ export function ArticleView({
   const [selectedCustomColor, setSelectedCustomColor] = useState("#E5B842");
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+
+  // Símbolos Mágickos Herméticos & Thelêmicos
+  const HERMETIC_SYMBOLS = [
+    {
+      group: "Planetas & Astros (777)",
+      symbols: [
+        { char: "☉", name: "Sol (Tiphareth)" },
+        { char: "☽", name: "Lua (Yesod)" },
+        { char: "☿", name: "Mercúrio (Hod)" },
+        { char: "♀", name: "Vênus (Netzach)" },
+        { char: "♂", name: "Marte (Geburah)" },
+        { char: "♃", name: "Júpiter (Chesed)" },
+        { char: "♄", name: "Saturno (Binah)" },
+        { char: "♅", name: "Urano" },
+        { char: "♆", name: "Netuno" },
+        { char: "♇", name: "Plutão" },
+      ],
+    },
+    {
+      group: "Elementos & Chaves Herméticas",
+      symbols: [
+        { char: "🜂", name: "Fogo (Yod)" },
+        { char: "🜄", name: "Água (Heh)" },
+        { char: "🜁", name: "Ar (Vau)" },
+        { char: "🜃", name: "Terra (Heh final)" },
+        { char: "🁢", name: "Espírito / Quintessência" },
+        { char: "⛤", name: "Pentagrama Mágicko" },
+        { char: "🝤", name: "Rosa-Cruz Hermética" },
+        { char: "𓁹", name: "Olho de Hórus" },
+        { char: "☥", name: "Ankh (Chave da Vida)" },
+        { char: "⚚", name: "Caduceu de Hermes" },
+        { char: "∴", name: "Três Pontos Iluminados" },
+      ],
+    },
+    {
+      group: "Zodíaco & Constelações",
+      symbols: [
+        { char: "♈", name: "Áries" },
+        { char: "♉", name: "Touro" },
+        { char: "♊", name: "Gêmeos" },
+        { char: "♋", name: "Câncer" },
+        { char: "♌", name: "Leão" },
+        { char: "♍", name: "Virgem" },
+        { char: "♎", name: "Libra" },
+        { char: "♏", name: "Escorpião" },
+        { char: "♐", name: "Sagitário" },
+        { char: "♑", name: "Capricórnio" },
+        { char: "♒", name: "Aquário" },
+        { char: "♓", name: "Peixes" },
+      ],
+    },
+  ];
 
   // Paleta de Cores Mágickas Thelêmicas
   const THELEMIC_COLORS = [
@@ -176,6 +250,7 @@ export function ArticleView({
     if (recoverableDraft.title !== undefined) setEditTitle(recoverableDraft.title);
     if (recoverableDraft.content !== undefined) setEditContent(recoverableDraft.content);
     if (recoverableDraft.category !== undefined) setEditCategory(recoverableDraft.category);
+    if (recoverableDraft.hasRating !== undefined) setHasRating(recoverableDraft.hasRating);
     if (recoverableDraft.rating !== undefined) setEditRating(recoverableDraft.rating);
     if (recoverableDraft.date !== undefined) setEditDate(recoverableDraft.date);
     if (recoverableDraft.thelemicDate !== undefined) setEditThelemicDate(recoverableDraft.thelemicDate);
@@ -198,11 +273,13 @@ export function ArticleView({
   React.useEffect(() => {
     if (!isEditing || !entry) return;
 
+    const initialHasRating = entry.success_rating !== undefined && entry.success_rating !== null;
     const isDirty =
       editTitle !== entry.title ||
       editContent !== entry.content ||
       editCategory !== normalizeCategory(entry.type) ||
-      editRating !== (entry.success_rating ?? 8);
+      hasRating !== initialHasRating ||
+      (hasRating && editRating !== (entry.success_rating ?? 8));
 
     if (!isDirty) return;
 
@@ -213,6 +290,7 @@ export function ArticleView({
           title: editTitle,
           content: editContent,
           category: editCategory,
+          hasRating,
           rating: editRating,
           date: editDate,
           thelemicDate: editThelemicDate,
@@ -234,6 +312,7 @@ export function ArticleView({
     editTitle,
     editContent,
     editCategory,
+    hasRating,
     editRating,
     editDate,
     editThelemicDate,
@@ -260,7 +339,9 @@ export function ArticleView({
     setEditTitle(entry.title);
     setEditContent(entry.content);
     setEditCategory(normalizeCategory(entry.type));
-    setEditRating(entry.success_rating ?? 8);
+    const entryHasRating = entry.success_rating !== undefined && entry.success_rating !== null;
+    setHasRating(entryHasRating);
+    setEditRating(entryHasRating ? entry.success_rating! : 8);
     setEditDate(new Date(entry.date).toISOString().slice(0, 16));
     setEditThelemicDate(entry.thelemic_date || "");
     setEditInfluences(entry.influences || []);
@@ -314,7 +395,7 @@ export function ArticleView({
       title: editTitle.trim(),
       content: editContent.trim(),
       type: editCategory,
-      success_rating: editRating,
+      success_rating: hasRating ? editRating : null,
       date: new Date(editDate).toISOString(),
       thelemic_date: editThelemicDate,
       influences: editInfluences,
@@ -386,6 +467,123 @@ export function ArticleView({
     }, 10);
   };
 
+  // Inserir símbolo mágico na posição atual do cursor
+  const insertSymbol = (symbol: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const current = textarea.value;
+
+    const newText = current.substring(0, start) + symbol + current.substring(end);
+    setEditContent(newText);
+    setIsSymbolsMenuOpen(false);
+
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + symbol.length, start + symbol.length);
+    }, 10);
+  };
+
+  // Inserir Callout Hermético
+  const insertCallout = (type: "INSIGHT" | "RITUAL" | "AVISO" | "CORRESPONDENCIA") => {
+    let template = "";
+    switch (type) {
+      case "INSIGHT":
+        template = `\n> [!INSIGHT]\n> Registro de gnose, iluminação súbita ou percepção do Eu Superior...\n\n`;
+        break;
+      case "RITUAL":
+        template = `\n> [!RITUAL]\n> Instrução cerimonial, postura de Asana ou vibração de Palavra de Poder...\n\n`;
+        break;
+      case "AVISO":
+        template = `\n> [!AVISO]\n> Advertência mágica, ruptura de círculo ou precaução em operações astrais...\n\n`;
+        break;
+      case "CORRESPONDENCIA":
+        template = `\n> [!777]\n> Correspondência de Liber 777: Perfume, Gema, Animal Sagrado ou Sephirah...\n\n`;
+        break;
+    }
+    insertFormatting(template, "");
+    setIsCalloutsMenuOpen(false);
+  };
+
+  // Gravação de Áudio / Voz Nativo
+  const startAudioRecording = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Seu navegador não possui suporte para gravação de microfone.");
+        return;
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+      audioChunksRef.current = [];
+
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        audioStreamRef.current?.getTracks().forEach((track) => track.stop());
+
+        try {
+          const formData = new FormData();
+          const fileName = `audio_diario_${Date.now()}.webm`;
+          formData.append("file", audioBlob, fileName);
+
+          const res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+          if (data.success && data.fileUrl) {
+            const dateStr = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+            const audioMarkup = `\n![audio:Gravação de Voz · ${dateStr}](${data.fileUrl})\n`;
+            insertFormatting(audioMarkup, "");
+          } else {
+            // Fallback para Base64 se upload falhar
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const base64Audio = reader.result as string;
+              const dateStr = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+              const audioMarkup = `\n![audio:Gravação de Voz · ${dateStr}](${base64Audio})\n`;
+              insertFormatting(audioMarkup, "");
+            };
+            reader.readAsDataURL(audioBlob);
+          }
+        } catch (err) {
+          console.error("Erro no upload de áudio:", err);
+        }
+      };
+
+      mediaRecorder.start(200);
+      setIsRecordingAudio(true);
+      setRecordingDuration(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1);
+      }, 1000);
+    } catch (err: any) {
+      console.error("Falha ao acessar microfone:", err);
+      alert("Não foi possível acessar o microfone. Verifique as permissões do seu navegador.");
+    }
+  };
+
+  const stopAudioRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setIsRecordingAudio(false);
+  };
+
   const handleInsertImage = () => {
     setIsImageModalOpen(true);
   };
@@ -407,7 +605,9 @@ export function ArticleView({
       `type: "${normalizeCategory(entry.type)}"`,
       `date: "${entry.date}"`,
       `thelemic_date: "${entry.thelemic_date || ""}"`,
-      `success_rating: ${entry.success_rating ?? 5}`,
+      ...(entry.success_rating !== undefined && entry.success_rating !== null
+        ? [`success_rating: ${entry.success_rating}`]
+        : []),
       `moon_phase: "${entry.moon_phase || ""}"`,
       `moon_sign: "${entry.moon_sign || ""}"`,
       `sun_sign: "${entry.sun_sign || ""}"`,
@@ -719,6 +919,33 @@ export function ArticleView({
         continue;
       }
 
+      // 2.5 Bloco de Áudio: ![audio:caption](url) ou ![audio](url) ou <audio ...>
+      const audioSyntaxMatch = trimmedLine.match(/^!\[audio(?::(.*?))?\]\((.*?)\)/i);
+      const htmlAudioMatch = trimmedLine.match(/<audio[^>]*src=["']([^"']+)["'][^>]*>/i);
+      if (audioSyntaxMatch || htmlAudioMatch) {
+        const url = audioSyntaxMatch ? audioSyntaxMatch[2].trim() : htmlAudioMatch![1].trim();
+        const caption = audioSyntaxMatch ? audioSyntaxMatch[1]?.trim() : "Gravação de Áudio";
+        elements.push(
+          <div
+            key={`audio-${i}`}
+            className="my-5 p-4 rounded-xl bg-medium-850 border border-medium-700/80 shadow-md flex flex-col gap-2.5 backdrop-blur-sm"
+          >
+            <div className="flex items-center justify-between text-xs font-mono text-medium-300">
+              <span className="flex items-center gap-2 text-white font-medium">
+                <Volume2 className="w-4 h-4 text-amber-400" />
+                <span>{caption || "Gravação Astral / Ritualística"}</span>
+              </span>
+              <span className="text-[10px] text-amber-400/80 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/30 font-semibold tracking-wider uppercase">
+                Áudio Mágicko
+              </span>
+            </div>
+            <audio src={url} controls className="w-full h-10 rounded-lg accent-amber-400" />
+          </div>
+        );
+        i++;
+        continue;
+      }
+
       // 3. Bloco de Imagem: ![alt](url)
       const imgMatch = trimmedLine.match(/^!\[(.*?)\]\((.*?)\)/);
       if (imgMatch) {
@@ -807,6 +1034,56 @@ export function ArticleView({
           />
         );
         i++;
+        continue;
+      }
+
+      // 4.5 Callout Hermético (> [!INSIGHT], > [!RITUAL], > [!AVISO], > [!777])
+      const calloutMatch = trimmedLine.match(/^>\s*\[!(INSIGHT|RITUAL|PRATICA|AVISO|ATENCAO|CAUTION|777|CORRESPONDENCIA)\]/i);
+      if (calloutMatch) {
+        const type = calloutMatch[1].toUpperCase();
+        const calloutLines: string[] = [];
+        const firstLineRest = trimmedLine.replace(/^>\s*\[!(.*?)\]/i, "").trim();
+        if (firstLineRest) calloutLines.push(firstLineRest);
+        i++;
+        while (i < rawLines.length && rawLines[i].trim().startsWith(">")) {
+          calloutLines.push(rawLines[i].trim().replace(/^>\s*/, ""));
+          i++;
+        }
+        const calloutBody = calloutLines.join("\n");
+
+        let borderClass = "border-amber-500/50 bg-amber-500/10 text-amber-200";
+        let icon = <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />;
+        let title = "INSIGHT & GNOSE";
+
+        if (type === "RITUAL" || type === "PRATICA") {
+          borderClass = "border-purple-500/50 bg-purple-500/10 text-purple-200";
+          icon = <Compass className="w-4 h-4 text-purple-400 shrink-0" />;
+          title = "RITUAL & OPERAÇÃO";
+        } else if (type === "AVISO" || type === "ATENCAO" || type === "CAUTION") {
+          borderClass = "border-rose-500/50 bg-rose-500/10 text-rose-200";
+          icon = <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />;
+          title = "ADVERTÊNCIA HERMÉTICA";
+        } else if (type === "777" || type === "CORRESPONDENCIA") {
+          borderClass = "border-sky-500/50 bg-sky-500/10 text-sky-200";
+          icon = <Star className="w-4 h-4 text-sky-400 shrink-0" />;
+          title = "LIBER 777 · CORRESPONDÊNCIA";
+        }
+
+        elements.push(
+          <div
+            key={`callout-${i}`}
+            className={`my-5 p-4 rounded-xl border ${borderClass} shadow-md backdrop-blur-sm`}
+          >
+            <div className="flex items-center gap-2 mb-2 font-mono text-xs font-bold uppercase tracking-wider text-white">
+              {icon}
+              <span>{title}</span>
+            </div>
+            <div
+              className="text-[15px] font-serif leading-relaxed text-medium-100 space-y-2"
+              dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(calloutBody.replace(/\n/g, "<br/>")) }}
+            />
+          </div>
+        );
         continue;
       }
 
@@ -1079,7 +1356,9 @@ export function ArticleView({
       {/* Main Canvas Area com largura de margem dinâmica */}
       <div
         className="flex-1 w-full mx-auto px-4 sm:px-6 py-10 transition-all duration-200"
-        style={{ maxWidth: `${readingWidth}px` }}
+        style={{
+          maxWidth: isEditing && editorLayout === "split" ? "1450px" : `${readingWidth}px`,
+        }}
       >
         {!isEditing ? (
           /* ========================================================
@@ -1104,7 +1383,7 @@ export function ArticleView({
                     {entry.moon_phase} ({entry.moon_illumination || 0}%)
                   </span>
                 )}
-                {entry.success_rating !== undefined && (
+                {entry.success_rating !== undefined && entry.success_rating !== null && (
                   <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-medium-800 border border-medium-700 text-white font-semibold">
                     <Star className="w-3 h-3 fill-white text-white" />
                     {entry.success_rating}/10
@@ -1336,17 +1615,32 @@ export function ArticleView({
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono text-medium-400 mb-1">
-                  SUCESSO MÁGICKO ({editRating}/10)
-                </label>
-                <input
-                  type="range"
-                  min={0}
-                  max={10}
-                  value={editRating}
-                  onChange={(e) => setEditRating(Number(e.target.value))}
-                  className="w-full accent-white cursor-pointer mt-2"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-mono text-medium-400">
+                    SUCESSO MÁGICKO {hasRating ? `(${editRating}/10)` : "(NÃO AVALIADO)"}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setHasRating(!hasRating)}
+                    className="text-[10px] font-mono underline hover:text-white text-medium-300 transition-colors"
+                  >
+                    {hasRating ? "Remover Avaliação" : "+ Adicionar Avaliação"}
+                  </button>
+                </div>
+                {hasRating ? (
+                  <input
+                    type="range"
+                    min={0}
+                    max={10}
+                    value={editRating}
+                    onChange={(e) => setEditRating(Number(e.target.value))}
+                    className="w-full accent-white cursor-pointer mt-2"
+                  />
+                ) : (
+                  <div className="text-[11px] font-mono text-medium-400 italic bg-medium-800/60 p-2 rounded border border-medium-750 mt-1">
+                    Nota sem pontuação (ideal para estudos, diários cotidianos e sonhos).
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1639,6 +1933,177 @@ export function ArticleView({
                 <span className="hidden sm:inline font-sans font-medium">Mesa Oracular</span>
               </button>
 
+              {/* Callouts Herméticos */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsCalloutsMenuOpen(!isCalloutsMenuOpen)}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all text-xs font-mono border ${
+                    isCalloutsMenuOpen
+                      ? "bg-purple-500/20 text-purple-200 border-purple-500/40 shadow-sm font-semibold"
+                      : "text-medium-300 hover:text-white hover:bg-medium-750 border-transparent"
+                  }`}
+                  title="Inserir Callout Hermético (Gnose, Ritual, Alerta ou Liber 777)"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                  <span className="hidden sm:inline font-sans font-medium">Callout</span>
+                </button>
+
+                {isCalloutsMenuOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-64 bg-medium-850 border border-medium-700 rounded-xl p-2 shadow-2xl z-40 space-y-1 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-2 py-1 text-[10px] font-mono font-bold text-medium-400 uppercase tracking-wider border-b border-medium-750 mb-1">
+                      Callouts Esotéricos
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => insertCallout("INSIGHT")}
+                      className="w-full text-left px-2.5 py-1.5 rounded hover:bg-amber-500/15 text-amber-200 hover:text-amber-100 flex items-center gap-2 text-xs transition-colors"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <div>
+                        <div className="font-semibold">Insight & Gnose</div>
+                        <div className="text-[10px] opacity-70">Revelações e iluminações astrais</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertCallout("RITUAL")}
+                      className="w-full text-left px-2.5 py-1.5 rounded hover:bg-purple-500/15 text-purple-200 hover:text-purple-100 flex items-center gap-2 text-xs transition-colors"
+                    >
+                      <Compass className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <div>
+                        <div className="font-semibold">Ritual & Operação</div>
+                        <div className="text-[10px] opacity-70">Passo a passo, posturas e vibrações</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertCallout("AVISO")}
+                      className="w-full text-left px-2.5 py-1.5 rounded hover:bg-rose-500/15 text-rose-200 hover:text-rose-100 flex items-center gap-2 text-xs transition-colors"
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                      <div>
+                        <div className="font-semibold">Advertência Hermética</div>
+                        <div className="text-[10px] opacity-70">Cuidados, banimentos e proteção</div>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertCallout("CORRESPONDENCIA")}
+                      className="w-full text-left px-2.5 py-1.5 rounded hover:bg-sky-500/15 text-sky-200 hover:text-sky-100 flex items-center gap-2 text-xs transition-colors"
+                    >
+                      <Star className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                      <div>
+                        <div className="font-semibold">Liber 777 Atribuição</div>
+                        <div className="text-[10px] opacity-70">Cores, incensos e deidades</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Símbolos Herméticos e Thelêmicos */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsSymbolsMenuOpen(!isSymbolsMenuOpen)}
+                  className={`flex items-center gap-1.5 px-2 py-1 rounded transition-all text-xs font-mono border ${
+                    isSymbolsMenuOpen
+                      ? "bg-amber-500/20 text-amber-200 border-amber-500/40 shadow-sm font-semibold"
+                      : "text-medium-300 hover:text-white hover:bg-medium-750 border-transparent"
+                  }`}
+                  title="Inserir Símbolos Mágickos Herméticos (☉ ☽ 🜂 🜄 ⛤ 𓁹 ☥ ⚚)"
+                >
+                  <span className="text-amber-300 font-bold text-sm leading-none">☉</span>
+                  <span className="hidden sm:inline font-sans font-medium">Símbolos</span>
+                </button>
+
+                {isSymbolsMenuOpen && (
+                  <div className="absolute left-0 top-full mt-2 w-80 bg-medium-850 border border-medium-700 rounded-xl p-3 shadow-2xl z-40 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-medium-750">
+                      <span className="text-[11px] font-mono font-bold text-white uppercase tracking-wider">
+                        Símbolos Herméticos & 777
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsSymbolsMenuOpen(false)}
+                        className="text-medium-400 hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                      {HERMETIC_SYMBOLS.map((group, gIdx) => (
+                        <div key={gIdx} className="space-y-1">
+                          <div className="text-[10px] font-mono text-medium-400 uppercase tracking-wide">
+                            {group.group}
+                          </div>
+                          <div className="grid grid-cols-5 gap-1">
+                            {group.symbols.map((sym, sIdx) => (
+                              <button
+                                key={sIdx}
+                                type="button"
+                                onClick={() => insertSymbol(sym.char)}
+                                className="h-8 rounded bg-medium-800 hover:bg-medium-750 border border-medium-700/80 text-white hover:text-amber-300 text-sm flex items-center justify-center transition-all hover:scale-105"
+                                title={sym.name}
+                              >
+                                {sym.char}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Gravador de Áudio de Voz */}
+              {!isRecordingAudio ? (
+                <button
+                  type="button"
+                  onClick={startAudioRecording}
+                  className="flex items-center gap-1.5 px-2 py-1 rounded transition-all text-xs font-mono text-medium-300 hover:text-rose-300 hover:bg-medium-750 border border-transparent"
+                  title="Gravar nota de voz ou descrição do ritual com microfone nativo"
+                >
+                  <Mic className="w-3.5 h-3.5 text-rose-400" />
+                  <span className="hidden sm:inline font-sans font-medium">Gravar Voz</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={stopAudioRecording}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded transition-all text-xs font-mono bg-rose-600 text-white border border-rose-400 shadow-md animate-pulse font-semibold"
+                  title="Clique para encerrar gravação e anexar ao diário"
+                >
+                  <Square className="w-3 h-3 fill-white" />
+                  <span>
+                    Gravando {Math.floor(recordingDuration / 60)}:
+                    {(recordingDuration % 60).toString().padStart(2, "0")}s · Parar
+                  </span>
+                </button>
+              )}
+
+              <div className="w-[1px] h-5 bg-medium-700 mx-1 hidden sm:block" />
+
+              {/* Botão Split-Screen */}
+              <button
+                type="button"
+                onClick={() => setEditorLayout(editorLayout === "split" ? "edit" : "split")}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-all text-xs font-mono border ${
+                  editorLayout === "split"
+                    ? "bg-white text-black border-white font-semibold shadow-sm"
+                    : "text-medium-300 hover:text-white hover:bg-medium-750 border-medium-700"
+                }`}
+                title={editorLayout === "split" ? "Voltar ao Editor Normal" : "Ativar Tela Dividida (Editor à esquerda + Preview ao vivo à direita)"}
+              >
+                <Columns className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline font-sans font-medium">
+                  {editorLayout === "split" ? "Tela Dividida" : "Split-Screen"}
+                </span>
+              </button>
+
               <div className="flex-1" />
 
               <button
@@ -1659,17 +2124,53 @@ export function ArticleView({
               </button>
             </div>
 
-            {/* Content Textarea */}
-            <div>
-              <textarea
-                ref={textareaRef}
-                rows={16}
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões..."
-                className="w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-base font-serif text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed"
-              />
-            </div>
+            {/* Content Textarea & Live Split-Screen Preview */}
+            {editorLayout === "split" ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-medium-400 px-1">
+                    <span>EDITOR (MARKDOWN)</span>
+                    <span>{editContent.length} caracteres</span>
+                  </div>
+                  <textarea
+                    ref={textareaRef}
+                    rows={22}
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões..."
+                    className="w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-base font-serif text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed resize-y min-h-[480px]"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-medium-400 px-1">
+                    <span className="text-amber-400 font-semibold">PREVIEW EM TEMPO REAL</span>
+                    <span>Modo Leitura</span>
+                  </div>
+                  <div className="w-full bg-medium-850/80 border border-medium-700/80 rounded-lg p-5 overflow-y-auto max-h-[620px] shadow-inner space-y-4">
+                    {editTitle && (
+                      <h2 className="text-2xl font-sans font-bold text-white tracking-tight border-b border-medium-750 pb-2">
+                        {editTitle}
+                      </h2>
+                    )}
+                    <div className="prose prose-invert max-w-none">
+                      {renderFormattedContent(editContent || "*Nenhum conteúdo digitado ainda.*")}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <textarea
+                  ref={textareaRef}
+                  rows={16}
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões..."
+                  className="w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-base font-serif text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed"
+                />
+              </div>
+            )}
 
             {/* Influences Section */}
             <div className="p-4 rounded-lg bg-medium-850 border border-medium-700 space-y-3">

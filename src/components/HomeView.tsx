@@ -190,7 +190,7 @@ export function HomeView({
     for (const e of entries) {
       const cat = normalizeCategory(e.type);
       if (counts[cat] !== undefined) counts[cat]++;
-      if (e.success_rating !== undefined && e.success_rating > 0) {
+      if (e.success_rating !== undefined && e.success_rating !== null && e.success_rating > 0) {
         totalRating += e.success_rating;
         ratingCount++;
       }
@@ -718,7 +718,7 @@ export function HomeView({
                       <span>{normalizeCategory(entry.type)}</span>
                     </span>
 
-                    {entry.success_rating !== undefined && (
+                    {entry.success_rating !== undefined && entry.success_rating !== null && (
                       <span className="flex items-center gap-1 text-[11px] font-mono text-medium-300 font-semibold">
                         <Star className="w-3 h-3 fill-white text-white" />
                         {entry.success_rating}/10

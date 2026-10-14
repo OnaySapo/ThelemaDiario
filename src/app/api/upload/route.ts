@@ -16,6 +16,14 @@ const ALLOWED_MIME_TYPES = new Set([
   "video/ogg",
   "video/quicktime",
   "video/x-matroska",
+  // Audio (Gravações de Voz e Áudio-Diário)
+  "audio/webm",
+  "audio/mp4",
+  "audio/mpeg",
+  "audio/ogg",
+  "audio/wav",
+  "audio/aac",
+  "audio/x-m4a",
 ]);
 
 const MAX_FILE_SIZE = 75 * 1024 * 1024; // 75MB
@@ -48,7 +56,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: `Formato de arquivo "${file.type}" não suportado. Envie imagens (JPG, PNG, WebP, GIF) ou vídeos (MP4, WebM).`,
+          error: `Formato de arquivo "${file.type}" não suportado. Envie imagens, vídeos ou gravações de áudio.`,
         },
         { status: 400 }
       );

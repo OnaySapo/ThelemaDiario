@@ -11,6 +11,7 @@ import { DashboardView } from "@/components/DashboardView";
 import { TreeOfLifeView, SEPHIROT } from "@/components/TreeOfLifeView";
 import { RitualTimerModal } from "@/components/RitualTimerModal";
 import { AltarModeModal } from "@/components/AltarModeModal";
+import { SpotlightModal } from "@/components/SpotlightModal";
 import { AstrologicalCoordinates } from "@/lib/astronomy";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { getDefaultTemplateForCategory } from "@/lib/templates";
@@ -26,14 +27,20 @@ export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isTimerModalOpen, setIsTimerModalOpen] = useState(false);
   const [isAltarModalOpen, setIsAltarModalOpen] = useState(false);
+  const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
   const [astroData, setAstroData] = useState<AstrologicalCoordinates | null>(null);
   const [loading, setLoading] = useState(true);
   const [isZenMode, setIsZenMode] = useState(false);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
 
-  // Global keyboard shortcuts (Ctrl+\ for Zen Mode, Escape for Graph Modal)
+  // Global keyboard shortcuts (Ctrl+\ for Zen Mode, Ctrl+K for Spotlight, Escape for Graph Modal)
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+K / Cmd+K para Spotlight
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsSpotlightOpen((prev) => !prev);
+      }
       if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
         e.preventDefault();
         setIsZenMode((prev) => !prev);
@@ -368,6 +375,17 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Spotlight / Busca Global Rápida (Ctrl+K) */}
+      <SpotlightModal
+        isOpen={isSpotlightOpen}
+        onClose={() => setIsSpotlightOpen(false)}
+        entries={entries}
+        onSelectEntry={(entry) => {
+          setSelectedEntryId(entry.id);
+          setViewMode("article");
+        }}
+      />
     </div>
   );
 }

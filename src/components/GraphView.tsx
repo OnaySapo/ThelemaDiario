@@ -17,7 +17,7 @@ interface GraphNode {
   vy: number;
   radius: number;
   color: string;
-  success_rating?: number;
+  success_rating?: number | null;
   count?: number;
 }
 
@@ -770,7 +770,7 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
             {hoveredNode.isEntry ? (
               <>
                 <div>Categoria: <span className="text-white capitalize">{normalizeCategory(hoveredNode.type)}</span></div>
-                {hoveredNode.success_rating !== undefined && (
+                {hoveredNode.success_rating !== undefined && hoveredNode.success_rating !== null && (
                   <div>Sucesso Mágicko: <span className="text-white font-semibold">{hoveredNode.success_rating}/10</span></div>
                 )}
                 <div className="text-[10px] text-medium-400 pt-1">

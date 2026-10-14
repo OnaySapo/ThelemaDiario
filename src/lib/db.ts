@@ -7,6 +7,39 @@ export type { MagickEntry };
 
 let dbInstance: DatabaseSync | null = null;
 
+function performAutoBackup(dbPath: string, dataDir: string) {
+  try {
+    if (!fs.existsSync(dbPath)) return;
+    const stats = fs.statSync(dbPath);
+    if (stats.size < 1024) return; // Muito pequeno ou vazio
+
+    const backupDir = path.join(dataDir, "backups");
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    const dateStamp = new Date().toISOString().slice(0, 10);
+    const backupFile = path.join(backupDir, `magick_diary_backup_${dateStamp}.db`);
+    if (!fs.existsSync(backupFile)) {
+      fs.copyFileSync(dbPath, backupFile);
+    }
+
+    // Rotaciona para manter até 7 backups diários
+    const existing = fs
+      .readdirSync(backupDir)
+      .filter((f) => f.startsWith("magick_diary_backup_") && f.endsWith(".db"))
+      .sort();
+    while (existing.length > 7) {
+      const oldest = existing.shift()!;
+      try {
+        fs.unlinkSync(path.join(backupDir, oldest));
+      } catch (e) {}
+    }
+  } catch (err) {
+    console.warn("Aviso ao realizar auto-backup do diário:", err);
+  }
+}
+
 export function getDatabase(): DatabaseSync {
   if (dbInstance) return dbInstance;
 
@@ -16,6 +49,8 @@ export function getDatabase(): DatabaseSync {
   }
 
   const dbPath = path.join(dataDir, "magick_diary.db");
+  performAutoBackup(dbPath, dataDir);
+
   const db = new DatabaseSync(dbPath);
 
   // High performance & integrity SQLite PRAGMAs
@@ -484,7 +519,7 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
     entry.title,
     entry.content,
     entry.date || now,
-    entry.success_rating ?? 5,
+    (entry.success_rating !== undefined && entry.success_rating !== null) ? entry.success_rating : null,
     entry.thelemic_date || "",
     entry.sun_sign || "",
     entry.sun_degree || 0,

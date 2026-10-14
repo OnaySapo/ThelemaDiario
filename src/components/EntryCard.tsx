@@ -115,7 +115,7 @@ export function EntryCard({ entry, onEdit, onDelete, onSelectConnect }: EntryCar
         </div>
 
         {/* Success rating badge */}
-        {entry.success_rating !== undefined && entry.success_rating > 0 && (
+        {entry.success_rating !== undefined && entry.success_rating !== null && entry.success_rating > 0 && (
           <div
             className="flex items-center gap-1 px-2 py-0.5 rounded bg-forest-750 border border-forest-600/50 text-xs font-mono font-semibold"
             title={`Taxa de Sucesso: ${entry.success_rating}/10`}

@@ -293,7 +293,7 @@ export function Sidebar({
                     <span className="text-medium-600">·</span>
                     <span>{entry.moon_phase || "Lua"}</span>
                   </span>
-                  {entry.success_rating !== undefined && entry.success_rating > 0 && (
+                  {entry.success_rating !== undefined && entry.success_rating !== null && entry.success_rating > 0 && (
                     <span className="flex items-center gap-0.5 text-medium-300 font-semibold">
                       <Star className="w-2.5 h-2.5 fill-white text-white" />
                       {entry.success_rating}/10
