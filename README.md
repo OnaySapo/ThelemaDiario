@@ -85,25 +85,46 @@ Ao preencher a data de nascimento do consulente, o sistema calcula instantaneame
 
 ---
 
-### 6. ✍️ Editor Científico de Notas Estilo Medium
+### 6. ✍️ Editor Científico de Notas Estilo Medium & Split-Screen
+* **Editor Split-Screen (Tela Dividida)**: Escreva em Markdown à esquerda e visualize em tempo real a tipografia e formatação à direita;
+* **Barra de Símbolos Mágickos Herméticos**: Insira com um clique símbolos planetários (`☉ ☽ ☿ ♀ ♂ ♃ ♄`), elementais (`🜂 🜄 🜁 🜃 🁢`), herméticos (`⛤ 𓁹 ☥ ⚚ ∴`) e do zodíaco no cursor;
+* **Callouts Esotéricos Estilizados**: Blocos com iluminação mística para `> [!INSIGHT]` (gnose e revelações), `> [!RITUAL]` (operações), `> [!AVISO]` (alertas) e `> [!777]` (Liber 777);
+* **Grimório de Gravação de Voz Nativo**: Grave descrições de rituais e sonhos com microfone nativo via Web Audio API, gerando um player de áudio embutido na nota;
 * **Formatação Completa**: Títulos, subtítulos, negrito, itálico, sublinhado e cores de texto personalizadas;
 * **Tabelas Dinâmicas**: Criação e manipulação de tabelas completas com colunas e linhas flexíveis;
-* **Mídias Locais e por URL**:
-  * Imagens locais e remotas com suporte a zoom;
-  * Vídeos locais e via URL com player nativo embutido;
-  * Compactação inteligente de arquivos locais para preservar espaço e performance;
-* **Margem de Leitura Ajustável**: Controle deslizante na barra de leitura para personalizar a largura do conteúdo (mais espaçoso ou mais focado);
+* **Mídias Locais e por URL**: Imagens locais e remotas com zoom, vídeos com player nativo embutido e compactação inteligente;
+* **Margem de Leitura Ajustável**: Controle deslizante na barra de leitura para personalizar a largura do conteúdo (680px a 1500px);
 * **Auto-Salvamento & Recuperação**: Sistema de rascunhos para proteção contra perda acidental de dados.
 
 ---
 
-### 7. 🕸️ Grafo de Conexões & Inteligência do Frater Auxiliar
+### 7. 🔍 Busca Global Instantânea (Spotlight — `Ctrl + K`)
+* **Pesquisa Universal em Tempo Real**: Localize notas instantaneamente por título, corpo de texto, influências, deidades, signos ou datas thelêmicas;
+* **Harmonia Dinâmica com os Temas**: O modal herda 100% da identidade visual da paleta selecionada (tanto no claro quanto no escuro);
+* **Navegação Fluida por Teclado**: Use `↑` e `↓` para navegar, `Enter` para abrir a nota e `Esc` para fechar.
+
+---
+
+### 8. 🧭 Bússola Solar de Liber Resh (Modo Altar)
+* **Mostrador Circular Cardinal**: Representação dos 4 quadrantes cardeais herméticos (*Norte / Khephra, Leste / Ra, Sul / Hathor, Oeste / Tum*);
+* **Agulha Solar Animada**: Gira e aponta automaticamente em tempo real para a maré solar e adoração thelêmica ativa no momento.
+
+---
+
+### 9. 📊 Matriz Analítica, Dashboard & Autocálculo Astronômico
+* **Autocálculo Contínuo**: Todas as notas calculam automaticamente seu signo solar, signo lunar, fase da lua, porcentagem de iluminação e dia planetário temporal exatos para a data informada;
+* **Auto-Reparação Retroativa**: O banco de dados preenche automaticamente notas históricas ou importadas que estejam sem coordenadas astrais;
+* **Correlações Herméticas Empíricas**: Gráficos estatísticos que cruzam seu índice de Sucesso Mágicko com fases lunares, signos do zodíaco, dias planetários e entidades invocadas.
+
+---
+
+### 10. 🕸️ Grafo de Conexões & Inteligência do Frater Auxiliar
 * **Grafo Interativo em Força Dirigida**: Conecte notas por tipos de relação (*Resultado Fenomênico de*, *Profetizado por*, *Sincrônico com*, *Referência de Estudo*);
 * **Frater Auxiliar**: Assistente analítico integrado que cruza as condições astrais registradas com suas notas para indicar correlações de sucesso nas operações.
 
 ---
 
-### 8. 🎨 Sistema Multi-Paletas de Temas
+### 11. 🎨 Sistema Multi-Paletas de Temas
 Suporte completo a 7 esquemas de cores inspirados em editores clássicos, todos com versões para **Modo Escuro** e **Modo Claro**:
 1. **Medium** (Preto & Branco minimalista);
 2. **Rosé Pine** (Tons aveludados e sóbrios);
