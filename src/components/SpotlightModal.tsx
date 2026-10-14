@@ -152,14 +152,16 @@ export function SpotlightModal({
                   onMouseEnter={() => setSelectedIndex(idx)}
                   className={`p-3 rounded-xl cursor-pointer transition-all border flex items-start justify-between gap-3 ${
                     isSelected
-                      ? "bg-white text-black font-semibold border-white shadow-md"
-                      : "bg-medium-900/60 border-medium-750 text-medium-200 hover:border-medium-600"
+                      ? "bg-medium-800 border-medium-500 text-medium-100 shadow-md ring-1 ring-medium-400/30"
+                      : "bg-medium-850/60 border-medium-750/70 text-medium-300 hover:bg-medium-800/40 hover:border-medium-700"
                   }`}
                 >
                   <div className="flex items-start gap-3 min-w-0">
                     <span
-                      className={`p-2 rounded-lg shrink-0 mt-0.5 ${
-                        isSelected ? "bg-black/10 text-black" : "bg-medium-800 text-medium-300 border border-medium-700"
+                      className={`p-2 rounded-lg shrink-0 mt-0.5 border ${
+                        isSelected
+                          ? "bg-medium-750 text-medium-100 border-medium-600"
+                          : "bg-medium-800/80 text-medium-300 border-medium-700"
                       }`}
                     >
                       {getCategoryThelemicIcon(entry.type, "w-4 h-4")}
@@ -170,22 +172,22 @@ export function SpotlightModal({
                         <span
                           className={`text-[10px] font-mono uppercase font-bold px-1.5 py-0.2 rounded border ${
                             isSelected
-                              ? "bg-black/10 border-black/20 text-black"
+                              ? "bg-medium-750 border-medium-600 text-medium-200"
                               : "bg-medium-800 border-medium-700 text-medium-400"
                           }`}
                         >
                           {normalizeCategory(entry.type)}
                         </span>
-                        <span className={`text-xs font-serif font-bold truncate ${isSelected ? "text-black" : "text-medium-100"}`}>
+                        <span className="text-xs font-serif font-bold truncate text-medium-100">
                           {entry.title}
                         </span>
                       </div>
 
-                      <p className={`text-xs line-clamp-1 leading-relaxed ${isSelected ? "text-neutral-800" : "text-medium-400"}`}>
+                      <p className="text-xs line-clamp-1 leading-relaxed text-medium-400">
                         {entry.content.replace(/[#*`_>]/g, "")}
                       </p>
 
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono opacity-80 pt-0.5">
+                      <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono text-medium-400 pt-0.5">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           <span>{formattedDate}</span>
@@ -197,7 +199,7 @@ export function SpotlightModal({
                           </span>
                         )}
                         {entry.success_rating !== undefined && entry.success_rating !== null && (
-                          <span className="flex items-center gap-1 font-semibold">
+                          <span className="flex items-center gap-1 font-semibold text-medium-200">
                             <Star className="w-3 h-3 fill-current" />
                             <span>{entry.success_rating}/10</span>
                           </span>
@@ -208,7 +210,7 @@ export function SpotlightModal({
 
                   <div className="shrink-0 flex items-center pt-2">
                     {isSelected ? (
-                      <span className="flex items-center gap-1 text-[11px] font-mono font-bold bg-black text-white px-2 py-1 rounded">
+                      <span className="flex items-center gap-1 text-[11px] font-mono font-bold bg-medium-700 text-medium-100 border border-medium-600 px-2.5 py-1 rounded-md shadow-sm">
                         <span>Abrir</span>
                         <CornerDownLeft className="w-3 h-3" />
                       </span>

@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 
 import { MagickEntry } from "./types";
+import { getFullAstrologicalData } from "./astronomy";
 export type { MagickEntry };
 
 let dbInstance: DatabaseSync | null = null;
@@ -161,6 +162,56 @@ export function getDatabase(): DatabaseSync {
   const countRow = db.prepare("SELECT COUNT(*) as count FROM entries").get() as { count: number };
   if (countRow.count === 0) {
     seedInitialData(db);
+  }
+
+  // Auto-reparação: preencher coordenadas astrológicas para qualquer nota que esteja com moon_sign ou moon_phase vazios
+  try {
+    const unpopulated = db.prepare(`
+      SELECT id, date FROM entries
+      WHERE moon_sign IS NULL OR moon_sign = ''
+         OR moon_phase IS NULL OR moon_phase = ''
+         OR planetary_day IS NULL OR planetary_day = ''
+    `).all() as { id: string; date: string }[];
+
+    if (unpopulated.length > 0) {
+      const updateAstro = db.prepare(`
+        UPDATE entries SET
+          thelemic_date = CASE WHEN thelemic_date IS NULL OR thelemic_date = '' THEN ? ELSE thelemic_date END,
+          sun_sign = CASE WHEN sun_sign IS NULL OR sun_sign = '' THEN ? ELSE sun_sign END,
+          sun_degree = CASE WHEN sun_degree IS NULL OR sun_degree = 0 THEN ? ELSE sun_degree END,
+          moon_sign = ?,
+          moon_degree = ?,
+          moon_phase = ?,
+          moon_illumination = ?,
+          planetary_day = ?,
+          planetary_hour = ?
+        WHERE id = ?
+      `);
+
+      for (const row of unpopulated) {
+        try {
+          const entryDate = row.date ? new Date(row.date) : new Date();
+          const validDate = isNaN(entryDate.getTime()) ? new Date() : entryDate;
+          const astro = getFullAstrologicalData(validDate);
+          updateAstro.run(
+            astro.thelemicDate,
+            astro.sunSign,
+            astro.sunDegree,
+            astro.moonSign,
+            astro.moonDegree,
+            astro.moonPhaseName,
+            astro.moonIllumination,
+            astro.planetaryDay,
+            astro.planetaryHour,
+            row.id
+          );
+        } catch (e) {
+          console.error("Erro ao auto-popular coordenadas para nota:", row.id, e);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Aviso ao auto-reparar coordenadas astrológicas:", err);
   }
 
   dbInstance = db;
@@ -481,6 +532,47 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
   const db = customDb || getDatabase();
   const now = new Date().toISOString();
   const entryId = entry.id || `entry-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const entryDateStr = entry.date || now;
+
+  // Busca registro existente se houver
+  let existing: any = null;
+  if (entry.id) {
+    existing = db.prepare("SELECT * FROM entries WHERE id = ?").get(entry.id) as any;
+  }
+
+  // Verifica se a data mudou em relação à anterior
+  const dateChanged = !!(existing && existing.date && entry.date && existing.date !== entry.date);
+
+  let thelemicDate = entry.thelemic_date || (!dateChanged && existing?.thelemic_date) || "";
+  let sunSign = entry.sun_sign || (!dateChanged && existing?.sun_sign) || "";
+  let sunDegree = entry.sun_degree !== undefined && entry.sun_degree !== 0 ? entry.sun_degree : (!dateChanged && existing?.sun_degree ? existing.sun_degree : 0);
+  let moonSign = entry.moon_sign || (!dateChanged && existing?.moon_sign) || "";
+  let moonDegree = entry.moon_degree !== undefined && entry.moon_degree !== 0 ? entry.moon_degree : (!dateChanged && existing?.moon_degree ? existing.moon_degree : 0);
+  let moonPhase = entry.moon_phase || (!dateChanged && existing?.moon_phase) || "";
+  let moonIllum = entry.moon_illumination !== undefined && entry.moon_illumination !== 0 ? entry.moon_illumination : (!dateChanged && existing?.moon_illumination ? existing.moon_illumination : 0);
+  let planetaryDay = entry.planetary_day || (!dateChanged && existing?.planetary_day) || "";
+  let planetaryHour = entry.planetary_hour || (!dateChanged && existing?.planetary_hour) || "";
+
+  // Se faltar algum dado astrológico crucial ou a data foi alterada, autocalcula na hora!
+  if (!moonSign || !moonPhase || !planetaryDay || !thelemicDate || dateChanged) {
+    try {
+      const parsedDate = new Date(entryDateStr);
+      const validDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+      const astro = getFullAstrologicalData(validDate);
+
+      thelemicDate = thelemicDate && !dateChanged ? thelemicDate : astro.thelemicDate;
+      sunSign = sunSign && !dateChanged ? sunSign : astro.sunSign;
+      sunDegree = sunDegree && !dateChanged ? sunDegree : astro.sunDegree;
+      moonSign = moonSign && !dateChanged ? moonSign : astro.moonSign;
+      moonDegree = moonDegree && !dateChanged ? moonDegree : astro.moonDegree;
+      moonPhase = moonPhase && !dateChanged ? moonPhase : astro.moonPhaseName;
+      moonIllum = moonIllum && !dateChanged ? moonIllum : astro.moonIllumination;
+      planetaryDay = planetaryDay && !dateChanged ? planetaryDay : astro.planetaryDay;
+      planetaryHour = planetaryHour && !dateChanged ? planetaryHour : astro.planetaryHour;
+    } catch (err) {
+      console.error("Erro ao autocalcular dados astrológicos ao salvar:", err);
+    }
+  }
 
   db.prepare(`
     INSERT INTO entries (
@@ -518,21 +610,21 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
     entry.type,
     entry.title,
     entry.content,
-    entry.date || now,
+    entryDateStr,
     (entry.success_rating !== undefined && entry.success_rating !== null) ? entry.success_rating : null,
-    entry.thelemic_date || "",
-    entry.sun_sign || "",
-    entry.sun_degree || 0,
-    entry.moon_sign || "",
-    entry.moon_degree || 0,
-    entry.moon_phase || "",
-    entry.moon_illumination || 0,
-    entry.planetary_day || "",
-    entry.planetary_hour || "",
+    thelemicDate,
+    sunSign,
+    sunDegree,
+    moonSign,
+    moonDegree,
+    moonPhase,
+    moonIllum,
+    planetaryDay,
+    planetaryHour,
     entry.mental_state_before || "",
     entry.mental_state_after || "",
     JSON.stringify(entry.tags || []),
-    entry.created_at || now,
+    entry.created_at || existing?.created_at || now,
     now
   );
 
