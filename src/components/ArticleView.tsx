@@ -603,6 +603,86 @@ export function ArticleView({
     setIsVideoModalOpen(true);
   };
 
+  // Upload automático ao Colar (Ctrl+V) ou Arrastar e Soltar (Drag & Drop)
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [uploadMediaNotice, setUploadMediaNotice] = useState<string | null>(null);
+
+  const handleMediaUploadFile = async (file: File) => {
+    const isImg = file.type.startsWith("image/");
+    const isVid = file.type.startsWith("video/");
+    const isAud = file.type.startsWith("audio/");
+
+    if (!isImg && !isVid && !isAud) {
+      return false;
+    }
+
+    try {
+      setIsUploadingMedia(true);
+      setUploadMediaNotice(`Enviando ${file.name}...`);
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        const cleanName = file.name.replace(/\.[^/.]+$/, "");
+        if (isImg) {
+          insertFormatting(`\n![${cleanName}](${data.url})\n`);
+        } else if (isVid) {
+          insertFormatting(`\n![video:${cleanName}](${data.url})\n`);
+        } else if (isAud) {
+          insertFormatting(`\n![audio:${cleanName}](${data.url})\n`);
+        }
+        setUploadMediaNotice(`Arquivo "${cleanName}" anexado com sucesso!`);
+        setTimeout(() => setUploadMediaNotice(null), 3500);
+        return true;
+      } else {
+        alert("Erro no upload: " + (data.error || "Falha ao enviar arquivo"));
+      }
+    } catch (err: any) {
+      console.error("Erro ao enviar mídia:", err);
+      alert("Falha ao enviar arquivo de mídia.");
+    } finally {
+      setIsUploadingMedia(false);
+    }
+    return false;
+  };
+
+  const handleTextareaPaste = async (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf("image") !== -1) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          await handleMediaUploadFile(file);
+        }
+        return;
+      }
+    }
+  };
+
+  const handleTextareaDrop = async (e: React.DragEvent<HTMLTextAreaElement>) => {
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      if (
+        file.type.startsWith("image/") ||
+        file.type.startsWith("video/") ||
+        file.type.startsWith("audio/")
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        await handleMediaUploadFile(file);
+      }
+    }
+  };
+
   const handleInsertTable = () => {
     const tableTemplate = `\n| Correspondência | Símbolo | Atribuição | Efeito / Notas |\n| :--- | :---: | :---: | :--- |\n| Planeta | ☉ Sol | Tiphareth | Consciência solar plena |\n| Elemento | 🔥 Fogo | Yod | Foco da Verdadeira Vontade |\n| Incenso | Olibano | Ar | Purificação do templo |\n\n`;
     insertFormatting(tableTemplate);
@@ -768,6 +848,24 @@ export function ArticleView({
   // Helper para formatar markdown inline com cores, negrito, itálico, links e Wikilinks estilo Obsidian
   const renderInlineMarkdown = (line: string): string => {
     return line
+      // Imagens Embedadas estilo Obsidian: ![[arquivo.ext]] ou ![[arquivo.ext|Legenda]]
+      .replace(/!\[\[(.*?)(?:\|(.*?))?\]\]/g, (_, target, captionOrWidth) => {
+        const fileName = target.trim();
+        const isImage = /\.(png|jpe?g|webp|gif|svg|avif)$/i.test(fileName);
+        if (isImage) {
+          const src = fileName.startsWith("http") || fileName.startsWith("/")
+            ? fileName
+            : `/uploads/${fileName}`;
+          const altText = captionOrWidth?.trim() || fileName;
+          return `<figure class="my-4 text-center"><img src="${src}" alt="${altText}" class="rounded-lg max-h-[500px] w-auto border border-medium-700 mx-auto shadow-sm" />${captionOrWidth ? `<figcaption class="text-center text-xs text-medium-400 mt-1.5 font-mono italic">${captionOrWidth}</figcaption>` : ""}</figure>`;
+        }
+        return `![[${target}]]`;
+      })
+      // Imagens Markdown inline: ![alt](url)
+      .replace(/!\[(.*?)\]\((.*?)\)/g, (_, alt, url) => {
+        const cleanUrl = url.trim().replace(/^["']|["']$/g, "").split(/\s+/)[0];
+        return `<figure class="my-4 text-center"><img src="${cleanUrl}" alt="${alt || 'Imagem'}" class="rounded-lg max-h-[500px] w-auto border border-medium-700 mx-auto shadow-sm" />${alt ? `<figcaption class="text-center text-xs text-medium-400 mt-1.5 font-mono italic">${alt}</figcaption>` : ""}</figure>`;
+      })
       // Wikilinks estilo Obsidian: [[Nome da Nota]] ou [[Alvo|Texto Exibido]]
       .replace(/\[\[(.*?)(?:\|(.*?))?\]\]/g, (_, target, alias) => {
         const textToDisplay = (alias || target).trim();
@@ -787,8 +885,8 @@ export function ArticleView({
       .replace(/<u>(.*?)<\/u>/gi, "<u class='underline underline-offset-4'>$1</u>")
       // Código inline
       .replace(/`([^`]+)`/g, "<code class='bg-medium-800 px-1.5 py-0.5 rounded text-xs font-mono text-medium-200 border border-medium-700'>$1</code>")
-      // Links normais Markdown
-      .replace(/\[(.*?)\]\((.*?)\)/g, "<a href='$2' target='_blank' rel='noopener noreferrer' class='text-white underline underline-offset-2 hover:text-medium-300'>$1</a>");
+      // Links normais Markdown (apenas se NÃO for imagem)
+      .replace(/(^|[^!])\[(.*?)\]\((.*?)\)/g, "$1<a href='$3' target='_blank' rel='noopener noreferrer' class='text-white underline underline-offset-2 hover:text-medium-300'>$2</a>");
   };
 
   // Render Formatted Markdown for reading mode (Tabelas, Vídeos, Imagens, Títulos, Citações)
@@ -1008,11 +1106,40 @@ export function ArticleView({
         continue;
       }
 
-      // 3. Bloco de Imagem: ![alt](url)
+      // 3. Imagem Embedada estilo Obsidian: ![[arquivo.ext]] ou ![[arquivo.ext|Legenda]]
+      const obsidianImgMatch = trimmedLine.match(/^!\[\[(.*?)(?:\|(.*?))?\]\]$/);
+      if (obsidianImgMatch) {
+        const fileName = obsidianImgMatch[1].trim();
+        const caption = obsidianImgMatch[2]?.trim() || fileName;
+        const isImage = /\.(png|jpe?g|webp|gif|svg|avif)$/i.test(fileName);
+        if (isImage) {
+          const src = fileName.startsWith("http") || fileName.startsWith("/")
+            ? fileName
+            : `/uploads/${fileName}`;
+          elements.push(
+            <figure key={`obs-img-${i}`} className="my-6">
+              <img
+                src={src}
+                alt={caption}
+                className="rounded-lg max-h-[550px] w-auto border border-medium-700 mx-auto shadow-sm"
+              />
+              {caption && (
+                <figcaption className="text-center text-xs text-medium-400 mt-2 font-mono italic">
+                  {caption}
+                </figcaption>
+              )}
+            </figure>
+          );
+          i++;
+          continue;
+        }
+      }
+
+      // 3.5. Bloco de Imagem Markdown: ![alt](url)
       const imgMatch = trimmedLine.match(/^!\[(.*?)\]\((.*?)\)/);
       if (imgMatch) {
         const alt = imgMatch[1];
-        const url = imgMatch[2].trim();
+        let url = imgMatch[2].trim().replace(/^["']|["']$/g, "").split(/\s+/)[0];
 
         if (isVideoUrl(url)) {
           const ytId = getYouTubeId(url);
@@ -1040,7 +1167,7 @@ export function ArticleView({
             <img
               src={url}
               alt={alt}
-              className="rounded-lg max-h-[500px] w-auto border border-medium-700 mx-auto shadow-sm"
+              className="rounded-lg max-h-[550px] w-auto border border-medium-700 mx-auto shadow-sm"
             />
             {alt && (
               <figcaption className="text-center text-xs text-medium-400 mt-2 font-mono italic">
@@ -2302,12 +2429,22 @@ export function ArticleView({
               </button>
             </div>
 
+            {/* Notificação de Upload de Mídia ao Colar / Arrastar */}
+            {uploadMediaNotice && (
+              <div className="p-2.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs font-mono flex items-center justify-between gap-2 shadow-sm animate-fadeIn">
+                <span className="flex items-center gap-2">
+                  <span className="animate-spin text-sm">⏳</span>
+                  <span>{uploadMediaNotice}</span>
+                </span>
+              </div>
+            )}
+
             {/* Content Textarea & Live Split-Screen Preview */}
             {editorLayout === "split" ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-[11px] font-mono text-medium-400 px-1">
-                    <span>EDITOR (MARKDOWN)</span>
+                    <span>EDITOR (MARKDOWN · Cole Ctrl+V ou Arraste Imagens aqui)</span>
                     <span>{editContent.length} caracteres</span>
                   </div>
                   <textarea
@@ -2315,7 +2452,9 @@ export function ArticleView({
                     rows={22}
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões..."
+                    onPaste={handleTextareaPaste}
+                    onDrop={handleTextareaDrop}
+                    placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Pode colar ou arrastar imagens aqui!)"
                     className="w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-base font-serif text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed resize-y min-h-[480px]"
                   />
                 </div>
@@ -2344,7 +2483,9 @@ export function ArticleView({
                   rows={16}
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões..."
+                  onPaste={handleTextareaPaste}
+                  onDrop={handleTextareaDrop}
+                  placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Pode colar Ctrl+V ou arrastar imagens diretamente aqui!)"
                   className="w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-base font-serif text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed"
                 />
               </div>

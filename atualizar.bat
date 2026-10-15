@@ -4,6 +4,10 @@ echo ========================================================
 echo   DIARIO MAGICKO THELEMICO - ATUALIZADOR SEGURO
 echo ========================================================
 echo.
+set "NODE_DIR=%~dp0node-v24.21.0-win-x64"
+if exist "%NODE_DIR%\node.exe" (
+    set "PATH=%NODE_DIR%;%PATH%"
+)
 echo [1/4] Protegendo suas anotacoes e criando backup local...
 
 if not exist "data\backups" mkdir "data\backups"

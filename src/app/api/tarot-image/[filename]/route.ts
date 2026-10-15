@@ -10,16 +10,19 @@ export async function GET(
     const { filename } = await context.params;
     const decodedFilename = decodeURIComponent(filename || "");
 
-    const tarotDir = path.join(process.cwd(), "Tarot de Toth");
-    let targetPath = path.join(tarotDir, decodedFilename);
-
     const fileParam = req.nextUrl.searchParams.get("file");
-    if (fileParam) {
-      targetPath = path.join(tarotDir, decodeURIComponent(fileParam));
+    const filenameToFind = fileParam ? decodeURIComponent(fileParam) : decodedFilename;
+
+    const publicTarotDir = path.join(process.cwd(), "public", "tarot");
+    const localRawDir = path.join(process.cwd(), "Tarot de Toth");
+
+    let targetPath = path.join(publicTarotDir, filenameToFind);
+    if (!fs.existsSync(targetPath)) {
+      targetPath = path.join(localRawDir, filenameToFind);
     }
 
     if (!fs.existsSync(targetPath)) {
-      return new NextResponse(`Image not found: ${decodedFilename}`, { status: 404 });
+      return new NextResponse(`Image not found: ${filenameToFind}`, { status: 404 });
     }
 
     const fileBuffer = await fs.promises.readFile(targetPath);
@@ -45,12 +48,15 @@ export async function HEAD(
     const { filename } = await context.params;
     const decodedFilename = decodeURIComponent(filename || "");
 
-    const tarotDir = path.join(process.cwd(), "Tarot de Toth");
-    let targetPath = path.join(tarotDir, decodedFilename);
-
     const fileParam = req.nextUrl.searchParams.get("file");
-    if (fileParam) {
-      targetPath = path.join(tarotDir, decodeURIComponent(fileParam));
+    const filenameToFind = fileParam ? decodeURIComponent(fileParam) : decodedFilename;
+
+    const publicTarotDir = path.join(process.cwd(), "public", "tarot");
+    const localRawDir = path.join(process.cwd(), "Tarot de Toth");
+
+    let targetPath = path.join(publicTarotDir, filenameToFind);
+    if (!fs.existsSync(targetPath)) {
+      targetPath = path.join(localRawDir, filenameToFind);
     }
 
     if (!fs.existsSync(targetPath)) {

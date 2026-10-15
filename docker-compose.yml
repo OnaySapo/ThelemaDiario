@@ -1,0 +1,14 @@
+services:
+  diario-magicko:
+    build: .
+    container_name: diario-magicko
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mantém os dados do banco SQLite e as imagens enviadas persistentes fora do container
+      - ./data:/app/data
+      - ./public/uploads:/app/public/uploads
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
