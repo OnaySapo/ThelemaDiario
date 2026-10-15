@@ -27,3 +27,4 @@ uploads/
 storage_config.json
 *.storage_config.json
 .node-linux/
+*.tsbuildinfo

@@ -463,3 +463,67 @@ export function getReshSolarTide(date: Date = new Date()): ReshTideInfo {
     nextStation: "Ra",
   };
 }
+
+export function getLiberReshFullText(station: "Ra" | "Hathor" | "Tum" | "Khephra"): {
+  god: string;
+  direction: string;
+  sign: string;
+  adoration: string;
+  unityAdoration: string;
+  fullMarkdown: string;
+} {
+  const unityAdoration = `Unidade que se estende além de tudo!
+Eu adoro o poder do Teu alento,
+Deus supremo e terrível,
+que fazes os deuses e a morte tremerem diante de Ti: —
+Eu, eu Te adoro!
+
+Aparece sobre o trono de Rá!
+Abre os caminhos do Khu!
+Ilumina os caminhos do Ka!
+Os caminhos dos Khabs percorrem para me agitar ou me acalmar!
+Aum! Que ela me mate!`;
+
+  if (station === "Ra") {
+    return {
+      god: "Ra",
+      direction: "Leste (Nascer do Sol)",
+      sign: "Sinal do Entrante / Deus Hórus",
+      adoration: `Salve a Ti que és Ra em Teu nascer, mesmo a Ti que és Ra em Tua força, que viajas através dos Céus em Tua barca no Renascer do Sol. Tahuti se posta em Seu esplendor na proa, e Ra-Hoor habita no leme. Salve a Ti desde as Moradas da Noite!`,
+      unityAdoration,
+      fullMarkdown: `### ☀️ Liber Resh vel Helios — Adoração da Aurora (Ra)\n\n**Posição:** Voltado ao **Leste**\n**Sinal:** *Sinal do Entrante* (passo à frente com o pé esquerdo, braços lançados adiante como um dardo)\n\n> "Salve a Ti que és Ra em Teu nascer, mesmo a Ti que és Ra em Tua força, que viajas através dos Céus em Tua barca no Renascer do Sol. Tahuti se posta em Seu esplendor na proa, e Ra-Hoor habita no leme. Salve a Ti desde as Moradas da Noite!"\n\n*(Após a saudação, faz-se o Sinal do Silêncio e recita-se a Unidade:)*\n\n> ${unityAdoration.replace(/\n/g, "\n> ")}\n\n*∴ 93 93/93 ∴*\n`,
+    };
+  }
+
+  if (station === "Hathor") {
+    return {
+      god: "Ahathoor / Hathor",
+      direction: "Sul (Meio-Dia Solar)",
+      sign: "Sinal de Puella / Hathor (Mão esquerda sobre o peito, direita sobre a genitália)",
+      adoration: `Salve a Ti que és Hathor em Teu triunfo, mesmo a Ti que és Hathor em Tua beleza, que viajas através dos Céus em Tua barca no Zênite do Sol. Tahuti se posta em Seu esplendor na proa, e Ra-Hoor habita no leme. Salve a Ti desde as Moradas da Manhã!`,
+      unityAdoration,
+      fullMarkdown: `### ☀️ Liber Resh vel Helios — Adoração Meridiana (Ahathoor)\n\n**Posição:** Voltado ao **Sul**\n**Sinal:** *Sinal de Puella* (Mão esquerda velando o seio, mão direita o ventre)\n\n> "Salve a Ti que és Hathor em Teu triunfo, mesmo a Ti que és Hathor em Tua beleza, que viajas através dos Céus em Tua barca no Zênite do Sol. Tahuti se posta em Seu esplendor na proa, e Ra-Hoor habita no leme. Salve a Ti desde as Moradas da Manhã!"\n\n*(Após a saudação, faz-se o Sinal do Silêncio e recita-se a Unidade:)*\n\n> ${unityAdoration.replace(/\n/g, "\n> ")}\n\n*∴ 93 93/93 ∴*\n`,
+    };
+  }
+
+  if (station === "Tum") {
+    return {
+      god: "Tum",
+      direction: "Oeste (Pôr do Sol)",
+      sign: "Sinal de Puer (Braço direito erguido em ângulo reto, mão fechada)",
+      adoration: `Salve a Ti que és Tum em Teu ocaso, mesmo a Ti que és Tum em Tua quietude, que viajas através dos Céus em Tua barca no Pôr do Sol. Tahuti se posta em Seu esplendor na proa, e Ra-Hoor habita no leme. Salve a Ti desde as Moradas do Dia!`,
+      unityAdoration,
+      fullMarkdown: `### ☀️ Liber Resh vel Helios — Adoração do Ocaso (Tum)\n\n**Posição:** Voltado ao **Oeste**\n**Sinal:** *Sinal de Puer*\n\n> "Salve a Ti que és Tum em Teu ocaso, mesmo a Ti que és Tum em Tua quietude, que viajas através dos Céus em Tua barca no Pôr do Sol. Tahuti se posta em Seu esplendor na proa, e Ra-Hoor habita no leme. Salve a Ti desde as Moradas do Dia!"\n\n*(Após a saudação, faz-se o Sinal do Silêncio e recita-se a Unidade:)*\n\n> ${unityAdoration.replace(/\n/g, "\n> ")}\n\n*∴ 93 93/93 ∴*\n`,
+    };
+  }
+
+  return {
+    god: "Khephra",
+    direction: "Norte (Meia-Noite)",
+    sign: "Sinal de Baphomet / Ísis em Luto",
+    adoration: `Salve a Ti que és Khephra em Teu esconderijo, mesmo a Ti que és Khephra em Teu silêncio, que viajas através dos Céus em Tua barca na Meia-Noite do Sol. Tahuti se posta em Seu esplendor na proa, e Ra-Hoor habita no leme. Salve a Ti desde as Moradas da Noite!`,
+    unityAdoration,
+    fullMarkdown: `### ☀️ Liber Resh vel Helios — Adoração da Meia-Noite (Khephra)\n\n**Posição:** Voltado ao **Norte**\n**Sinal:** *Sinal de Khephra / Ísis em Luto*\n\n> "Salve a Ti que és Khephra em Teu esconderijo, mesmo a Ti que és Khephra em Teu silêncio, que viajas através dos Céus em Tua barca na Meia-Noite do Sol. Tahuti se posta em Seu esplendor na proa, e Ra-Hoor habita no leme. Salve a Ti desde as Moradas da Noite!"\n\n*(Após a saudação, faz-se o Sinal do Silêncio e recita-se a Unidade:)*\n\n> ${unityAdoration.replace(/\n/g, "\n> ")}\n\n*∴ 93 93/93 ∴*\n`,
+  };
+}
+

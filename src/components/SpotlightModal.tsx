@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { MagickEntry, normalizeCategory } from "@/lib/types";
 import { getCategoryThelemicIcon, ZodiacIcon, ThelemicDateDisplay } from "@/components/ThelemicIcons";
-import { Search, X, Calendar, Star, Compass, ArrowRight, CornerDownLeft } from "lucide-react";
+import { Search, X, Calendar, Star, Compass, ArrowRight, CornerDownLeft, Calculator } from "lucide-react";
+import { calculateGematria } from "@/lib/gematria";
 
 interface SpotlightModalProps {
   isOpen: boolean;
@@ -56,6 +57,13 @@ export function SpotlightModal({
       })
       .slice(0, 15);
   }, [entries, query]);
+
+  // Cálculo cabalístico em tempo real do termo buscado
+  const gematriaVal = useMemo(() => {
+    if (!query.trim() || query.length > 40) return null;
+    const res = calculateGematria(query.trim());
+    return res.primaryValue > 0 ? res : null;
+  }, [query]);
 
   // Navegação por teclado (Cima, Baixo, Enter, Esc)
   useEffect(() => {
@@ -128,6 +136,26 @@ export function SpotlightModal({
 
         {/* Lista de Resultados */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {/* Card Cabalístico de Gematria em Tempo Real */}
+          {gematriaVal && (
+            <div className="px-3.5 py-2 mx-1 mb-2 rounded-xl bg-gradient-to-r from-amber-500/10 via-medium-800 to-amber-500/10 border border-amber-500/30 text-xs font-mono flex items-center justify-between text-amber-300 shadow-sm animate-in fade-in duration-150">
+              <div className="flex items-center gap-2">
+                <Calculator className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  Gematria de &ldquo;<strong className="text-white">{query}</strong>&rdquo;:{" "}
+                  <strong className="text-white text-sm bg-black/40 px-2 py-0.5 rounded border border-amber-500/40">
+                    {gematriaVal.primaryValue}
+                  </strong>
+                </span>
+              </div>
+              <span className="text-[10px] text-medium-400">
+                {gematriaVal.correspondences.length > 0
+                  ? `${gematriaVal.correspondences[0].word} (${gematriaVal.correspondences[0].meaning})`
+                  : "Sepher Sephiroth"}
+              </span>
+            </div>
+          )}
+
           {results.length === 0 ? (
             <div className="p-8 text-center text-xs font-mono text-medium-400 space-y-2">
               <p>Nenhuma anotação mágica encontrada para &ldquo;{query}&rdquo;.</p>

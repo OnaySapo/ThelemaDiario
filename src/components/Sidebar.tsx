@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import {
   Search,
@@ -20,6 +20,9 @@ import {
   Flame,
   CloudMoon,
   BookMarked,
+  Calculator,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { EstrelaDeThelema, getCategoryThelemicIcon, ZodiacIcon, IconeSolThelema } from "@/components/ThelemicIcons";
 
@@ -41,6 +44,7 @@ interface SidebarProps {
   onOpenAltar?: () => void;
   onOpenQuickDream?: () => void;
   onOpenGrimoireCompiler?: () => void;
+  onOpenGematria?: () => void;
 }
 
 export function Sidebar({
@@ -61,6 +65,7 @@ export function Sidebar({
   onOpenAltar,
   onOpenQuickDream,
   onOpenGrimoireCompiler,
+  onOpenGematria,
 }: SidebarProps) {
   const categories: { name: string; label: string; icon: React.ReactNode }[] = [
     { name: "all", label: "Todas", icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
@@ -84,6 +89,8 @@ export function Sidebar({
     }
     return true;
   });
+
+  const [isTempleMenuOpen, setIsTempleMenuOpen] = useState(false);
 
   return (
     <aside className="w-full h-full bg-medium-900 border-r border-medium-700 flex flex-col select-none">
@@ -112,12 +119,13 @@ export function Sidebar({
         </button>
       </div>
 
-      {/* Navigation Quick Bar (Home / Dashboard / Árvore / Dharana / Altar) */}
+      {/* Navigation Quick Bar Simplificada & Consolidada */}
       <div className="p-2 border-b border-medium-700 bg-medium-850/60 space-y-1.5">
-        <div className="grid grid-cols-2 gap-1.5">
+        {/* Pilares Centrais: Início · Dashboard · Árvore */}
+        <div className="grid grid-cols-3 gap-1">
           <button
             onClick={onOpenHome}
-            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${
+            className={`flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-md text-xs font-medium transition-all ${
               currentView === "home"
                 ? "bg-white text-black font-semibold shadow-sm"
                 : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
@@ -125,12 +133,12 @@ export function Sidebar({
             title="Tela Inicial Thelêmica (Portal de Entrada)"
           >
             <Home className="w-3.5 h-3.5" />
-            <span>Início</span>
+            <span className="truncate">Início</span>
           </button>
 
           <button
             onClick={onOpenDashboard}
-            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-xs font-medium transition-all ${
+            className={`flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-md text-xs font-medium transition-all ${
               currentView === "dashboard"
                 ? "bg-white text-black font-semibold shadow-sm"
                 : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
@@ -138,71 +146,124 @@ export function Sidebar({
             title="Dashboard Analítico de Frequência e Sucesso"
           >
             <BarChart2 className="w-3.5 h-3.5" />
-            <span>Dashboard</span>
+            <span className="truncate">Métricas</span>
           </button>
-        </div>
 
-        <div className="grid grid-cols-3 gap-1">
           {onOpenTree && (
             <button
               onClick={onOpenTree}
-              className={`flex items-center justify-center gap-1 py-1 px-1 rounded text-[11px] font-mono transition-all ${
+              className={`flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-md text-xs font-medium transition-all ${
                 currentView === "tree"
                   ? "bg-purple-600 text-white font-semibold shadow-sm"
-                  : "bg-medium-900 hover:bg-medium-800 text-medium-300 hover:text-white border border-medium-750"
+                  : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
               }`}
               title="Árvore da Vida Cabalística (Otz Chiim / 10 Sephiroth)"
             >
-              <Sparkles className="w-3 h-3 text-purple-400" />
-              <span>Árvore</span>
-            </button>
-          )}
-
-          {onOpenTimer && (
-            <button
-              onClick={onOpenTimer}
-              className="flex items-center justify-center gap-1 py-1 px-1 rounded text-[11px] font-mono bg-medium-900 hover:bg-medium-800 text-medium-300 hover:text-white border border-medium-750 transition-all"
-              title="Cronômetro & Temporizador de Dharana (Liber E)"
-            >
-              <Clock className="w-3 h-3 text-blue-400" />
-              <span>Dharana</span>
-            </button>
-          )}
-
-          {onOpenAltar && (
-            <button
-              onClick={onOpenAltar}
-              className="flex items-center justify-center gap-1 py-1 px-1 rounded text-[11px] font-mono bg-medium-900 hover:bg-medium-800 text-medium-300 hover:text-white border border-medium-750 transition-all"
-              title="Modo Altar em Tela Cheia para Rituais"
-            >
-              <Flame className="w-3 h-3 text-amber-400" />
-              <span>Altar</span>
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              <span className="truncate">Árvore</span>
             </button>
           )}
         </div>
 
-        {/* Linha Rápida: Quick Dream (Alt+S) & Compilador de Grimório */}
-        <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-          {onOpenQuickDream && (
-            <button
-              onClick={onOpenQuickDream}
-              className="flex items-center justify-center gap-1 py-1 px-1.5 rounded text-[11px] font-mono bg-indigo-950/40 hover:bg-indigo-900/50 text-indigo-200 hover:text-white border border-indigo-500/30 transition-all group"
-              title="Captura Rápida de Sonhos de Madrugada (Atalho: Alt + S)"
-            >
-              <CloudMoon className="w-3 h-3 text-indigo-400 group-hover:scale-110 transition-transform" />
-              <span>Sonho (Alt+S)</span>
-            </button>
-          )}
+        {/* Menu Retrátil Elegante: Templo, Rituais & Ferramentas */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsTempleMenuOpen(!isTempleMenuOpen)}
+            className={`w-full flex items-center justify-between py-1 px-2 rounded text-[11px] font-mono transition-all border ${
+              isTempleMenuOpen
+                ? "bg-amber-500/15 text-amber-200 border-amber-500/30"
+                : "bg-medium-800/80 hover:bg-medium-800 text-medium-300 hover:text-white border-medium-750"
+            }`}
+          >
+            <span className="flex items-center gap-1.5">
+              <Flame className="w-3 h-3 text-amber-400" />
+              <span>Templo & Rituais</span>
+            </span>
+            {isTempleMenuOpen ? (
+              <ChevronUp className="w-3 h-3 text-medium-400" />
+            ) : (
+              <ChevronDown className="w-3 h-3 text-medium-400" />
+            )}
+          </button>
 
-          {onOpenGrimoireCompiler && (
-            <button
-              onClick={onOpenGrimoireCompiler}
-              className="flex items-center justify-center gap-1 py-1 px-1.5 rounded text-[11px] font-mono bg-amber-950/30 hover:bg-amber-900/40 text-amber-200 hover:text-white border border-amber-500/30 transition-all group"
-              title="Compilar Grimório Thelêmico em Livro (A4 / PDF)"
-            >
-              <BookMarked className="w-3 h-3 text-amber-400 group-hover:scale-110 transition-transform" />
-              <span>Grimório PDF</span>
-            </button>
+          {isTempleMenuOpen && (
+            <div className="mt-1 p-1 rounded-lg bg-medium-900 border border-medium-750 grid grid-cols-2 gap-1 animate-in fade-in duration-150">
+              {onOpenQuickDream && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenQuickDream();
+                    setIsTempleMenuOpen(false);
+                  }}
+                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-200 border border-indigo-500/30 transition-all text-left truncate"
+                  title="Captura Rápida de Sonhos (Alt + S)"
+                >
+                  <CloudMoon className="w-3 h-3 text-indigo-400 shrink-0" />
+                  <span className="truncate">Sonho (Alt+S)</span>
+                </button>
+              )}
+
+              {onOpenTimer && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenTimer();
+                    setIsTempleMenuOpen(false);
+                  }}
+                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-medium-800 hover:bg-medium-750 text-blue-200 border border-medium-700 transition-all text-left truncate"
+                  title="Cronômetro Dharana (Liber E)"
+                >
+                  <Clock className="w-3 h-3 text-blue-400 shrink-0" />
+                  <span className="truncate">Dharana</span>
+                </button>
+              )}
+
+              {onOpenAltar && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenAltar();
+                    setIsTempleMenuOpen(false);
+                  }}
+                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-amber-950/30 hover:bg-amber-900/50 text-amber-200 border border-amber-500/30 transition-all text-left truncate"
+                  title="Modo Altar em Tela Cheia"
+                >
+                  <Flame className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span className="truncate">Altar Ritual</span>
+                </button>
+              )}
+
+              {onOpenGrimoireCompiler && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenGrimoireCompiler();
+                    setIsTempleMenuOpen(false);
+                  }}
+                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-medium-800 hover:bg-medium-750 text-medium-200 border border-medium-700 transition-all text-left truncate"
+                  title="Compilar Grimório em PDF"
+                >
+                  <BookMarked className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span className="truncate">Grimório PDF</span>
+                </button>
+              )}
+
+              {onOpenGematria && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenGematria();
+                    setIsTempleMenuOpen(false);
+                  }}
+                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-medium-800 hover:bg-medium-750 text-amber-200 border border-medium-700 transition-all text-left truncate col-span-2"
+                  title="Calculadora de Gematria Thelêmica"
+                >
+                  <Calculator className="w-3 h-3 text-amber-400 shrink-0" />
+                  <span className="truncate">Gematria Thelêmica (777)</span>
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

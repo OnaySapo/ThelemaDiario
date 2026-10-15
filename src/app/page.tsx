@@ -14,6 +14,7 @@ import { AltarModeModal } from "@/components/AltarModeModal";
 import { SpotlightModal } from "@/components/SpotlightModal";
 import { QuickDreamModal } from "@/components/QuickDreamModal";
 import { GrimoireCompilerModal } from "@/components/GrimoireCompilerModal";
+import { GematriaModal } from "@/components/GematriaModal";
 import { AstrologicalCoordinates } from "@/lib/astronomy";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { getDefaultTemplateForCategory } from "@/lib/templates";
@@ -32,6 +33,7 @@ export default function Home() {
   const [isSpotlightOpen, setIsSpotlightOpen] = useState(false);
   const [isQuickDreamOpen, setIsQuickDreamOpen] = useState(false);
   const [isGrimoireOpen, setIsGrimoireOpen] = useState(false);
+  const [isGematriaOpen, setIsGematriaOpen] = useState(false);
   const [astroData, setAstroData] = useState<AstrologicalCoordinates | null>(null);
   const [loading, setLoading] = useState(true);
   const [isZenMode, setIsZenMode] = useState(false);
@@ -302,6 +304,7 @@ export default function Home() {
           onOpenAltar={() => setIsAltarModalOpen(true)}
           onOpenQuickDream={() => setIsQuickDreamOpen(true)}
           onOpenGrimoireCompiler={() => setIsGrimoireOpen(true)}
+          onOpenGematria={() => setIsGematriaOpen(true)}
         />
       </div>
 
@@ -456,6 +459,17 @@ export default function Home() {
         isOpen={isGrimoireOpen}
         onClose={() => setIsGrimoireOpen(false)}
         entries={entries}
+      />
+
+      {/* Calculadora de Gematria Thelêmica & Liber 777 */}
+      <GematriaModal
+        isOpen={isGematriaOpen}
+        onClose={() => setIsGematriaOpen(false)}
+        allEntries={entries}
+        onSelectEntry={(entry) => {
+          setSelectedEntryId(entry.id);
+          setViewMode("article");
+        }}
       />
     </div>
   );

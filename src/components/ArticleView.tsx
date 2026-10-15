@@ -52,8 +52,14 @@ import {
   Strikethrough,
   Layers,
   Search,
+  Sun,
+  Calculator,
 } from "lucide-react";
 import { ImageInsertModal, VideoInsertModal } from "@/components/MediaInsertModais";
+import { SlashCommandMenu, SlashCommandItem } from "@/components/SlashCommandMenu";
+import { GematriaModal } from "@/components/GematriaModal";
+import { calculateGematria } from "@/lib/gematria";
+import { getReshSolarTide, getLiberReshFullText } from "@/lib/astronomy";
 
 interface ArticleViewProps {
   entry: MagickEntry | null;
@@ -147,6 +153,22 @@ export function ArticleView({
   const [selectedCustomColor, setSelectedCustomColor] = useState("#E5B842");
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+
+  // Slash Commands (/)
+  const [isSlashMenuOpen, setIsSlashMenuOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState("");
+  const [slashPosition, setSlashPosition] = useState({ top: 0, left: 0 });
+  const [slashStartIndex, setSlashStartIndex] = useState<number | null>(null);
+
+  // Gematria Thelêmica Modal & Floating Selection Badge
+  const [isGematriaModalOpen, setIsGematriaModalOpen] = useState(false);
+  const [gematriaSelectedText, setGematriaSelectedText] = useState("");
+  const [floatingGematria, setFloatingGematria] = useState<{
+    text: string;
+    value: number;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Símbolos Mágickos Herméticos & Thelêmicos
   const HERMETIC_SYMBOLS = [
@@ -538,6 +560,100 @@ export function ArticleView({
     insertFormatting(`\n\n---\n**∴ 93 93/93 ∴**\n*Amor é a lei, amor sob vontade.*\n\n`);
   };
 
+  // Inserir adoração solar do Liber Resh vel Helios para o trânsito atual
+  const handleInsertLiberResh = () => {
+    const tide = getReshSolarTide(new Date());
+    const fullText = getLiberReshFullText(tide.station);
+    insertFormatting(`\n\n${fullText.fullMarkdown}\n\n`);
+  };
+
+  // Listener para seleção de texto para badge inteligente de Gematria
+  React.useEffect(() => {
+    const handleSelection = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed) {
+        setFloatingGematria(null);
+        return;
+      }
+      const text = selection.toString().trim();
+      if (text && text.length > 0 && text.length <= 40 && !text.includes("\n")) {
+        const gem = calculateGematria(text);
+        if (gem.primaryValue > 0) {
+          try {
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            if (rect && rect.top > 0) {
+              setFloatingGematria({
+                text,
+                value: gem.primaryValue,
+                x: rect.left + rect.width / 2,
+                y: Math.max(10, rect.top - 38),
+              });
+              return;
+            }
+          } catch (err) {}
+        }
+      }
+      setFloatingGematria(null);
+    };
+
+    document.addEventListener("selectionchange", handleSelection);
+    return () => document.removeEventListener("selectionchange", handleSelection);
+  }, []);
+
+  // Executar ação de Slash Command substituindo o gatilho "/..."
+  const executeSlashAction = (action: () => void) => {
+    if (slashStartIndex !== null && textareaRef.current) {
+      const textarea = textareaRef.current;
+      const cursor = textarea.selectionStart;
+      const current = textarea.value;
+
+      const before = current.substring(0, slashStartIndex);
+      const after = current.substring(cursor);
+      const updated = before + after;
+      setEditContent(updated);
+
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(slashStartIndex, slashStartIndex);
+        action();
+      }, 10);
+    } else {
+      action();
+    }
+    setIsSlashMenuOpen(false);
+  };
+
+  // Detectar digitação de "/" no textarea para acionar Slash Commands
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setEditContent(val);
+
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const cursor = textarea.selectionStart;
+    const textBeforeCursor = val.substring(0, cursor);
+
+    const slashMatch = textBeforeCursor.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/);
+
+    if (slashMatch) {
+      const query = slashMatch[1];
+      setSlashQuery(query);
+      setSlashStartIndex(cursor - query.length - 1);
+
+      const rect = textarea.getBoundingClientRect();
+      const lines = textBeforeCursor.split("\n").length;
+      const top = rect.top + Math.min(rect.height - 40, lines * 22 - textarea.scrollTop + 30);
+      const left = Math.min(rect.left + 30, window.innerWidth - 320);
+
+      setSlashPosition({ top, left });
+      setIsSlashMenuOpen(true);
+    } else {
+      setIsSlashMenuOpen(false);
+    }
+  };
+
   // Inserir item de checklist no cursor
   const handleInsertChecklist = () => {
     insertFormatting("\n- [ ] ");
@@ -798,6 +914,208 @@ export function ArticleView({
     const tableTemplate = `\n| Correspondência | Símbolo | Atribuição | Efeito / Notas |\n| :--- | :---: | :---: | :--- |\n| Planeta | ☉ Sol | Tiphareth | Consciência solar plena |\n| Elemento | 🔥 Fogo | Yod | Foco da Verdadeira Vontade |\n| Incenso | Olibano | Ar | Purificação do templo |\n\n`;
     insertFormatting(tableTemplate);
   };
+
+  const slashCommands: SlashCommandItem[] = [
+    {
+      id: "resh",
+      title: "Adoração do Liber Resh",
+      description: "Insere a adoração solar da maré atual (Ra, Hathor, Tum, Khephra)",
+      icon: <Sun className="w-4 h-4 text-amber-400" />,
+      category: "thelêmico",
+      keywords: ["resh", "adoracao", "sol", "helios", "ra", "hathor", "tum", "khephra"],
+      action: () => executeSlashAction(handleInsertLiberResh),
+    },
+    {
+      id: "gematria",
+      title: "Gematria Thelêmica",
+      description: "Calculadora de valores cabalísticos e correspondências do Liber 777",
+      icon: <Calculator className="w-4 h-4 text-amber-400" />,
+      category: "thelêmico",
+      keywords: ["gematria", "numero", "cabala", "777", "hebraico", "grego"],
+      action: () => {
+        setIsSlashMenuOpen(false);
+        setGematriaSelectedText("");
+        setIsGematriaModalOpen(true);
+      },
+    },
+    {
+      id: "checklist",
+      title: "Lista de Tarefas / Checklist",
+      description: "Item de checklist interativo clicável (- [ ])",
+      icon: <CheckSquare className="w-4 h-4 text-emerald-400" />,
+      category: "formatação",
+      keywords: ["check", "tarefa", "lista", "todo"],
+      action: () => executeSlashAction(handleInsertChecklist),
+    },
+    {
+      id: "tarot",
+      title: "Carta de Tarot de Thoth",
+      description: "Inserir lâmina individual com correspondências e zoom (![tarot:...])",
+      icon: <Layers className="w-4 h-4 text-amber-400" />,
+      category: "hermético",
+      keywords: ["tarot", "thoth", "carta", "lamina", "arcano", "crowley"],
+      action: () => {
+        setIsSlashMenuOpen(false);
+        setIsTarotPickerOpen(true);
+      },
+    },
+    {
+      id: "oracle-table",
+      title: "Mesa Oracular de Thoth",
+      description: "Pano de Altar, baralho 3D e tiragens no corpo da nota",
+      icon: <Sparkles className="w-4 h-4 text-amber-300" />,
+      category: "hermético",
+      keywords: ["mesa", "oraculo", "tiragem", "baralho"],
+      action: () => executeSlashAction(handleToggleOracleTable),
+    },
+    {
+      id: "astral-stamp",
+      title: "Carimbo Astral do Momento",
+      description: "Sol, Lua, Signos e Hora Planetária exatos",
+      icon: <Compass className="w-4 h-4 text-amber-300" />,
+      category: "thelêmico",
+      keywords: ["carimbo", "astral", "transito", "lua", "signo", "planeta"],
+      action: () => executeSlashAction(handleInsertAstralStamp),
+    },
+    {
+      id: "thelemic-seal",
+      title: "Selo Thelêmico 93",
+      description: "∴ 93 93/93 ∴ Amor é a lei, amor sob vontade",
+      icon: <span className="font-bold text-amber-400 text-xs">∴93∴</span>,
+      category: "thelêmico",
+      keywords: ["selo", "93", "thelema", "encerramento"],
+      action: () => executeSlashAction(handleInsertThelemicSeal),
+    },
+    {
+      id: "note-link",
+      title: "Linkar Outra Nota",
+      description: "Wikilink estilo Obsidian ([[Nome da Nota]])",
+      icon: <Link2 className="w-4 h-4 text-amber-400" />,
+      category: "formatação",
+      keywords: ["link", "nota", "wikilink", "obsidian", "conectar"],
+      action: () => {
+        setIsSlashMenuOpen(false);
+        setIsNoteLinkMenuOpen(true);
+      },
+    },
+    {
+      id: "table",
+      title: "Tabela de Correspondências",
+      description: "Tabela formatada de correspondências do Liber 777",
+      icon: <Table className="w-4 h-4 text-sky-400" />,
+      category: "formatação",
+      keywords: ["tabela", "grid", "correspondencias"],
+      action: () => executeSlashAction(handleInsertTable),
+    },
+    {
+      id: "callout-insight",
+      title: "Callout: Insight & Gnose",
+      description: "Caixa dourada de revelações e iluminações astrais",
+      icon: <Sparkles className="w-4 h-4 text-amber-400" />,
+      category: "hermético",
+      keywords: ["callout", "gnose", "insight", "revelacao"],
+      action: () => executeSlashAction(() => insertCallout("INSIGHT")),
+    },
+    {
+      id: "callout-ritual",
+      title: "Callout: Ritual & Operação",
+      description: "Passo a passo, posturas e vibrações",
+      icon: <Compass className="w-4 h-4 text-purple-400" />,
+      category: "hermético",
+      keywords: ["callout", "ritual", "operacao"],
+      action: () => executeSlashAction(() => insertCallout("RITUAL")),
+    },
+    {
+      id: "callout-aviso",
+      title: "Callout: Advertência Hermética",
+      description: "Banimentos, avisos e proteção mágica",
+      icon: <ShieldAlert className="w-4 h-4 text-rose-400" />,
+      category: "hermético",
+      keywords: ["callout", "aviso", "advertencia", "banimento"],
+      action: () => executeSlashAction(() => insertCallout("AVISO")),
+    },
+    {
+      id: "callout-777",
+      title: "Callout: Liber 777 Atribuição",
+      description: "Cores, incensos e deidades",
+      icon: <Star className="w-4 h-4 text-sky-400" />,
+      category: "hermético",
+      keywords: ["callout", "777", "atribuicao"],
+      action: () => executeSlashAction(() => insertCallout("CORRESPONDENCIA")),
+    },
+    {
+      id: "symbols",
+      title: "Símbolos Herméticos",
+      description: "Paleta rápida de símbolos mágickos (☉ ☽ 🜂 🜄 ⛤ 𓁹 ☥ ⚚)",
+      icon: <span className="text-amber-300 font-bold text-xs">☉</span>,
+      category: "hermético",
+      keywords: ["simbolos", "hermetico", "sol", "lua", "elementos"],
+      action: () => {
+        setIsSlashMenuOpen(false);
+        setIsSymbolsMenuOpen(true);
+      },
+    },
+    {
+      id: "h1",
+      title: "Título H1",
+      description: "Cabeçalho principal grande (# )",
+      icon: <Heading1 className="w-4 h-4 text-white" />,
+      category: "formatação",
+      keywords: ["h1", "titulo", "cabecalho"],
+      action: () => executeSlashAction(() => insertFormatting("# ")),
+    },
+    {
+      id: "h2",
+      title: "Subtítulo H2",
+      description: "Subtítulo de seção (## )",
+      icon: <Heading2 className="w-4 h-4 text-white" />,
+      category: "formatação",
+      keywords: ["h2", "subtitulo"],
+      action: () => executeSlashAction(() => insertFormatting("## ")),
+    },
+    {
+      id: "h3",
+      title: "Título Menor H3",
+      description: "Título de subseção (### )",
+      icon: <Heading3 className="w-4 h-4 text-white" />,
+      category: "formatação",
+      keywords: ["h3"],
+      action: () => executeSlashAction(() => insertFormatting("### ")),
+    },
+    {
+      id: "quote",
+      title: "Citação / Aforismo",
+      description: "Bloco de citação de grimório (> )",
+      icon: <Quote className="w-4 h-4 text-medium-300" />,
+      category: "formatação",
+      keywords: ["citacao", "quote", "aforismo"],
+      action: () => executeSlashAction(() => insertFormatting("> ")),
+    },
+    {
+      id: "image",
+      title: "Inserir Imagem",
+      description: "Upload local ou URL de imagem",
+      icon: <ImageIcon className="w-4 h-4 text-medium-300" />,
+      category: "mídia",
+      keywords: ["imagem", "foto", "figura", "upload"],
+      action: () => {
+        setIsSlashMenuOpen(false);
+        handleInsertImage();
+      },
+    },
+    {
+      id: "video",
+      title: "Inserir Vídeo",
+      description: "YouTube ou arquivo local",
+      icon: <Video className="w-4 h-4 text-medium-300" />,
+      category: "mídia",
+      keywords: ["video", "youtube", "midia"],
+      action: () => {
+        setIsSlashMenuOpen(false);
+        handleInsertVideo();
+      },
+    },
+  ];
 
   const handleExportMarkdown = () => {
     if (!entry) return;
@@ -2728,6 +3046,31 @@ export function ArticleView({
                 <span className="hidden sm:inline font-sans font-medium">Carimbo Astral</span>
               </button>
 
+              {/* Adoração Liber Resh */}
+              <button
+                type="button"
+                onClick={handleInsertLiberResh}
+                className="flex items-center gap-1.5 px-2 py-1 rounded transition-all text-xs font-mono text-medium-300 hover:text-amber-300 hover:bg-medium-750 border border-transparent"
+                title="Inserir Adoração Solar do Liber Resh vel Helios da hora atual"
+              >
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline font-sans font-medium">Liber Resh</span>
+              </button>
+
+              {/* Gematria Thelêmica */}
+              <button
+                type="button"
+                onClick={() => {
+                  setGematriaSelectedText("");
+                  setIsGematriaModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-2 py-1 rounded transition-all text-xs font-mono text-medium-300 hover:text-amber-300 hover:bg-medium-750 border border-transparent"
+                title="Calculadora de Gematria Thelêmica & Liber 777"
+              >
+                <Calculator className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline font-sans font-medium">Gematria</span>
+              </button>
+
               {/* Selo Thelêmico */}
               <button
                 type="button"
@@ -2826,10 +3169,10 @@ export function ArticleView({
                     ref={textareaRef}
                     rows={22}
                     value={editContent}
-                    onChange={(e) => setEditContent(e.target.value)}
+                    onChange={handleContentChange}
                     onPaste={handleTextareaPaste}
                     onDrop={handleTextareaDrop}
-                    placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Pode colar ou arrastar imagens aqui!)"
+                    placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Digite '/' para comandos rápidos ou cole imagens diretamente!)"
                     className={`w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed resize-y min-h-[480px] ${getFontClass()}`}
                     style={{ fontSize: `${fontSize}px` }}
                   />
@@ -2871,10 +3214,10 @@ export function ArticleView({
                   ref={textareaRef}
                   rows={16}
                   value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
+                  onChange={handleContentChange}
                   onPaste={handleTextareaPaste}
                   onDrop={handleTextareaDrop}
-                  placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Pode colar Ctrl+V ou arrastar imagens diretamente aqui!)"
+                  placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Digite '/' para comandos rápidos ou cole imagens diretamente!)"
                   className={`w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed ${getFontClass()}`}
                   style={{ fontSize: `${fontSize}px` }}
                 />
@@ -2893,76 +3236,6 @@ export function ArticleView({
                 </div>
               </div>
             )}
-
-            {/* Influences Section */}
-            <div className="p-4 rounded-lg bg-medium-850 border border-medium-700 space-y-3">
-              <span className="block text-xs font-mono font-bold text-white uppercase">
-                Influências Mágicas (Liber 777)
-              </span>
-
-              <div className="flex flex-wrap gap-2">
-                {editInfluences.map((inf, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-medium-800 border border-medium-700 text-xs text-white"
-                  >
-                    <strong className="text-medium-400 capitalize">{inf.category}:</strong>
-                    <span>{inf.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => setEditInfluences(editInfluences.filter((_, idx) => idx !== i))}
-                      className="text-medium-400 hover:text-red-400 ml-1"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                <select
-                  value={newInfCat}
-                  onChange={(e) => setNewInfCat(e.target.value)}
-                  className="bg-medium-800 border border-medium-700 rounded px-2.5 py-1.5 text-xs text-white"
-                >
-                  <option value="entity">Entidade / Deidade</option>
-                  <option value="tool">Arma / Instrumento</option>
-                  <option value="incense">Incenso / Perfume</option>
-                  <option value="candle">Vela / Cor</option>
-                  <option value="feeling">Sentimento / Êxtase</option>
-                </select>
-
-                <input
-                  type="text"
-                  value={newInfVal}
-                  onChange={(e) => setNewInfVal(e.target.value)}
-                  placeholder="Nome (ex: Babalon, Olíbano, Espada)..."
-                  className="flex-1 bg-medium-800 border border-medium-700 rounded px-3 py-1.5 text-xs text-white placeholder-medium-500"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      if (newInfVal.trim()) {
-                        setEditInfluences([...editInfluences, { category: newInfCat, name: newInfVal.trim() }]);
-                        setNewInfVal("");
-                      }
-                    }
-                  }}
-                />
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (newInfVal.trim()) {
-                      setEditInfluences([...editInfluences, { category: newInfCat, name: newInfVal.trim() }]);
-                      setNewInfVal("");
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-white text-black font-semibold text-xs rounded hover:bg-medium-200"
-                >
-                  Adicionar
-                </button>
-              </div>
-            </div>
 
             {/* Bottom Actions */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-medium-700">
@@ -3190,6 +3463,49 @@ export function ArticleView({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Menu Flutuante de Slash Commands (/) */}
+      <SlashCommandMenu
+        isOpen={isSlashMenuOpen}
+        query={slashQuery}
+        position={slashPosition}
+        onClose={() => setIsSlashMenuOpen(false)}
+        commands={slashCommands}
+      />
+
+      {/* Modal da Calculadora de Gematria Thelêmica & Liber 777 */}
+      <GematriaModal
+        isOpen={isGematriaModalOpen}
+        onClose={() => setIsGematriaModalOpen(false)}
+        initialText={gematriaSelectedText}
+        allEntries={allEntries}
+        onInsertGematriaNote={(md) => insertFormatting(md)}
+        onSelectEntry={onSelectEntry}
+      />
+
+      {/* Floating Gematria Badge ao selecionar palavras */}
+      {floatingGematria && (
+        <button
+          type="button"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            setGematriaSelectedText(floatingGematria.text);
+            setIsGematriaModalOpen(true);
+            setFloatingGematria(null);
+          }}
+          style={{
+            position: "fixed",
+            top: `${floatingGematria.y}px`,
+            left: `${floatingGematria.x}px`,
+            transform: "translateX(-50%)",
+          }}
+          className="z-50 px-2.5 py-1 rounded-full bg-black/90 text-amber-400 border border-amber-500/60 shadow-2xl text-xs font-mono font-bold flex items-center gap-1.5 hover:scale-105 hover:bg-amber-950/90 transition-all animate-in fade-in zoom-in-90 duration-150 cursor-pointer"
+          title="Ver cálculo cabalístico e correspondências no Liber 777"
+        >
+          <Calculator className="w-3 h-3 text-amber-400" />
+          <span>Gematria: {floatingGematria.value}</span>
+        </button>
       )}
     </div>
   );

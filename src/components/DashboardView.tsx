@@ -18,6 +18,8 @@ import {
   Flame,
   CheckCircle,
 } from "lucide-react";
+import { MagicHeatmap } from "@/components/MagicHeatmap";
+import { LiberReshWidget } from "@/components/LiberReshWidget";
 
 interface DashboardViewProps {
   entries: MagickEntry[];
@@ -254,6 +256,19 @@ export function DashboardView({
             </span>
           </div>
         </div>
+      </div>
+
+      {/* ========================================================
+          DISCIPLINA MÁGICA & MARÉ SOLAR
+          ======================================================== */}
+      <div className="space-y-4">
+        <LiberReshWidget />
+        <MagicHeatmap
+          entries={entries}
+          onSelectDate={(dateStr) => {
+            setSearchQuery(dateStr);
+          }}
+        />
       </div>
 
       {/* ========================================================

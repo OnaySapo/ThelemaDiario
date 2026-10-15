@@ -11,6 +11,7 @@ import {
   EstrelaDeThelema,
 } from "@/components/ThelemicIcons";
 import { DynamicMoonPhase } from "@/components/DynamicMoonPhase";
+import { LiberReshWidget } from "@/components/LiberReshWidget";
 import {
   getFullAstrologicalData,
   getUpcomingMoonPhases,
@@ -303,42 +304,11 @@ export function HomeView({
           </div>
         </div>
 
-        {/* Maré Solar Thelêmica (Liber Resh Station Indicator) */}
-        {reshTide && (
-          <div className="mt-6 pt-5 border-t border-medium-750 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="w-8 h-8 rounded-full bg-medium-800 border border-medium-700 flex items-center justify-center text-white font-mono text-sm font-bold">
-                {reshTide.symbol}
-              </span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold text-white uppercase">
-                    Maré Solar (Liber Resh): {reshTide.station} no {reshTide.direction}
-                  </span>
-                  <span className="text-[10px] font-mono px-2 py-0.2 rounded bg-medium-800 text-medium-300 border border-medium-700">
-                    {reshTide.hourRange}
-                  </span>
-                </div>
-                <p className="text-[11px] text-medium-400 italic font-serif mt-0.5 line-clamp-1">
-                  "{reshTide.salutation}"
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-[11px] font-mono text-medium-400">
-                Próxima adoração: <strong className="text-white">{reshTide.nextStation}</strong> (em ~{Math.floor(reshTide.minutesToNext / 60)}h {reshTide.minutesToNext % 60}m)
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowReshModal(true)}
-                className="px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded text-xs font-mono border border-medium-700 transition-colors"
-              >
-                Invocação Completa
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Maré Solar Thelêmica Interativa (Liber Resh vel Helios) */}
+        <LiberReshWidget
+          onInsertAdoration={(md) => onNewNote("Prática", md, "Adoração de Liber Resh")}
+          className="mt-6"
+        />
       </section>
 
       {/* ========================================================
