@@ -36,6 +36,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isZenMode, setIsZenMode] = useState(false);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
+  const [autoEditEntryId, setAutoEditEntryId] = useState<string | null>(null);
 
   // Global keyboard shortcuts (Ctrl+\ for Zen Mode, Ctrl+K for Spotlight, Alt+S for Quick Dream, Escape for Graph Modal)
   useEffect(() => {
@@ -172,6 +173,7 @@ export default function Home() {
       });
       const data = await res.json();
       if (data.success) {
+        setAutoEditEntryId(data.entry.id);
         await loadEntries(data.entry.id);
         setViewMode("article");
       }
@@ -347,6 +349,8 @@ export default function Home() {
             isZenMode={isZenMode}
             onToggleZenMode={() => setIsZenMode((prev) => !prev)}
             onBackToHome={() => setViewMode("home")}
+            autoEdit={autoEditEntryId === selectedEntry?.id}
+            onClearAutoEdit={() => setAutoEditEntryId(null)}
           />
         )}
       </main>

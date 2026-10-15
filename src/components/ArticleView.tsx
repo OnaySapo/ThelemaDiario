@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
-import { THOTH_TAROT_DECK, TAROT_SPREADS } from "@/lib/thothTarot";
+import { THOTH_TAROT_DECK, TAROT_SPREADS, ThothCard } from "@/lib/thothTarot";
 import { getCategoryThelemicIcon, ThelemicDateDisplay, ZodiacIcon } from "@/components/ThelemicIcons";
 import { OracleTable, CardOnTable } from "@/components/OracleTable";
 import { getDefaultTemplateForCategory } from "@/lib/templates";
@@ -47,6 +47,11 @@ import {
   Columns,
   Info,
   ShieldAlert,
+  CheckSquare,
+  Highlighter,
+  Strikethrough,
+  Layers,
+  Search,
 } from "lucide-react";
 import { ImageInsertModal, VideoInsertModal } from "@/components/MediaInsertModais";
 
@@ -60,6 +65,8 @@ interface ArticleViewProps {
   isZenMode?: boolean;
   onToggleZenMode?: () => void;
   onBackToHome?: () => void;
+  autoEdit?: boolean;
+  onClearAutoEdit?: () => void;
 }
 
 export function ArticleView({
@@ -72,6 +79,8 @@ export function ArticleView({
   isZenMode = false,
   onToggleZenMode,
   onBackToHome,
+  autoEdit = false,
+  onClearAutoEdit,
 }: ArticleViewProps) {
   const [isEditing, setIsEditing] = useState(false);
 
@@ -123,6 +132,15 @@ export function ArticleView({
   // Reading Width / Margin State (with LocalStorage persistence)
   const [readingWidth, setReadingWidth] = useState<number>(780);
   const [isMarginPopoverOpen, setIsMarginPopoverOpen] = useState(false);
+
+  // Tipografia (Família & Tamanho da Fonte com persistência)
+  const [fontFamily, setFontFamily] = useState<"serif" | "sans" | "mono">("serif");
+  const [fontSize, setFontSize] = useState<number>(17);
+
+  // Cartas de Tarot Inline & Lightbox Zoom
+  const [isTarotPickerOpen, setIsTarotPickerOpen] = useState(false);
+  const [tarotPickerSearch, setTarotPickerSearch] = useState("");
+  const [selectedTarotCardForZoom, setSelectedTarotCardForZoom] = useState<ThothCard | null>(null);
 
   // Color Picker & Media Modals State
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
@@ -196,7 +214,7 @@ export function ArticleView({
     { name: "Cinza Etéreo", color: "#9CA3AF" },
   ];
 
-  // Carrega largura salva de margem do localStorage
+  // Carrega largura salva de margem e tipografia do localStorage
   React.useEffect(() => {
     try {
       const saved = localStorage.getItem("magick_diary_reading_width");
@@ -204,6 +222,17 @@ export function ArticleView({
         const parsed = parseInt(saved, 10);
         if (!isNaN(parsed) && parsed >= 550 && parsed <= 1600) {
           setReadingWidth(parsed);
+        }
+      }
+      const savedFont = localStorage.getItem("magick_diary_font_family");
+      if (savedFont === "serif" || savedFont === "sans" || savedFont === "mono") {
+        setFontFamily(savedFont);
+      }
+      const savedSize = localStorage.getItem("magick_diary_font_size");
+      if (savedSize) {
+        const parsedSize = parseInt(savedSize, 10);
+        if (!isNaN(parsedSize) && parsedSize >= 13 && parsedSize <= 26) {
+          setFontSize(parsedSize);
         }
       }
     } catch (e) {}
@@ -214,6 +243,26 @@ export function ArticleView({
     try {
       localStorage.setItem("magick_diary_reading_width", newWidth.toString());
     } catch (e) {}
+  };
+
+  const changeFontFamily = (font: "serif" | "sans" | "mono") => {
+    setFontFamily(font);
+    try {
+      localStorage.setItem("magick_diary_font_family", font);
+    } catch (e) {}
+  };
+
+  const changeFontSize = (size: number) => {
+    setFontSize(size);
+    try {
+      localStorage.setItem("magick_diary_font_size", size.toString());
+    } catch (e) {}
+  };
+
+  const getFontClass = () => {
+    if (fontFamily === "sans") return "font-sans";
+    if (fontFamily === "mono") return "font-mono";
+    return "font-serif";
   };
 
   // Autosave Draft State
@@ -370,7 +419,20 @@ export function ArticleView({
     }
 
     setIsEditing(true);
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+      }
+    }, 50);
   };
+
+  // Auto-edit hook when requested by parent (ex: ao criar nova nota)
+  React.useEffect(() => {
+    if (autoEdit && entry && !isEditing) {
+      handleStartEdit();
+      onClearAutoEdit?.();
+    }
+  }, [autoEdit, entry?.id]);
 
   const handleToggleOracleTable = () => {
     setHasOracleTable((prev) => !prev);
@@ -453,6 +515,55 @@ export function ArticleView({
       textarea.focus();
       textarea.setSelectionRange(start + prefix.length, start + prefix.length + (selected.length || 5));
     }, 10);
+  };
+
+  // Inserir carimbo do trânsito astral atual no cursor
+  const handleInsertAstralStamp = async () => {
+    try {
+      const res = await fetch("/api/astronomy");
+      const astro = await res.json();
+      if (astro.success) {
+        const stamp = `\n> ☉ **Trânsito Astral:** Sol em ${astro.sunDegree}° ${astro.sunSign} · ☽ Lua em ${astro.moonDegree}° ${astro.moonSign} (${astro.moonPhaseName}, ${astro.moonIllumination}%) · Dia: ${astro.planetaryDay} · Hora: ${astro.planetaryHour}\n\n`;
+        insertFormatting(stamp);
+      } else {
+        insertFormatting(`\n> ☉ **Trânsito Astral:** Sol em Tiphareth · ☽ Lua em Yesod\n\n`);
+      }
+    } catch (e) {
+      insertFormatting(`\n> ☉ **Trânsito Astral:** Sol em Tiphareth · ☽ Lua em Yesod\n\n`);
+    }
+  };
+
+  // Inserir selo thelêmico formal de encerramento
+  const handleInsertThelemicSeal = () => {
+    insertFormatting(`\n\n---\n**∴ 93 93/93 ∴**\n*Amor é a lei, amor sob vontade.*\n\n`);
+  };
+
+  // Inserir item de checklist no cursor
+  const handleInsertChecklist = () => {
+    insertFormatting("\n- [ ] ");
+  };
+
+  // Alternar checklist na leitura ou preview
+  const handleToggleChecklist = async (lineIdx: number) => {
+    if (!entry) return;
+    const lines = (isEditing ? editContent : entry.content).split("\n");
+    if (lineIdx < 0 || lineIdx >= lines.length) return;
+    const targetLine = lines[lineIdx];
+    const match = targetLine.match(/^([-*])\s+\[([ xX])\]\s*(.*)$/);
+    if (!match) return;
+
+    const currentChecked = match[2].toLowerCase() === "x";
+    const newChecked = currentChecked ? " " : "x";
+    lines[lineIdx] = `${match[1]} [${newChecked}] ${match[3]}`;
+    const newContent = lines.join("\n");
+
+    setEditContent(newContent);
+    if (!isEditing) {
+      await onUpdateEntry({
+        id: entry.id,
+        content: newContent,
+      });
+    }
   };
 
   // Aplica cor do texto na seleção
@@ -877,6 +988,12 @@ export function ArticleView({
       // Cores via tags amigáveis <color=...> ou <color name=...>
       .replace(/<color=([^>]+)>(.*?)<\/color>/gi, "<span style='color: $1'>$2</span>")
       .replace(/<color\s+name=["']?([^"'>]+)["']?>(.*?)<\/color>/gi, "<span style='color: $1'>$2</span>")
+      // Marca-texto solar (==destaque==)
+      .replace(/==(.*?)==/g, "<mark class='bg-amber-400/25 text-amber-200 px-1 py-0.5 rounded border-b border-amber-400/50 font-medium'>$1</mark>")
+      // Tachado / Strikethrough (~~texto~~)
+      .replace(/~~(.*?)~~/g, "<del class='line-through text-medium-400 opacity-60'>$1</del>")
+      // Selo Thelêmico destacado (∴ 93 ∴ ou ∴ 93 93/93 ∴)
+      .replace(/\*\*∴\s*93(?:\s*93\/93)?\s*∴\*\*/g, "<span class='inline-flex items-center gap-1 font-mono text-xs font-bold text-amber-300 bg-amber-500/15 border border-amber-500/40 px-2 py-0.5 rounded tracking-wider shadow-sm'>∴ 93 93/93 ∴</span>")
       // Negrito
       .replace(/\*\*(.*?)\*\*/g, "<strong class='text-white font-semibold'>$1</strong>")
       // Itálico
@@ -941,6 +1058,137 @@ export function ArticleView({
     while (i < rawLines.length) {
       const line = rawLines[i];
       const trimmedLine = line.trim();
+
+      // 0.2 Checklist Interativa Clicável: - [ ] Tarefa ou - [x] Tarefa Concluída
+      const checklistMatch = trimmedLine.match(/^([-*])\s+\[([ xX])\]\s*(.*)$/);
+      if (checklistMatch) {
+        const isChecked = checklistMatch[2].toLowerCase() === "x";
+        const taskText = checklistMatch[3];
+        const currentLineIndex = i;
+
+        elements.push(
+          <div
+            key={`todo-${i}`}
+            onClick={() => handleToggleChecklist(currentLineIndex)}
+            className="flex items-start gap-3 my-2 cursor-pointer group select-none py-1 px-1.5 rounded hover:bg-medium-800/40 transition-colors"
+            title="Clique para alternar o status da tarefa"
+          >
+            <div
+              className={`w-4 h-4 rounded border mt-1 flex items-center justify-center shrink-0 transition-all ${
+                isChecked
+                  ? "bg-amber-400 border-amber-400 text-black shadow-sm"
+                  : "border-medium-600 bg-medium-800 group-hover:border-amber-400/80"
+              }`}
+            >
+              {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+            </div>
+            <div
+              className={`text-[16px] leading-relaxed transition-all ${
+                isChecked
+                  ? "line-through text-medium-400 opacity-60"
+                  : "text-medium-100 group-hover:text-white"
+              }`}
+              dangerouslySetInnerHTML={{ __html: renderInlineMarkdown(taskText) }}
+            />
+          </div>
+        );
+        i++;
+        continue;
+      }
+
+      // 0.3 Carta do Tarot de Thoth Inline: ![tarot:Nome Da Carta]
+      const tarotSyntaxMatch = trimmedLine.match(/^!\[tarot:(.*?)\](?:\((.*?)\))?/i);
+      if (tarotSyntaxMatch) {
+        const cardQuery = tarotSyntaxMatch[1].trim().toLowerCase();
+        const card = THOTH_TAROT_DECK.find(
+          (c) =>
+            c.name.toLowerCase() === cardQuery ||
+            c.name.toLowerCase().includes(cardQuery) ||
+            c.id.toLowerCase() === cardQuery ||
+            c.imageFile.toLowerCase().includes(cardQuery) ||
+            (c.number && c.number.toLowerCase() === cardQuery)
+        );
+
+        if (card) {
+          elements.push(
+            <div
+              key={`tarot-${i}`}
+              className="my-5 p-4 rounded-xl bg-medium-850/90 border border-amber-500/30 flex flex-col sm:flex-row items-center gap-4 shadow-lg backdrop-blur-sm group hover:border-amber-400/60 transition-all"
+            >
+              <div
+                onClick={() => setSelectedTarotCardForZoom(card)}
+                className="relative w-24 sm:w-28 aspect-[600/894] rounded-lg overflow-hidden border border-amber-400/40 shadow-md cursor-pointer shrink-0 group-hover:scale-105 transition-transform bg-black"
+                title="Clique para ampliar a lâmina do Tarot de Thoth"
+              >
+                <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-mono font-semibold">
+                  🔍 Ampliar
+                </div>
+              </div>
+              <div className="flex-1 space-y-1.5 text-center sm:text-left">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 font-semibold">
+                    {card.suit === "major" ? `Atu ${card.number}` : card.suit.toUpperCase()}
+                  </span>
+                  {card.hebrewLetter && (
+                    <span className="text-[11px] font-mono text-medium-300 bg-medium-800 px-2 py-0.5 rounded border border-medium-750">
+                      {card.hebrewLetter} ({card.hebrewName})
+                    </span>
+                  )}
+                  {card.astrologicalSign && (
+                    <span className="text-[11px] font-mono text-medium-300 bg-medium-800 px-2 py-0.5 rounded border border-medium-750">
+                      {card.astrologicalSign}
+                    </span>
+                  )}
+                  {card.sephirahPath && (
+                    <span className="text-[10px] font-mono text-medium-400 bg-medium-800/80 px-1.5 py-0.5 rounded border border-medium-750">
+                      {card.sephirahPath}
+                    </span>
+                  )}
+                </div>
+                <h4 className="text-lg font-sans font-bold text-white tracking-tight">
+                  {card.number ? `${card.number}. ` : ""}{card.name}
+                </h4>
+                {card.thelemicTitle && (
+                  <p className="text-xs font-mono text-amber-300/90 italic">
+                    "{card.thelemicTitle}"
+                  </p>
+                )}
+                <p className="text-xs text-medium-300 font-serif leading-relaxed line-clamp-2">
+                  {card.description}
+                </p>
+                {card.keywords && card.keywords.length > 0 && (
+                  <div className="flex flex-wrap justify-center sm:justify-start gap-1 pt-0.5">
+                    {card.keywords.slice(0, 4).map((kw, kIdx) => (
+                      <span key={kIdx} className="text-[9px] font-mono bg-medium-800 text-medium-300 px-1.5 py-0.5 rounded border border-medium-750">
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+          i++;
+          continue;
+        }
+      }
+
+      // 0.4 Divisores Sagrados Thelêmicos (---thelema---, ---rosacruz---, ---horus---)
+      if (/^---(thelema|rosacruz|horus|estrela)---?$/i.test(trimmedLine)) {
+        const symType = trimmedLine.replace(/-/g, "").toLowerCase();
+        elements.push(
+          <div key={`hr-sym-${i}`} className="my-8 flex items-center justify-center gap-4">
+            <div className="h-[1px] flex-1 bg-gradient-to-r from-transparent to-amber-500/40" />
+            <span className="text-amber-400 font-mono text-xs px-2.5 py-1 rounded border border-amber-500/30 bg-amber-500/10 font-bold tracking-wider uppercase flex items-center gap-1.5">
+              {symType === "thelema" ? "☉ 93 93/93 ☉" : symType === "rosacruz" ? "🝤 Rosa-Cruz Hermética 🝤" : "𓁹 Olho de Hórus 𓁹"}
+            </span>
+            <div className="h-[1px] flex-1 bg-gradient-to-l from-transparent to-amber-500/40" />
+          </div>
+        );
+        i++;
+        continue;
+      }
 
       // 1. Bloco de Tabela Markdown
       if (
@@ -1370,7 +1618,7 @@ export function ArticleView({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Botão de Margem / Largura de Leitura */}
+          {/* Botão de Visual, Tipografia & Margens */}
           <div className="relative">
             <button
               onClick={() => setIsMarginPopoverOpen(!isMarginPopoverOpen)}
@@ -1379,91 +1627,161 @@ export function ArticleView({
                   ? "bg-white text-black border-white font-semibold"
                   : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border-medium-700"
               }`}
-              title="Ajustar Margens e Largura da Área de Leitura / Edição"
+              title="Ajustar Tipografia, Tamanho da Letra e Margem da Área de Leitura / Edição"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Margem ({readingWidth}px)</span>
+              <span className="hidden sm:inline">Visual & Margem</span>
             </button>
 
             {isMarginPopoverOpen && (
-              <div className="absolute right-0 top-full mt-2 w-72 bg-medium-850 border border-medium-700 rounded-xl p-4 shadow-2xl z-40 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute right-0 top-full mt-2 w-80 bg-medium-850 border border-medium-700 rounded-xl p-4 shadow-2xl z-40 space-y-4 animate-in fade-in zoom-in-95 duration-150">
                 <div className="flex items-center justify-between pb-2 border-b border-medium-750">
                   <span className="text-xs font-mono font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                     <SlidersHorizontal className="w-3.5 h-3.5 text-white" />
-                    <span>Margem & Largura</span>
+                    <span>Visual, Fonte & Margem</span>
                   </span>
                   <span className="text-[11px] font-mono text-medium-300 font-bold bg-medium-800 px-1.5 py-0.5 rounded border border-medium-700">
-                    {readingWidth}px
+                    {readingWidth}px · {fontSize}px
                   </span>
                 </div>
 
-                {/* Presets Rápidos */}
-                <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
-                  <button
-                    type="button"
-                    onClick={() => changeReadingWidth(680)}
-                    className={`p-2 rounded text-left transition-colors border ${
-                      readingWidth === 680
-                        ? "bg-white text-black font-semibold border-white"
-                        : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
-                    }`}
-                  >
-                    Estreita
-                    <span className="block text-[10px] opacity-70">680px · Livro</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => changeReadingWidth(780)}
-                    className={`p-2 rounded text-left transition-colors border ${
-                      readingWidth === 780
-                        ? "bg-white text-black font-semibold border-white"
-                        : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
-                    }`}
-                  >
-                    Padrão
-                    <span className="block text-[10px] opacity-70">780px · Medium</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => changeReadingWidth(1050)}
-                    className={`p-2 rounded text-left transition-colors border ${
-                      readingWidth === 1050
-                        ? "bg-white text-black font-semibold border-white"
-                        : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
-                    }`}
-                  >
-                    Ampla
-                    <span className="block text-[10px] opacity-70">1050px · Tabelas</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => changeReadingWidth(1380)}
-                    className={`p-2 rounded text-left transition-colors border ${
-                      readingWidth === 1380
-                        ? "bg-white text-black font-semibold border-white"
-                        : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
-                    }`}
-                  >
-                    Total
-                    <span className="block text-[10px] opacity-70">1380px · Tela</span>
-                  </button>
+                {/* 1. Família Tipográfica */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-mono text-medium-400 uppercase font-semibold block">
+                    Família da Fonte
+                  </span>
+                  <div className="grid grid-cols-3 gap-1 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => changeFontFamily("serif")}
+                      className={`p-2 rounded font-serif text-center transition-all border ${
+                        fontFamily === "serif"
+                          ? "bg-white text-black font-semibold border-white shadow-sm"
+                          : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
+                      }`}
+                    >
+                      Grimório
+                      <span className="block text-[9px] font-mono opacity-70">Serif</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => changeFontFamily("sans")}
+                      className={`p-2 rounded font-sans text-center transition-all border ${
+                        fontFamily === "sans"
+                          ? "bg-white text-black font-semibold border-white shadow-sm"
+                          : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
+                      }`}
+                    >
+                      Moderno
+                      <span className="block text-[9px] font-mono opacity-70">Sans</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => changeFontFamily("mono")}
+                      className={`p-2 rounded font-mono text-center transition-all border ${
+                        fontFamily === "mono"
+                          ? "bg-white text-black font-semibold border-white shadow-sm"
+                          : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
+                      }`}
+                    >
+                      Alquímico
+                      <span className="block text-[9px] font-mono opacity-70">Mono</span>
+                    </button>
+                  </div>
                 </div>
 
-                {/* Slider de Ajuste Fino */}
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex justify-between text-[10px] font-mono text-medium-400">
-                    <span>Mais margem (600px)</span>
-                    <span>Menos margem (1500px)</span>
+                {/* 2. Tamanho da Fonte */}
+                <div className="space-y-1.5 pt-1 border-t border-medium-750">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-medium-400 font-semibold">
+                    <span>TAMANHO DO TEXTO</span>
+                    <span className="text-white">{fontSize}px</span>
                   </div>
-                  <input
-                    type="range"
-                    min={600}
-                    max={1500}
-                    step={20}
-                    value={readingWidth}
-                    onChange={(e) => changeReadingWidth(Number(e.target.value))}
-                    className="w-full accent-white cursor-pointer"
-                  />
+                  <div className="grid grid-cols-4 gap-1 text-xs font-mono">
+                    {[15, 17, 19, 21].map((sz) => (
+                      <button
+                        key={sz}
+                        type="button"
+                        onClick={() => changeFontSize(sz)}
+                        className={`py-1.5 rounded text-center transition-all border ${
+                          fontSize === sz
+                            ? "bg-amber-400 text-black font-bold border-amber-400 shadow-sm"
+                            : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
+                        }`}
+                      >
+                        {sz}px
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Presets de Largura */}
+                <div className="space-y-1.5 pt-1 border-t border-medium-750">
+                  <span className="text-[10px] font-mono text-medium-400 uppercase font-semibold block">
+                    Largura da Área
+                  </span>
+                  <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
+                    <button
+                      type="button"
+                      onClick={() => changeReadingWidth(680)}
+                      className={`p-1.5 rounded text-left transition-colors border ${
+                        readingWidth === 680
+                          ? "bg-white text-black font-semibold border-white"
+                          : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
+                      }`}
+                    >
+                      Estreita (680px)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => changeReadingWidth(780)}
+                      className={`p-1.5 rounded text-left transition-colors border ${
+                        readingWidth === 780
+                          ? "bg-white text-black font-semibold border-white"
+                          : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
+                      }`}
+                    >
+                      Padrão (780px)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => changeReadingWidth(1050)}
+                      className={`p-1.5 rounded text-left transition-colors border ${
+                        readingWidth === 1050
+                          ? "bg-white text-black font-semibold border-white"
+                          : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
+                      }`}
+                    >
+                      Ampla (1050px)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => changeReadingWidth(1380)}
+                      className={`p-1.5 rounded text-left transition-colors border ${
+                        readingWidth === 1380
+                          ? "bg-white text-black font-semibold border-white"
+                          : "bg-medium-800 text-medium-300 hover:text-white border-medium-700"
+                      }`}
+                    >
+                      Total (1380px)
+                    </button>
+                  </div>
+
+                  {/* Slider de Ajuste Fino */}
+                  <div className="space-y-1 pt-1">
+                    <div className="flex justify-between text-[10px] font-mono text-medium-400">
+                      <span>Mais margem (600px)</span>
+                      <span>Menos margem (1500px)</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={600}
+                      max={1500}
+                      step={20}
+                      value={readingWidth}
+                      onChange={(e) => changeReadingWidth(Number(e.target.value))}
+                      className="w-full accent-white cursor-pointer"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -1656,7 +1974,8 @@ export function ArticleView({
             {/* Article Body Content */}
             <div
               onClick={handleArticleClick}
-              className="pt-4 border-t border-medium-800"
+              className={`pt-4 border-t border-medium-800 ${getFontClass()}`}
+              style={{ fontSize: `${fontSize}px` }}
             >
               {renderFormattedContent(entry.content)}
             </div>
@@ -2003,6 +2322,22 @@ export function ArticleView({
               >
                 <Underline className="w-4 h-4" />
               </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting("==", "==")}
+                className="p-1.5 text-medium-300 hover:text-amber-300 hover:bg-medium-750 rounded transition-colors"
+                title="Marca-texto Solar (==Destaque==)"
+              >
+                <Highlighter className="w-4 h-4 text-amber-400" />
+              </button>
+              <button
+                type="button"
+                onClick={() => insertFormatting("~~", "~~")}
+                className="p-1.5 text-medium-300 hover:text-white hover:bg-medium-750 rounded transition-colors"
+                title="Tachado / Riscado (~~Texto~~)"
+              >
+                <Strikethrough className="w-4 h-4" />
+              </button>
 
               {/* Seletor de Cores de Texto */}
               <div className="relative">
@@ -2120,6 +2455,15 @@ export function ArticleView({
 
               <button
                 type="button"
+                onClick={handleInsertChecklist}
+                className="p-1.5 text-medium-300 hover:text-white hover:bg-medium-750 rounded transition-colors"
+                title="Inserir Lista de Tarefas / Checklist do Ritual (- [ ])"
+              >
+                <CheckSquare className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
                 onClick={handleInsertImage}
                 className="p-1.5 text-medium-300 hover:text-white hover:bg-medium-750 rounded transition-colors"
                 title="Inserir Imagem (via URL ou Upload)"
@@ -2143,6 +2487,15 @@ export function ArticleView({
                 title="Inserir Tabela Formatada de Correspondências"
               >
                 <Table className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsTarotPickerOpen(true)}
+                className="p-1.5 text-medium-300 hover:text-amber-300 hover:bg-medium-750 rounded transition-colors"
+                title="Inserir Lâmina Individual do Tarot de Thoth (![tarot:...])"
+              >
+                <Layers className="w-4 h-4 text-amber-400" />
               </button>
 
               <button
@@ -2364,6 +2717,28 @@ export function ArticleView({
                 )}
               </div>
 
+              {/* Carimbo Astral do Momento */}
+              <button
+                type="button"
+                onClick={handleInsertAstralStamp}
+                className="flex items-center gap-1.5 px-2 py-1 rounded transition-all text-xs font-mono text-medium-300 hover:text-amber-300 hover:bg-medium-750 border border-transparent"
+                title="Carimbar Trânsito Astral do Momento (Sol, Lua, Signos e Hora Planetária)"
+              >
+                <Compass className="w-3.5 h-3.5 text-amber-300" />
+                <span className="hidden sm:inline font-sans font-medium">Carimbo Astral</span>
+              </button>
+
+              {/* Selo Thelêmico */}
+              <button
+                type="button"
+                onClick={handleInsertThelemicSeal}
+                className="flex items-center gap-1.5 px-2 py-1 rounded transition-all text-xs font-mono text-medium-300 hover:text-amber-300 hover:bg-medium-750 border border-transparent"
+                title="Inserir Selo Thelêmico Formal (∴ 93 93/93 ∴ Amor é a lei, amor sob vontade)"
+              >
+                <span className="text-amber-400 font-bold text-xs">∴93∴</span>
+                <span className="hidden sm:inline font-sans font-medium">Selo 93</span>
+              </button>
+
               {/* Gravador de Áudio de Voz */}
               {!isRecordingAudio ? (
                 <button
@@ -2445,7 +2820,7 @@ export function ArticleView({
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-[11px] font-mono text-medium-400 px-1">
                     <span>EDITOR (MARKDOWN · Cole Ctrl+V ou Arraste Imagens aqui)</span>
-                    <span>{editContent.length} caracteres</span>
+                    <span className="text-amber-400/90 font-semibold">{fontFamily} · {fontSize}px</span>
                   </div>
                   <textarea
                     ref={textareaRef}
@@ -2455,8 +2830,22 @@ export function ArticleView({
                     onPaste={handleTextareaPaste}
                     onDrop={handleTextareaDrop}
                     placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Pode colar ou arrastar imagens aqui!)"
-                    className="w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-base font-serif text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed resize-y min-h-[480px]"
+                    className={`w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed resize-y min-h-[480px] ${getFontClass()}`}
+                    style={{ fontSize: `${fontSize}px` }}
                   />
+                  {/* Barra de Métricas em Tempo Real */}
+                  <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-medium-400 pt-1.5 px-1 border-t border-medium-750/60 mt-1 select-none">
+                    <div className="flex items-center gap-2.5">
+                      <span><strong className="text-white">{editContent.trim() ? editContent.trim().split(/\s+/).length : 0}</strong> palavras</span>
+                      <span>•</span>
+                      <span><strong className="text-white">{editContent.length}</strong> caracteres</span>
+                      <span>•</span>
+                      <span><strong className="text-white">{editContent.split("\n").length}</strong> linhas</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-medium-400">
+                      <span>Leitura estimada: ~<strong className="text-white">{Math.max(1, Math.ceil((editContent.trim() ? editContent.trim().split(/\s+/).length : 0) / 200))}</strong> min</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="space-y-1">
@@ -2470,14 +2859,14 @@ export function ArticleView({
                         {editTitle}
                       </h2>
                     )}
-                    <div className="prose prose-invert max-w-none">
+                    <div className={`prose prose-invert max-w-none ${getFontClass()}`} style={{ fontSize: `${fontSize}px` }}>
                       {renderFormattedContent(editContent || "*Nenhum conteúdo digitado ainda.*")}
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div>
+              <div className="space-y-1">
                 <textarea
                   ref={textareaRef}
                   rows={16}
@@ -2486,8 +2875,22 @@ export function ArticleView({
                   onPaste={handleTextareaPaste}
                   onDrop={handleTextareaDrop}
                   placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Pode colar Ctrl+V ou arrastar imagens diretamente aqui!)"
-                  className="w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-base font-serif text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed"
+                  className={`w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed ${getFontClass()}`}
+                  style={{ fontSize: `${fontSize}px` }}
                 />
+                {/* Barra de Métricas em Tempo Real */}
+                <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-medium-400 pt-1.5 px-1 border-t border-medium-750/60 mt-1 select-none">
+                  <div className="flex items-center gap-2.5">
+                    <span><strong className="text-white">{editContent.trim() ? editContent.trim().split(/\s+/).length : 0}</strong> palavras</span>
+                    <span>•</span>
+                    <span><strong className="text-white">{editContent.length}</strong> caracteres</span>
+                    <span>•</span>
+                    <span><strong className="text-white">{editContent.split("\n").length}</strong> linhas</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-medium-400">
+                    <span>Leitura estimada: ~<strong className="text-white">{Math.max(1, Math.ceil((editContent.trim() ? editContent.trim().split(/\s+/).length : 0) / 200))}</strong> min</span>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -2598,6 +3001,196 @@ export function ArticleView({
           insertFormatting(`\n![video:${caption || "Vídeo"}](${url})\n`);
         }}
       />
+
+      {/* Modal Seletor de Cartas do Tarot de Thoth */}
+      {isTarotPickerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-medium-850 border border-medium-700 w-full max-w-3xl max-h-[85vh] rounded-2xl flex flex-col shadow-2xl overflow-hidden">
+            <div className="p-4 border-b border-medium-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="text-sm font-sans font-bold text-white uppercase tracking-wider">
+                    Tarot de Thoth — Inserir Lâmina no Texto
+                  </h3>
+                  <span className="text-[11px] font-mono text-medium-400">
+                    Selecione uma das 80 cartas para incorporar ao diário com correspondências completas
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTarotPickerOpen(false)}
+                className="p-1.5 text-medium-400 hover:text-white rounded-lg hover:bg-medium-750 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Busca de Cartas */}
+            <div className="p-3 border-b border-medium-750 bg-medium-900/50">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-medium-400" />
+                <input
+                  type="text"
+                  value={tarotPickerSearch}
+                  onChange={(e) => setTarotPickerSearch(e.target.value)}
+                  placeholder="Buscar por nome, número ou naipe (ex: Diabo, Louco, Espadas, 15)..."
+                  className="w-full bg-medium-800 border border-medium-700 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-amber-400 font-sans"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            {/* Grid de Cartas */}
+            <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 custom-scrollbar">
+              {THOTH_TAROT_DECK.filter((c) => {
+                if (!tarotPickerSearch.trim()) return true;
+                const q = tarotPickerSearch.toLowerCase();
+                return (
+                  c.name.toLowerCase().includes(q) ||
+                  c.number.toLowerCase().includes(q) ||
+                  c.suit.toLowerCase().includes(q) ||
+                  (c.hebrewName && c.hebrewName.toLowerCase().includes(q)) ||
+                  (c.astrologicalSign && c.astrologicalSign.toLowerCase().includes(q))
+                );
+              }).map((card) => (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() => {
+                    insertFormatting(`\n![tarot:${card.name}](${card.imageUrl})\n`);
+                    setIsTarotPickerOpen(false);
+                  }}
+                  className="group flex flex-col items-center p-2 rounded-xl bg-medium-800 hover:bg-medium-750 border border-medium-700 hover:border-amber-400/80 transition-all text-left"
+                >
+                  <div className="w-full aspect-[600/894] rounded-lg overflow-hidden bg-black mb-1.5 shadow-sm group-hover:scale-105 transition-transform">
+                    <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
+                  </div>
+                  <span className="text-[11px] font-sans font-semibold text-white group-hover:text-amber-300 truncate w-full text-center">
+                    {card.number ? `${card.number}. ` : ""}{card.name}
+                  </span>
+                  <span className="text-[9px] font-mono text-medium-400 uppercase">
+                    {card.suit === "major" ? "Arcano Maior" : card.suit}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Zoom de Carta de Tarot */}
+      {selectedTarotCardForZoom && (
+        <div
+          onClick={() => setSelectedTarotCardForZoom(null)}
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-medium-850 border border-amber-500/40 max-w-4xl w-full max-h-[90vh] rounded-2xl flex flex-col md:flex-row shadow-2xl overflow-hidden"
+          >
+            {/* Imagem em Destaque */}
+            <div className="md:w-1/2 p-6 bg-black/60 flex items-center justify-center border-b md:border-b-0 md:border-r border-medium-750">
+              <div className="max-h-[70vh] aspect-[600/894] rounded-xl overflow-hidden border border-amber-400/40 shadow-2xl">
+                <img
+                  src={selectedTarotCardForZoom.imageUrl}
+                  alt={selectedTarotCardForZoom.name}
+                  className="w-full h-full object-contain bg-black"
+                />
+              </div>
+            </div>
+
+            {/* Informações e Correspondências */}
+            <div className="md:w-1/2 p-6 flex flex-col overflow-y-auto space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-[11px] font-mono uppercase px-2.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/40 text-amber-300 font-bold">
+                    {selectedTarotCardForZoom.suit === "major"
+                      ? `Atu ${selectedTarotCardForZoom.number}`
+                      : selectedTarotCardForZoom.suit.toUpperCase()}
+                  </span>
+                  <h3 className="text-2xl font-sans font-bold text-white tracking-tight mt-1">
+                    {selectedTarotCardForZoom.number ? `${selectedTarotCardForZoom.number}. ` : ""}
+                    {selectedTarotCardForZoom.name}
+                  </h3>
+                  {selectedTarotCardForZoom.thelemicTitle && (
+                    <p className="text-xs font-mono text-amber-300/90 italic">
+                      "{selectedTarotCardForZoom.thelemicTitle}"
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTarotCardForZoom(null)}
+                  className="p-1.5 text-medium-400 hover:text-white rounded-lg hover:bg-medium-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Atribuições Herméticas */}
+              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                {selectedTarotCardForZoom.hebrewLetter && (
+                  <div className="p-2.5 rounded-lg bg-medium-800 border border-medium-750">
+                    <span className="text-[10px] text-medium-400 block">LETRA HEBRAICA:</span>
+                    <span className="text-white font-semibold">
+                      {selectedTarotCardForZoom.hebrewLetter} ({selectedTarotCardForZoom.hebrewName})
+                    </span>
+                  </div>
+                )}
+                {selectedTarotCardForZoom.astrologicalSign && (
+                  <div className="p-2.5 rounded-lg bg-medium-800 border border-medium-750">
+                    <span className="text-[10px] text-medium-400 block">SIGNO / PLANETA:</span>
+                    <span className="text-white font-semibold">{selectedTarotCardForZoom.astrologicalSign}</span>
+                  </div>
+                )}
+                {selectedTarotCardForZoom.sephirahPath && (
+                  <div className="p-2.5 rounded-lg bg-medium-800 border border-medium-750">
+                    <span className="text-[10px] text-medium-400 block">CAMINHO / ÁRVORE:</span>
+                    <span className="text-white font-semibold">{selectedTarotCardForZoom.sephirahPath}</span>
+                  </div>
+                )}
+                {selectedTarotCardForZoom.element && (
+                  <div className="p-2.5 rounded-lg bg-medium-800 border border-medium-750">
+                    <span className="text-[10px] text-medium-400 block">ELEMENTO:</span>
+                    <span className="text-white font-semibold">{selectedTarotCardForZoom.element}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Descrição */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-mono text-medium-400 uppercase font-semibold block">
+                  Significado Arquetípico & Instrução
+                </span>
+                <p className="text-xs text-medium-200 font-serif leading-relaxed">
+                  {selectedTarotCardForZoom.description}
+                </p>
+              </div>
+
+              {/* Palavras-chave */}
+              {selectedTarotCardForZoom.keywords && selectedTarotCardForZoom.keywords.length > 0 && (
+                <div className="space-y-1.5 pt-2 border-t border-medium-750">
+                  <span className="text-[10px] font-mono text-medium-400 uppercase font-semibold block">
+                    Palavras-Chave (Crowley)
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedTarotCardForZoom.keywords.map((kw, kIdx) => (
+                      <span
+                        key={kIdx}
+                        className="px-2 py-0.5 rounded-md bg-medium-800 border border-medium-700 text-xs text-medium-300 font-mono"
+                      >
+                        {kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
