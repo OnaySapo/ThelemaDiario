@@ -24,6 +24,8 @@ if exist "data\magick_diary.db" (
 
 echo.
 echo [2/4] Puxando atualizacoes do GitHub (git pull origin main)...
+git checkout -- package-lock.json 2>nul
+git fetch origin main
 git pull origin main
 
 echo.
@@ -32,12 +34,13 @@ call npm install
 
 echo.
 echo [4/4] Compilando versao otimizada (npm run build)...
+if exist ".next" rmdir /s /q ".next"
 call npm run build
 
 echo.
 echo ========================================================
 echo   ATUALIZACAO CONCLUIDA COM SUCESSO!
 echo   Suas notas continuam 100%% salvas e protegidas.
-echo   Para iniciar, execute: npm start
+echo   Para iniciar, execute: iniciar_diario.bat
 echo ========================================================
 pause

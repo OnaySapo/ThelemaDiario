@@ -1,0 +1,7 @@
+# Garante finais de linha UNIX (LF) em scripts shell para Linux/macOS
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Scripts batch do Windows mantêm CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf

@@ -16,37 +16,50 @@ echo " 'O Método da Ciência, o Objetivo da Religião.'"
 echo "========================================================"
 echo ""
 
-# 1. Verificar se Node e NPM já existem no sistema
+# 1. Verificar se Node e NPM já existem no sistema com versão adequada (>= 22.5.0)
 NODE_BIN=""
 NPM_BIN=""
 
 if command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
-    NODE_VERSION=$(node -v | tr -d 'v' | cut -d'.' -f1)
-    if [ "$NODE_VERSION" -ge 18 ]; then
+    NODE_MAJOR=$(node -v | tr -d 'v' | cut -d'.' -f1)
+    NODE_MINOR=$(node -v | tr -d 'v' | cut -d'.' -f2)
+    if [ "$NODE_MAJOR" -gt 22 ] || { [ "$NODE_MAJOR" -eq 22 ] && [ "$NODE_MINOR" -ge 5 ]; }; then
         echo "✓ Node.js detectado no sistema: $(node -v)"
         NODE_BIN="node"
         NPM_BIN="npm"
     fi
 fi
 
-# 2. Se não houver Node >= 18 no sistema, usar/baixar Node.js portátil local
+# 2. Se não houver Node >= 22.5 no sistema, usar/baixar Node.js portátil local
 if [ -z "$NODE_BIN" ]; then
     PORTABLE_DIR="$DIR/.node-linux"
     
     if [ -x "$PORTABLE_DIR/bin/node" ] && [ -x "$PORTABLE_DIR/bin/npm" ]; then
-        echo "✓ Usando Node.js portátil local em $PORTABLE_DIR"
+        echo "✓ Usando Node.js portátil local em $PORTABLE_DIR ($("$PORTABLE_DIR/bin/node" -v))"
     else
-        echo "➜ Node.js não encontrado no sistema. Baixando versão portátil oficial (independente)..."
+        echo "➜ Node.js v22+ não encontrado no sistema. Baixando versão portátil oficial (independente)..."
+        OS_NAME=$(uname -s | tr '[:upper:]' '[:lower:]')
         ARCH=$(uname -m)
         NODE_VER="v22.14.0"
         
-        if [ "$ARCH" = "x86_64" ]; then
-            TAR_NAME="node-${NODE_VER}-linux-x64.tar.xz"
-        elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
-            TAR_NAME="node-${NODE_VER}-linux-arm64.tar.xz"
+        if [ "$OS_NAME" = "linux" ]; then
+            if [ "$ARCH" = "x86_64" ]; then
+                TAR_NAME="node-${NODE_VER}-linux-x64.tar.xz"
+            elif [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+                TAR_NAME="node-${NODE_VER}-linux-arm64.tar.xz"
+            else
+                echo "❌ Arquitetura '$ARCH' não suportada automaticamente para download portátil."
+                echo "Por favor, instale o Node.js v22+ via gerenciador de pacotes."
+                exit 1
+            fi
+        elif [ "$OS_NAME" = "darwin" ]; then
+            if [ "$ARCH" = "arm64" ]; then
+                TAR_NAME="node-${NODE_VER}-darwin-arm64.tar.gz"
+            else
+                TAR_NAME="node-${NODE_VER}-darwin-x64.tar.gz"
+            fi
         else
-            echo "❌ Arquitetura '$ARCH' não suportada automaticamente para download portátil."
-            echo "Por favor, instale o Node.js v18+ via gerenciador de pacotes da sua distribuição (ex: sudo apt install nodejs npm)."
+            echo "❌ Sistema '$OS_NAME' não suportado automaticamente pelo script."
             exit 1
         fi
         
@@ -65,7 +78,11 @@ if [ -z "$NODE_BIN" ]; then
         
         echo "➜ Extraindo ambiente portátil local..."
         mkdir -p "$PORTABLE_DIR"
-        tar -xJf "$TEMP_TAR" -C "$PORTABLE_DIR" --strip-components=1
+        if [[ "$TAR_NAME" == *.tar.xz ]]; then
+            tar -xJf "$TEMP_TAR" -C "$PORTABLE_DIR" --strip-components=1
+        else
+            tar -xzf "$TEMP_TAR" -C "$PORTABLE_DIR" --strip-components=1
+        fi
         rm -f "$TEMP_TAR"
         echo "✓ Node.js portátil instalado com sucesso em $PORTABLE_DIR"
     fi
