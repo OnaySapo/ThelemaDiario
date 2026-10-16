@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { MagickEntry, ChatMessage } from "@/lib/types";
 import { Send, Bot, Sparkles, User, Network, RotateCcw, Link2, Trash2, Maximize2 } from "lucide-react";
 
@@ -33,6 +33,37 @@ export function RightSidebar({
 
   // Mini Graph Canvas
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Contagem unificada de conexões (tabela + wikilinks + backlinks)
+  const connectedCount = useMemo(() => {
+    if (!currentEntry) return 0;
+    const ids = new Set<string>();
+    if (currentEntry.connections) {
+      currentEntry.connections.forEach((c) => ids.add(c.target_id));
+    }
+    if (currentEntry.content) {
+      const regex = /\[\[(.*?)\]\]/g;
+      let m: RegExpExecArray | null;
+      while ((m = regex.exec(currentEntry.content)) !== null) {
+        const rawTarget = m[1]?.split("|")[0]?.trim().toLowerCase();
+        if (rawTarget) {
+          const match = allEntries.find(
+            (e) => e.title?.toLowerCase().trim() === rawTarget || e.id?.toLowerCase().trim() === rawTarget
+          );
+          if (match && match.id !== currentEntry.id) ids.add(match.id);
+        }
+      }
+    }
+    const currentTitle = currentEntry.title?.toLowerCase().trim();
+    if (currentTitle) {
+      for (const other of allEntries) {
+        if (other.id !== currentEntry.id && other.content?.toLowerCase().includes(`[[${currentTitle}`)) {
+          ids.add(other.id);
+        }
+      }
+    }
+    return ids.size;
+  }, [currentEntry, allEntries]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -126,32 +157,67 @@ export function RightSidebar({
         radius: 12,
       });
 
-      // Connected notes
+      // 1. Mapeia notas conectadas: Conexões explícitas + Wikilinks ([[...]]) + Backlinks
+      const connectedTargetsMap = new Map<string, MagickEntry>();
+
       if (currentEntry.connections) {
-        currentEntry.connections.forEach((conn, idx) => {
+        currentEntry.connections.forEach((conn) => {
           const target = allEntries.find((e) => e.id === conn.target_id);
-          if (target) {
-            const angle = (idx / currentEntry.connections!.length) * Math.PI * 2;
-            const dist = 65;
-            miniNodes.push({
-              id: target.id,
-              label: target.title,
-              isMain: false,
-              entryObj: target,
-              x: cx + Math.cos(angle) * dist,
-              y: cy + Math.sin(angle) * dist,
-              radius: 8,
-            });
-            miniEdges.push([currentEntry.id, target.id]);
+          if (target && target.id !== currentEntry.id) {
+            connectedTargetsMap.set(target.id, target);
           }
         });
       }
 
-      // Influences as small satellites
+      // Wikilinks citados no texto da nota atual
+      if (currentEntry.content) {
+        const wikilinkRegex = /\[\[(.*?)\]\]/g;
+        let wm: RegExpExecArray | null;
+        while ((wm = wikilinkRegex.exec(currentEntry.content)) !== null) {
+          const rawTarget = wm[1]?.split("|")[0]?.trim().toLowerCase();
+          if (!rawTarget) continue;
+          const target = allEntries.find(
+            (e) => e.title?.toLowerCase().trim() === rawTarget || e.id?.toLowerCase().trim() === rawTarget
+          );
+          if (target && target.id !== currentEntry.id) {
+            connectedTargetsMap.set(target.id, target);
+          }
+        }
+      }
+
+      // Backlinks: outras notas que citam o título da nota atual
+      const currentTitleLower = currentEntry.title?.toLowerCase().trim();
+      if (currentTitleLower) {
+        for (const other of allEntries) {
+          if (other.id === currentEntry.id) continue;
+          if (other.content && other.content.toLowerCase().includes(`[[${currentTitleLower}`)) {
+            connectedTargetsMap.set(other.id, other);
+          }
+        }
+      }
+
+      // Plota notas conectadas no anel orbital intermediário
+      const connectedList = Array.from(connectedTargetsMap.values());
+      connectedList.forEach((target, idx) => {
+        const angle = (idx / Math.max(1, connectedList.length)) * Math.PI * 2;
+        const dist = 68;
+        miniNodes.push({
+          id: target.id,
+          label: target.title,
+          isMain: false,
+          entryObj: target,
+          x: cx + Math.cos(angle) * dist,
+          y: cy + Math.sin(angle) * dist,
+          radius: 8,
+        });
+        miniEdges.push([currentEntry.id, target.id]);
+      });
+
+      // Influências herméticas (Liber 777) como pequenos satélites mais próximos
       if (currentEntry.influences) {
         currentEntry.influences.slice(0, 4).forEach((inf, idx) => {
           const angle = (idx / 4) * Math.PI * 2 + Math.PI / 4;
-          const dist = 42;
+          const dist = 40;
           const infId = `inf-${inf.name}`;
           miniNodes.push({
             id: infId,
@@ -159,7 +225,7 @@ export function RightSidebar({
             isMain: false,
             x: cx + Math.cos(angle) * dist,
             y: cy + Math.sin(angle) * dist,
-            radius: 5,
+            radius: 4.5,
           });
           miniEdges.push([currentEntry.id, infId]);
         });
@@ -413,8 +479,8 @@ export function RightSidebar({
             <span>Mini Grafo de Conexões</span>
           </span>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-medium-500">
-              {currentEntry?.connections?.length || 0} links
+            <span className="text-[10px] text-medium-500 font-mono">
+              {connectedCount} {connectedCount === 1 ? "conexão" : "conexões"}
             </span>
             {onOpenFullGraph && (
               <button

@@ -1323,6 +1323,40 @@ export function TreeOfLifeView({
                 >
                   <title>{`${sephirah.name} (${sephirah.english}) · Sephirah #${sephirah.id}`}</title>
 
+                  {/* AURA DE ATIVIDADE MÁGICKA: Brilho e Halo Luminoso Proporcional ao Número de Operações */}
+                  {noteCount > 0 && !isSelected && (
+                    <g className="transition-all duration-300 pointer-events-none">
+                      {/* Halo radial luminoso proporcional */}
+                      <circle
+                        cx={sephirah.x}
+                        cy={sephirah.y}
+                        r={5.4 + Math.min(2.0, noteCount * 0.35)}
+                        fill={sephirah.color}
+                        fillOpacity={Math.min(0.24, 0.08 + noteCount * 0.03)}
+                        stroke={sephirah.color}
+                        strokeWidth={0.5 + Math.min(0.6, noteCount * 0.12)}
+                        strokeOpacity={Math.min(0.7, 0.25 + noteCount * 0.09)}
+                        style={{
+                          filter: `drop-shadow(0 0 ${Math.min(7, 2 + noteCount * 1.2)}px ${sephirah.color})`,
+                          animation: noteCount >= 2 ? "sephirahIntenseGlow 2.4s ease-in-out infinite alternate" : undefined,
+                        }}
+                      />
+                      {/* Anel sagrado tracejado para esferas de alta prática (3+ registros) */}
+                      {noteCount >= 3 && (
+                        <circle
+                          cx={sephirah.x}
+                          cy={sephirah.y}
+                          r={7.2 + Math.min(1.0, noteCount * 0.15)}
+                          fill="none"
+                          stroke={sephirah.color}
+                          strokeWidth={0.4}
+                          strokeDasharray="1 1.5"
+                          strokeOpacity={0.45}
+                        />
+                      )}
+                    </g>
+                  )}
+
                   {/* AURA DE SELEÇÃO: Pulso Vibrante e Constante na Cor da Própria Sephirah */}
                   {isSelected && (
                     <>
@@ -1491,6 +1525,11 @@ export function TreeOfLifeView({
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block shadow-sm" />
             <span>Notas vinculadas</span>
+          </span>
+          <span>·</span>
+          <span className="flex items-center gap-1.5 text-amber-300 font-semibold">
+            <Sparkles className="w-3 h-3 text-amber-300" />
+            <span>Auras luminosas indicam alta atividade prática</span>
           </span>
           <span>·</span>
           <span>22 Arcanos Maiores nos caminhos</span>

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
-import { getCategoryThelemicIcon, ZodiacIcon, IconeSolThelema, IconeLuaThelema } from "@/components/ThelemicIcons";
+import { getCategoryThelemicIcon, ZodiacIcon, IconeSolThelema, IconeLuaThelema, EstrelaDeThelema } from "@/components/ThelemicIcons";
 import {
   BarChart2,
   TrendingUp,
@@ -17,6 +17,7 @@ import {
   Layers,
   Flame,
   CheckCircle,
+  Zap,
 } from "lucide-react";
 import { MagicHeatmap } from "@/components/MagicHeatmap";
 import { LiberReshWidget } from "@/components/LiberReshWidget";
@@ -220,6 +221,52 @@ export function DashboardView({
       .slice(0, 5);
   }, [filteredEntries]);
 
+  // Padrão de Ouro Empírico & Síntese Hermética (Cruzamento Automatizado)
+  const goldenPattern = useMemo(() => {
+    const sortedMoonSigns = [...moonSignStats].sort((a, b) => b.avgRating - a.avgRating);
+    const sortedMoonPhases = [...moonPhaseStats].sort((a, b) => b.avgRating - a.avgRating);
+    const sortedPlanetaryDays = [...planetaryDayStats].sort((a, b) => b.avgRating - a.avgRating);
+
+    const sortedEntities = influencesAnalysis
+      .filter((i) => i.category.toLowerCase() === "entity")
+      .sort((a, b) => b.avgRating - a.avgRating);
+
+    const sortedIncenses = influencesAnalysis
+      .filter((i) => i.category.toLowerCase() === "incense")
+      .sort((a, b) => b.avgRating - a.avgRating);
+
+    const bestSign = sortedMoonSigns[0] || null;
+    const bestPhase = sortedMoonPhases[0] || null;
+    const bestDay = sortedPlanetaryDays[0] || null;
+    const bestEntity = sortedEntities[0] || null;
+    const bestIncense = sortedIncenses[0] || null;
+    const bestOverallInf = [...influencesAnalysis].sort((a, b) => b.avgRating - a.avgRating)[0] || null;
+
+    const baseAvg = Number(kpis.avgScore) || 5;
+    const peakRating = Math.max(
+      bestSign?.avgRating || 0,
+      bestPhase?.avgRating || 0,
+      bestDay?.avgRating || 0,
+      bestOverallInf?.avgRating || 0
+    );
+
+    const upliftPercent =
+      baseAvg > 0 && peakRating > baseAvg
+        ? Math.round(((peakRating - baseAvg) / baseAvg) * 100)
+        : null;
+
+    return {
+      bestSign,
+      bestPhase,
+      bestDay,
+      bestEntity,
+      bestIncense,
+      bestOverallInf,
+      peakRating,
+      upliftPercent,
+    };
+  }, [moonSignStats, moonPhaseStats, planetaryDayStats, influencesAnalysis, kpis.avgScore]);
+
   return (
     <div className="flex-1 h-full bg-medium-900 overflow-y-auto p-4 sm:p-8 space-y-8 select-text">
       {/* ========================================================
@@ -257,6 +304,158 @@ export function DashboardView({
           </div>
         </div>
       </div>
+
+      {/* ========================================================
+          Padrão de Ouro Empírico & Síntese Hermética
+          ======================================================== */}
+      {filteredEntries.length > 0 && (
+        <section className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-950/30 via-medium-850 to-medium-850 p-6 sm:p-7 shadow-lg relative overflow-hidden space-y-5">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-500/20 pb-4 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 shrink-0 shadow-sm">
+                <EstrelaDeThelema className="w-5 h-5 text-amber-300" />
+              </div>
+              <div>
+                <h2 className="text-base sm:text-lg font-serif font-bold text-white tracking-tight flex items-center gap-2">
+                  <span>Padrão de Ouro Empírico & Síntese Hermética</span>
+                  {goldenPattern.upliftPercent !== null && goldenPattern.upliftPercent > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 font-semibold">
+                      +{goldenPattern.upliftPercent}% Eficácia
+                    </span>
+                  )}
+                </h2>
+                <p className="text-xs text-medium-400 font-sans mt-0.5">
+                  Cruzamento estatístico automatizado dos fatores astrais e materiais de maior confirmação na sua Obra.
+                </p>
+              </div>
+            </div>
+
+            {goldenPattern.peakRating > 0 && (
+              <div className="bg-medium-900/90 border border-amber-500/30 px-3.5 py-1.5 rounded-xl flex items-center gap-2 shrink-0 self-start sm:self-auto font-mono">
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                <span className="text-xs text-medium-400">Pico Comprovado:</span>
+                <strong className="text-amber-300 font-bold text-sm">{goldenPattern.peakRating} / 10</strong>
+              </div>
+            )}
+          </div>
+
+          {/* Cards dos 4 Pilares da Fórmula */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 relative z-10">
+            {/* 1. Signo Lunar Ideal */}
+            <div className="p-3.5 rounded-xl bg-medium-900/80 border border-medium-750 space-y-1.5">
+              <span className="text-[10px] font-mono text-medium-400 uppercase tracking-wider flex items-center gap-1.5">
+                <IconeLuaThelema className="w-3.5 h-3.5 text-amber-300" size={14} />
+                <span>Signo Lunar Ideal</span>
+              </span>
+              <div className="flex items-center gap-2">
+                {goldenPattern.bestSign?.sign && (
+                  <ZodiacIcon sign={goldenPattern.bestSign.sign} className="w-4 h-4 text-white" size={16} />
+                )}
+                <span className="text-sm font-sans font-bold text-white truncate">
+                  {goldenPattern.bestSign?.sign || "Dados insuficientes"}
+                </span>
+              </div>
+              {goldenPattern.bestSign && (
+                <div className="text-[10px] font-mono text-medium-400 flex items-center justify-between pt-1 border-t border-medium-800">
+                  <span>Média: <strong className="text-amber-300">{goldenPattern.bestSign.avgRating}/10</strong></span>
+                  <span>{goldenPattern.bestSign.count} {goldenPattern.bestSign.count === 1 ? "prática" : "práticas"}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Fase Lunar Ótima */}
+            <div className="p-3.5 rounded-xl bg-medium-900/80 border border-medium-750 space-y-1.5">
+              <span className="text-[10px] font-mono text-medium-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                <span>Fase Lunar Mais Fluida</span>
+              </span>
+              <span className="text-sm font-sans font-bold text-white block truncate">
+                {goldenPattern.bestPhase?.phase || "Dados insuficientes"}
+              </span>
+              {goldenPattern.bestPhase && (
+                <div className="text-[10px] font-mono text-medium-400 flex items-center justify-between pt-1 border-t border-medium-800">
+                  <span>Média: <strong className="text-amber-300">{goldenPattern.bestPhase.avgRating}/10</strong></span>
+                  <span>{goldenPattern.bestPhase.count} {goldenPattern.bestPhase.count === 1 ? "registro" : "registros"}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Dia Planetário Consagrado */}
+            <div className="p-3.5 rounded-xl bg-medium-900/80 border border-medium-750 space-y-1.5">
+              <span className="text-[10px] font-mono text-medium-400 uppercase tracking-wider flex items-center gap-1.5">
+                <IconeSolThelema className="w-3.5 h-3.5 text-amber-300" size={14} />
+                <span>Dia Planetário Consagrado</span>
+              </span>
+              <span className="text-sm font-sans font-bold text-white block truncate">
+                {goldenPattern.bestDay?.day || "Dados insuficientes"}
+              </span>
+              {goldenPattern.bestDay && (
+                <div className="text-[10px] font-mono text-medium-400 flex items-center justify-between pt-1 border-t border-medium-800">
+                  <span>Média: <strong className="text-amber-300">{goldenPattern.bestDay.avgRating}/10</strong></span>
+                  <span>{goldenPattern.bestDay.count} {goldenPattern.bestDay.count === 1 ? "operação" : "operações"}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 4. Correspondência Chave (777) */}
+            <div className="p-3.5 rounded-xl bg-medium-900/80 border border-medium-750 space-y-1.5">
+              <span className="text-[10px] font-mono text-medium-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Flame className="w-3.5 h-3.5 text-amber-300" />
+                <span>Catalisador Chave (777)</span>
+              </span>
+              <span className="text-sm font-sans font-bold text-white block truncate">
+                {goldenPattern.bestIncense?.name || goldenPattern.bestEntity?.name || goldenPattern.bestOverallInf?.name || "Dados insuficientes"}
+              </span>
+              {(goldenPattern.bestIncense || goldenPattern.bestEntity || goldenPattern.bestOverallInf) && (
+                <div className="text-[10px] font-mono text-medium-400 flex items-center justify-between pt-1 border-t border-medium-800">
+                  <span className="capitalize">{goldenPattern.bestIncense ? "Incenso" : goldenPattern.bestEntity ? "Entidade" : "Elemento"}</span>
+                  <strong className="text-amber-300">
+                    {(goldenPattern.bestIncense || goldenPattern.bestEntity || goldenPattern.bestOverallInf)?.avgRating}/10
+                  </strong>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Síntese Descritiva em Linguagem Natural */}
+          <div className="p-4 rounded-xl bg-medium-900/90 border border-amber-500/20 text-xs text-medium-300 leading-relaxed font-sans relative z-10">
+            <p>
+              <strong className="text-amber-300 font-mono font-semibold">🔬 Síntese Científico-Mágicka: </strong>
+              {goldenPattern.bestSign && goldenPattern.bestPhase ? (
+                <>
+                  Seus registros indicam que o ápice de validação fenomênica ocorre sob a{" "}
+                  <strong className="text-white">{goldenPattern.bestPhase.phase}</strong> com a Lua em{" "}
+                  <strong className="text-white">{goldenPattern.bestSign.sign}</strong>
+                  {goldenPattern.bestDay ? (
+                    <>
+                      , preferencialmente no <strong className="text-white">{goldenPattern.bestDay.day}</strong>
+                    </>
+                  ) : null}
+                  {goldenPattern.bestIncense ? (
+                    <>
+                      {" "}e consagração com <strong className="text-white">{goldenPattern.bestIncense.name}</strong>
+                    </>
+                  ) : goldenPattern.bestEntity ? (
+                    <>
+                      {" "}em alinhamento com <strong className="text-white">{goldenPattern.bestEntity.name}</strong>
+                    </>
+                  ) : null}
+                  . Sob esta configuração empírica, sua taxa média de sucesso atinge{" "}
+                  <strong className="text-amber-300 font-mono font-bold">{goldenPattern.peakRating}/10</strong>
+                  {goldenPattern.upliftPercent ? (
+                    <span className="text-emerald-400 font-mono"> (+{goldenPattern.upliftPercent}% acima da sua média basal)</span>
+                  ) : null}
+                  . O Método da Ciência, o Alvo da Religião.
+                </>
+              ) : (
+                "Continue registrando suas práticas, rituais e incensos para que a matriz hermética sintetize seu padrão fenomênico individual."
+              )}
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* ========================================================
           DISCIPLINA MÁGICA & MARÉ SOLAR

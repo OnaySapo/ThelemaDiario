@@ -462,16 +462,24 @@ export function GraphView({ onSelectEntry, entries, onClose }: GraphViewProps) {
           hoveredNode && (hoveredNode.id === sNode.id || hoveredNode.id === tNode.id);
 
         ctx.strokeStyle = isHighlighted
-          ? isLight ? "rgba(0, 0, 0, 0.9)" : "rgba(255, 255, 255, 0.95)"
+          ? isLight ? "rgba(0, 0, 0, 0.95)" : "rgba(255, 255, 255, 0.95)"
           : edge.type === "entry_connection"
           ? isLight ? "rgba(0, 0, 0, 0.35)" : "rgba(255, 255, 255, 0.35)"
+          : edge.type === "wikilink"
+          ? isLight ? "rgba(180, 83, 9, 0.5)" : "rgba(229, 184, 66, 0.55)"
           : isLight ? "rgba(0, 0, 0, 0.15)" : "rgba(255, 255, 255, 0.16)";
-        ctx.lineWidth = isHighlighted ? 2.5 : edge.type === "entry_connection" ? 1.5 : 0.8;
+        ctx.lineWidth = isHighlighted ? 2.5 : edge.type === "entry_connection" ? 1.5 : edge.type === "wikilink" ? 1.2 : 0.8;
 
         ctx.beginPath();
+        if (edge.type === "wikilink" && !isHighlighted) {
+          ctx.setLineDash([4, 3]);
+        } else {
+          ctx.setLineDash([]);
+        }
         ctx.moveTo(sNode.x, sNode.y);
         ctx.lineTo(tNode.x, tNode.y);
         ctx.stroke();
+        ctx.setLineDash([]);
 
         // Edge label if highlighted
         if (isHighlighted && edge.label) {

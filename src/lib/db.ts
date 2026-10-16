@@ -882,7 +882,7 @@ export function createConnection(conn: { source_id: string; target_id: string; r
 
 export function getGraphNetworkData() {
   const db = getDatabase();
-  const entries = db.prepare("SELECT id, type, title, success_rating, moon_phase, sun_sign, date FROM entries").all() as any[];
+  const entries = db.prepare("SELECT id, type, title, content, success_rating, moon_phase, sun_sign, date FROM entries").all() as any[];
   const connections = db.prepare("SELECT source_id, target_id, relationship_type, notes FROM entry_connections").all() as any[];
   const influences = db.prepare("SELECT entry_id, category, name FROM entry_influences").all() as any[];
 
@@ -917,21 +917,64 @@ export function getGraphNetworkData() {
     })),
   ];
 
-  const edges = [
-    ...connections.map((c) => ({
-      source: c.source_id,
-      target: c.target_id,
-      label: c.relationship_type,
-      notes: c.notes,
-      type: "entry_connection",
-    })),
-    ...influences.map((inf) => ({
-      source: inf.entry_id,
-      target: `inf-${inf.category}-${inf.name}`,
-      label: inf.category,
-      type: "influence_link",
-    })),
+  // Track existing edges to avoid duplicates
+  const existingEdgeSet = new Set<string>();
+
+  const edges: any[] = [
+    ...connections.map((c) => {
+      existingEdgeSet.add(`${c.source_id}->${c.target_id}`);
+      return {
+        source: c.source_id,
+        target: c.target_id,
+        label: c.relationship_type,
+        notes: c.notes,
+        type: "entry_connection",
+      };
+    }),
+    ...influences.map((inf) => {
+      existingEdgeSet.add(`${inf.entry_id}->inf-${inf.category}-${inf.name}`);
+      return {
+        source: inf.entry_id,
+        target: `inf-${inf.category}-${inf.name}`,
+        label: inf.category,
+        type: "influence_link",
+      };
+    }),
   ];
+
+  // Map titles to IDs for Wikilink extraction
+  const titleToEntryMap = new Map<string, string>();
+  for (const e of entries) {
+    if (e.title) titleToEntryMap.set(e.title.toLowerCase().trim(), e.id);
+    if (e.id) titleToEntryMap.set(e.id.toLowerCase().trim(), e.id);
+  }
+
+  // Scan entries for [[Wikilinks]] inside markdown content
+  const wikilinkRegex = /\[\[(.*?)\]\]/g;
+  for (const e of entries) {
+    if (!e.content) continue;
+    let match: RegExpExecArray | null;
+    while ((match = wikilinkRegex.exec(e.content)) !== null) {
+      const rawTarget = match[1] || "";
+      const targetClean = rawTarget.split("|")[0].trim().toLowerCase();
+      if (!targetClean) continue;
+      const targetId = titleToEntryMap.get(targetClean);
+      if (targetId && targetId !== e.id) {
+        const edgeKey = `${e.id}->${targetId}`;
+        const reverseKey = `${targetId}->${e.id}`;
+        if (!existingEdgeSet.has(edgeKey) && !existingEdgeSet.has(reverseKey)) {
+          existingEdgeSet.add(edgeKey);
+          edges.push({
+            source: e.id,
+            target: targetId,
+            label: "wikilink",
+            notes: "Citação no texto",
+            type: "wikilink",
+          });
+        }
+      }
+    }
+  }
 
   return { nodes, edges };
 }

@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 import { ImageInsertModal, VideoInsertModal } from "@/components/MediaInsertModais";
 import { SlashCommandMenu, SlashCommandItem } from "@/components/SlashCommandMenu";
+import { WikilinkSuggestMenu } from "@/components/WikilinkSuggestMenu";
 import { GematriaModal } from "@/components/GematriaModal";
 import { calculateGematria } from "@/lib/gematria";
 import { getReshSolarTide, getLiberReshFullText } from "@/lib/astronomy";
@@ -159,6 +160,12 @@ export function ArticleView({
   const [slashQuery, setSlashQuery] = useState("");
   const [slashPosition, setSlashPosition] = useState({ top: 0, left: 0 });
   const [slashStartIndex, setSlashStartIndex] = useState<number | null>(null);
+
+  // Wikilink Autocomplete ([[])
+  const [isWikilinkSuggestOpen, setIsWikilinkSuggestOpen] = useState(false);
+  const [wikilinkQuery, setWikilinkQuery] = useState("");
+  const [wikilinkPosition, setWikilinkPosition] = useState({ top: 0, left: 0 });
+  const [wikilinkStartIndex, setWikilinkStartIndex] = useState<number | null>(null);
 
   // Gematria Thelêmica Modal & Floating Selection Badge
   const [isGematriaModalOpen, setIsGematriaModalOpen] = useState(false);
@@ -624,7 +631,7 @@ export function ArticleView({
     setIsSlashMenuOpen(false);
   };
 
-  // Detectar digitação de "/" no textarea para acionar Slash Commands
+  // Detectar digitação de "/" ou "[[" no textarea para acionar menus dinâmicos
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setEditContent(val);
@@ -635,23 +642,62 @@ export function ArticleView({
     const cursor = textarea.selectionStart;
     const textBeforeCursor = val.substring(0, cursor);
 
+    const wikilinkMatch = textBeforeCursor.match(/\[\[([^\]\n]*)$/);
     const slashMatch = textBeforeCursor.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/);
 
-    if (slashMatch) {
-      const query = slashMatch[1];
-      setSlashQuery(query);
-      setSlashStartIndex(cursor - query.length - 1);
+    if (wikilinkMatch) {
+      const query = wikilinkMatch[1];
+      setWikilinkQuery(query);
+      setWikilinkStartIndex(cursor - query.length - 2);
 
       const rect = textarea.getBoundingClientRect();
       const lines = textBeforeCursor.split("\n").length;
       const top = rect.top + Math.min(rect.height - 40, lines * 22 - textarea.scrollTop + 30);
-      const left = Math.min(rect.left + 30, window.innerWidth - 320);
+      const left = Math.min(rect.left + 30, window.innerWidth - 340);
 
-      setSlashPosition({ top, left });
-      setIsSlashMenuOpen(true);
-    } else {
+      setWikilinkPosition({ top, left });
+      setIsWikilinkSuggestOpen(true);
       setIsSlashMenuOpen(false);
+    } else {
+      setIsWikilinkSuggestOpen(false);
+
+      if (slashMatch) {
+        const query = slashMatch[1];
+        setSlashQuery(query);
+        setSlashStartIndex(cursor - query.length - 1);
+
+        const rect = textarea.getBoundingClientRect();
+        const lines = textBeforeCursor.split("\n").length;
+        const top = rect.top + Math.min(rect.height - 40, lines * 22 - textarea.scrollTop + 30);
+        const left = Math.min(rect.left + 30, window.innerWidth - 320);
+
+        setSlashPosition({ top, left });
+        setIsSlashMenuOpen(true);
+      } else {
+        setIsSlashMenuOpen(false);
+      }
     }
+  };
+
+  // Inserir Wikilink selecionado no popup
+  const handleSelectWikilink = (selected: MagickEntry) => {
+    if (wikilinkStartIndex === null || wikilinkStartIndex < 0) return;
+    const textarea = textareaRef.current;
+    const currentCursor = textarea?.selectionStart || editContent.length;
+    const before = editContent.substring(0, wikilinkStartIndex);
+    const after = editContent.substring(currentCursor);
+    const inserted = `[[${selected.title}]]`;
+    const newContent = before + inserted + after;
+    setEditContent(newContent);
+    setIsWikilinkSuggestOpen(false);
+
+    setTimeout(() => {
+      if (textarea) {
+        textarea.focus();
+        const newPos = before.length + inserted.length;
+        textarea.setSelectionRange(newPos, newPos);
+      }
+    }, 10);
   };
 
   // Inserir item de checklist no cursor
@@ -3472,6 +3518,16 @@ export function ArticleView({
         position={slashPosition}
         onClose={() => setIsSlashMenuOpen(false)}
         commands={slashCommands}
+      />
+
+      {/* Menu Flutuante de Autocomplete de Wikilinks ([[]) */}
+      <WikilinkSuggestMenu
+        isOpen={isWikilinkSuggestOpen}
+        query={wikilinkQuery}
+        position={wikilinkPosition}
+        onClose={() => setIsWikilinkSuggestOpen(false)}
+        entries={allEntries.filter((e) => !entry || e.id !== entry.id)}
+        onSelectEntry={handleSelectWikilink}
       />
 
       {/* Modal da Calculadora de Gematria Thelêmica & Liber 777 */}
