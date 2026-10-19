@@ -23,8 +23,10 @@ import {
   Server,
   AlertCircle,
   FolderOpen,
+  Upload,
 } from "lucide-react";
 import { MagickEntry } from "@/lib/types";
+import { getLocalDateKey, formatDateTimeBR, getInfluenceCategoryLabel } from "@/lib/dateUtils";
 import { EstrelaDeThelema } from "@/components/ThelemicIcons";
 import {
   THEMES,
@@ -366,6 +368,9 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
     }
   };
 
+  const [isImportingJSON, setIsImportingJSON] = useState(false);
+  const [importStatusMsg, setImportStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   const handleExportVaultZip = async () => {
     try {
       setIsExportingVault(true);
@@ -375,7 +380,7 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `diario_magicko_vault_obsidian_${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `diario_magicko_vault_obsidian_${getLocalDateKey(new Date())}.zip`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -447,21 +452,62 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(entries, null, 2));
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `diario_magicko_backup_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute("download", `diario_magicko_backup_${getLocalDateKey(new Date())}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+  };
+
+  const handleImportJSONFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImportingJSON(true);
+    setImportStatusMsg(null);
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.entries) ? parsed.entries : null;
+      if (!list || list.length === 0) {
+        throw new Error("O arquivo JSON selecionado não contém notas válidas.");
+      }
+
+      const res = await fetch("/api/entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entries: list }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || "Erro ao importar notas.");
+      }
+
+      setImportStatusMsg({
+        type: "success",
+        text: `${data.importedCount ?? list.length} notas importadas / restauradas com sucesso!`,
+      });
+      if (onReloadEntries) {
+        onReloadEntries();
+      }
+    } catch (err: any) {
+      setImportStatusMsg({
+        type: "error",
+        text: err.message || "Falha ao ler arquivo JSON de backup.",
+      });
+    } finally {
+      setIsImportingJSON(false);
+      e.target.value = "";
+    }
   };
 
   const handleExportMarkdown = () => {
     let mdContent = `# 📜 Diário Mágicko Thelêmico — Exportação Completa\n\n`;
     for (const e of entries) {
       mdContent += `## [${e.type.toUpperCase()}] ${e.title}\n`;
-      mdContent += `* **Data**: ${e.date}\n`;
+      mdContent += `* **Data**: ${formatDateTimeBR(e.date, " às ")}\n`;
       if (e.thelemic_date) mdContent += `* **Data Thelêmica**: ${e.thelemic_date}\n`;
       if (e.success_rating) mdContent += `* **Sucesso**: ${e.success_rating}/10\n`;
       if (e.influences && e.influences.length > 0) {
-        mdContent += `* **Influências**: ${e.influences.map((i) => `${i.category}: ${i.name}`).join(", ")}\n`;
+        mdContent += `* **Influências**: ${e.influences.map((i) => `${getInfluenceCategoryLabel(i.category)}: ${i.name}`).join(", ")}\n`;
       }
       mdContent += `\n${e.content}\n\n---\n\n`;
     }
@@ -469,7 +515,7 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
     const dataStr = "data:text/markdown;charset=utf-8," + encodeURIComponent(mdContent);
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `diario_magicko_notas_${new Date().toISOString().slice(0, 10)}.md`);
+    downloadAnchor.setAttribute("download", `diario_magicko_notas_${getLocalDateKey(new Date())}.md`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -952,7 +998,7 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
           {/* Export / Backup */}
           <div className="space-y-2">
             <span className="block text-xs font-semibold text-medium-300 uppercase tracking-wider font-mono">
-              Exportação & Backup
+              Exportação, Importação & Backup
             </span>
             <div className="flex flex-wrap gap-3">
               <button
@@ -973,6 +1019,21 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
                 <span>Exportar Tudo em JSON</span>
               </button>
 
+              <label
+                className="flex items-center gap-2 px-3.5 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 rounded border border-amber-500/40 text-xs font-medium transition-colors cursor-pointer"
+                title="Importa ou restaura notas de um arquivo .JSON exportado anteriormente (sem apagar suas notas atuais)"
+              >
+                <Upload className={`w-4 h-4 text-amber-300 ${isImportingJSON ? "animate-bounce" : ""}`} />
+                <span>{isImportingJSON ? "Importando..." : "Importar / Restaurar Backup (.JSON)"}</span>
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleImportJSONFile}
+                  disabled={isImportingJSON}
+                  className="hidden"
+                />
+              </label>
+
               <button
                 onClick={handleExportMarkdown}
                 className="flex items-center gap-2 px-3.5 py-2 bg-medium-850 hover:bg-medium-800 text-white rounded border border-medium-700 text-xs font-medium transition-colors"
@@ -981,6 +1042,23 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
                 <span>Exportar Caderno em Markdown</span>
               </button>
             </div>
+
+            {importStatusMsg && (
+              <div
+                className={`flex items-center gap-2 p-2.5 rounded-lg border text-xs font-mono ${
+                  importStatusMsg.type === "success"
+                    ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-200"
+                    : "bg-rose-950/40 border-rose-500/40 text-rose-200"
+                }`}
+              >
+                {importStatusMsg.type === "success" ? (
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                )}
+                <span>{importStatusMsg.text}</span>
+              </div>
+            )}
           </div>
         </div>
 

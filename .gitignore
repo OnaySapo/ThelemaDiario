@@ -27,4 +27,6 @@ uploads/
 storage_config.json
 *.storage_config.json
 .node-linux/
+.node-win/
+node-v*-win-x64/
 *.tsbuildinfo

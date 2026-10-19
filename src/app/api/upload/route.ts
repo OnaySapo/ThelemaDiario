@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       url: publicUrl,
+      fileUrl: publicUrl,
       filename: file.name,
       size: file.size,
       mimeType: file.type,

@@ -69,6 +69,7 @@ import {
   formatDateTimeBR,
   formatTime24h,
   formatTime24hWithSeconds,
+  getLocalDateKey,
   getInfluenceCategoryLabel,
 } from "@/lib/dateUtils";
 import { BrazilianDateTimeInput, BrazilianDateInput } from "@/components/BrazilianDateTimeInput";
@@ -317,25 +318,42 @@ export function ArticleView({
   // Sugestões Rápidas do Liber 777 por Categoria
   const LIBER_777_PRESETS: Record<string, string[]> = {
     entity: [
+      "Sagrado Anjo Guardião",
+      "Choronzon",
+      "Aiwass",
+      "Taphthartharath (Mercúrio)",
+      "Hismael (Júpiter)",
+      "Bartzabel (Marte)",
+      "Sorath (Sol)",
+      "Kedemel (Vênus)",
+      "Chasmodai (Lua)",
+      "Zazel (Saturno)",
+    ],
+    deity: [
       "Nuit",
       "Hadit",
       "Ra-Hoor-Khuit",
       "Babalon",
       "Thoth / Tahuti",
       "Hoor-paar-kraat",
-      "Sagrado Anjo Guardião",
-      "Arcanjo Raphael",
-      "Arcanjo Michael",
-      "Arcanjo Gabriel",
-      "Arcanjo Uriel",
-      "Arcanjo Kamael",
+      "Therion",
+      "Ísis",
+      "Osíris",
+      "Hórus",
+      "Hathor",
+      "Pã",
     ],
-    element: [
-      "Fogo (Tejas) 🜂",
-      "Água (Apas) 🜄",
-      "Ar (Vayu) 🜁",
-      "Terra (Prithivi) 🜃",
-      "Espírito (Akasha) 🁢",
+    color: [
+      "Ouro Solar",
+      "Branco Brilhante",
+      "Escarlate / Rubi",
+      "Azul Celeste (Nuit)",
+      "Verde Esmeralda",
+      "Púrpura / Violeta",
+      "Laranja Hermético",
+      "Prata Lunar",
+      "Negro (Binah)",
+      "Amarelo Citrino",
     ],
     candle: [
       "Ouro Solar",
@@ -348,6 +366,53 @@ export function ArticleView({
       "Prata Lunar",
       "Negro (Binah)",
     ],
+    element: [
+      "Fogo (Tejas) 🜂",
+      "Água (Apas) 🜄",
+      "Ar (Vayu) 🜁",
+      "Terra (Prithivi) 🜃",
+      "Espírito (Akasha) 🁢",
+    ],
+    planet: [
+      "Sol · Tiphareth ☉",
+      "Lua · Yesod ☽",
+      "Mercúrio · Hod ☿",
+      "Vênus · Netzach ♀",
+      "Marte · Geburah ♂",
+      "Júpiter · Chesed ♃",
+      "Saturno · Binah ♄",
+      "Terra · Malkuth 🜨",
+    ],
+    sephirah: [
+      "1 · Kether (Coroa)",
+      "2 · Chokmah (Sabedoria)",
+      "3 · Binah (Entendimento)",
+      "4 · Chesed (Misericórdia)",
+      "5 · Geburah (Severidade)",
+      "6 · Tiphareth (Beleza)",
+      "7 · Netzach (Vitória)",
+      "8 · Hod (Esplendor)",
+      "9 · Yesod (Fundação)",
+      "10 · Malkuth (Reino)",
+    ],
+    tarot: [
+      "0 · O Louco (Aleph)",
+      "I · O Mago (Beth)",
+      "II · A Sacerdotisa (Gimel)",
+      "III · A Imperatriz (Daleth)",
+      "IV · O Imperador (Tzaddi)",
+      "VI · Os Amantes (Zain)",
+      "VIII · Ajustamento (Lamed)",
+      "IX · O Eremita (Yod)",
+      "XI · Luxúria (Teth)",
+      "XIII · A Morte (Nun)",
+      "XIV · Arte (Samekh)",
+      "XVI · A Torre (Peh)",
+      "XVII · A Estrela (He)",
+      "XIX · O Sol (Resh)",
+      "XX · O Aeon (Shin)",
+      "XXI · O Universo (Tau)",
+    ],
     incense: [
       "Olíbano (Olibanum)",
       "Mirra",
@@ -359,6 +424,19 @@ export function ArticleView({
       "Canela",
       "Jasmim",
       "Dittany de Creta",
+      "Gálbano",
+    ],
+    instrument: [
+      "Baqueta / Vara (Fogo)",
+      "Taça / Cálice (Água)",
+      "Espada / Adaga (Ar)",
+      "Pantáculo / Disco (Terra)",
+      "Lamen",
+      "Sino Mágicko",
+      "Óleo de Abramelin",
+      "Manto / Robe",
+      "Anel",
+      "Lâmpada Mágicka",
     ],
     tool: [
       "Baqueta / Vara (Fogo)",
@@ -371,17 +449,33 @@ export function ArticleView({
       "Manto / Robe",
       "Anel",
     ],
-    planet: [
-      "Sol · Tiphareth ☉",
-      "Lua · Yesod ☽",
-      "Mercúrio · Hod ☿",
-      "Vênus · Netzach ♀",
-      "Marte · Geburah ♂",
-      "Júpiter · Chesed ♃",
-      "Saturno · Binah ♄",
-      "Kether (Coroa)",
-      "Chokmah (Sabedoria)",
-      "Malkuth (Reino)",
+    angel: [
+      "Metatron (Kether)",
+      "Raziel (Chokmah)",
+      "Tzaphqiel (Binah)",
+      "Tzadkiel (Chesed)",
+      "Kamael (Geburah)",
+      "Raphael (Tiphareth / Ar)",
+      "Haniel (Netzach)",
+      "Michael (Hod / Fogo)",
+      "Gabriel (Yesod / Água)",
+      "Sandalphon (Malkuth)",
+      "Uriel (Terra)",
+    ],
+    herb: [
+      "Lótus",
+      "Rosa",
+      "Acácia",
+      "Absinto (Artemísia)",
+      "Louro Solar",
+      "Verbena",
+      "Mandrágora",
+      "Arruda",
+      "Alecrim",
+      "Quartzo Cristal",
+      "Lápis-Lazúli",
+      "Rubi",
+      "Esmeralda",
     ],
     feeling: [
       "Êxtase Solar",
@@ -391,6 +485,7 @@ export function ArticleView({
       "Devoção (Bhakti)",
       "Serenidade",
       "Força Marcial",
+      "Vontade Inabalável",
     ],
   };
 
@@ -653,19 +748,6 @@ export function ArticleView({
       }
     };
   }, []);
-
-  // Atalho Ctrl+S / Cmd+S para salvar imediatamente durante a edição
-  React.useEffect(() => {
-    if (!isEditing) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
-        e.preventDefault();
-        handleSaveEdit();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isEditing, entry, editTitle, editContent, editCategory, hasRating, editRating, editDate, editInfluences, editConnections]);
 
   const handleToggleOracleTable = () => {
     setHasOracleTable((prev) => !prev);
@@ -1021,16 +1103,17 @@ export function ArticleView({
             body: formData,
           });
           const data = await res.json();
-          if (data.success && data.fileUrl) {
-            const dateStr = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-            const audioMarkup = `\n![audio:Gravação de Voz · ${dateStr}](${data.fileUrl})\n`;
+          const uploadedUrl = data.url || data.fileUrl;
+          if (data.success && uploadedUrl) {
+            const dateStr = formatTime24h(new Date());
+            const audioMarkup = `\n![audio:Gravação de Voz · ${dateStr}](${uploadedUrl})\n`;
             insertFormatting(audioMarkup, "");
           } else {
             // Fallback para Base64 se upload falhar
             const reader = new FileReader();
             reader.onloadend = () => {
               const base64Audio = reader.result as string;
-              const dateStr = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+              const dateStr = formatTime24h(new Date());
               const audioMarkup = `\n![audio:Gravação de Voz · ${dateStr}](${base64Audio})\n`;
               insertFormatting(audioMarkup, "");
             };
@@ -1388,7 +1471,7 @@ export function ArticleView({
     const link = document.createElement("a");
     const sanitizedTitle = entry.title.toLowerCase().replace(/[^a-z0-9]/gi, "_").slice(0, 40);
     link.href = url;
-    link.download = `${entry.date.slice(0, 10)}_${sanitizedTitle}.md`;
+    link.download = `${getLocalDateKey(entry.date)}_${sanitizedTitle}.md`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -1482,16 +1565,18 @@ export function ArticleView({
   // Backlinks (outras notas que mencionam a nota atual)
   const backlinks = React.useMemo(() => {
     if (!entry) return [];
-    const entryTitleLower = entry.title.toLowerCase();
+    const entryTitleLower = entry.title.trim().toLowerCase();
     const entryId = entry.id;
 
     return allEntries.filter((other) => {
       if (other.id === entryId) return false;
       const contentLower = other.content.toLowerCase();
-      const mentionsTitle = contentLower.includes(`[[${entryTitleLower}`) || contentLower.includes(`[[${other.title.toLowerCase()}`);
-      const mentionsDirectly = contentLower.includes(entryTitleLower);
+      const mentionsWikilink =
+        (entryTitleLower.length > 0 && contentLower.includes(`[[${entryTitleLower}`)) ||
+        contentLower.includes(`[[${entryId.toLowerCase()}`);
+      const mentionsDirectly = entryTitleLower.length >= 6 && contentLower.includes(entryTitleLower);
       const hasConnection = (other.connections || []).some((c) => c.target_id === entryId);
-      return mentionsTitle || mentionsDirectly || hasConnection;
+      return mentionsWikilink || mentionsDirectly || hasConnection;
     });
   }, [entry, allEntries]);
 
@@ -2774,6 +2859,7 @@ export function ArticleView({
                   <option value="instrument">Instrumento / Arma Mágicka</option>
                   <option value="angel">Coro Angelical / Arcanjo</option>
                   <option value="herb">Erva / Planta / Cristal</option>
+                  <option value="feeling">Estado / Emoção / Força</option>
                 </select>
 
                 <div className="flex-1 flex gap-2">

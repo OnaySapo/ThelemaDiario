@@ -253,19 +253,118 @@ export function GrimoireCompilerModal({ isOpen, onClose, entries }: GrimoireComp
                     )}
                   </div>
 
+                  {/* Tiragem Oracular (se presente) */}
+                  {entry.oracle_data?.cards && entry.oracle_data.cards.length > 0 && (
+                    <div className="p-3.5 rounded-lg bg-stone-950/70 print:bg-stone-100 border border-amber-500/30 print:border-stone-400 space-y-1.5 text-xs font-serif">
+                      <div className="font-mono text-[10px] uppercase tracking-wider text-amber-400 print:text-stone-700 font-bold">
+                        Tiragem de Tarot de Thoth · {entry.oracle_data.spread_name || "Tiragem Livre"}
+                      </div>
+                      {entry.oracle_data.query && (
+                        <p className="italic text-stone-300 print:text-stone-800">
+                          Pergunta: &ldquo;{entry.oracle_data.query}&rdquo;
+                        </p>
+                      )}
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {entry.oracle_data.cards.map((card, cIdx) => (
+                          <span
+                            key={`${card.cardId}-${cIdx}`}
+                            className="px-2 py-0.5 rounded bg-stone-900 print:bg-white border border-stone-700 print:border-stone-400 text-amber-200 print:text-black font-mono text-[11px]"
+                          >
+                            {card.position ? `${card.position}: ` : `${cIdx + 1}. `}
+                            <strong>{card.cardName}</strong>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Conteúdo da Nota Formatado */}
-                  <div className="font-serif text-sm leading-relaxed text-stone-300 print:text-stone-900 whitespace-pre-wrap selection:bg-amber-500/30">
-                    {entry.content
-                      .replace(/\[\[(.*?)(?:\|(.*?))?\]\]/g, "$2$1")
-                      .replace(/\*\*(.*?)\*\*/g, "$1")
-                      .replace(/\*(.*?)\*/g, "$1")}
+                  <div className="font-serif text-sm leading-relaxed text-stone-300 print:text-stone-900 space-y-2.5 selection:bg-amber-500/30">
+                    {entry.content.split("\n").map((line, lIdx) => {
+                      const trimmed = line.trim();
+                      if (!trimmed) {
+                        return <div key={lIdx} className="h-1.5" />;
+                      }
+                      if (trimmed === "---" || trimmed === "***") {
+                        return <hr key={lIdx} className="border-stone-700 print:border-stone-400 my-3" />;
+                      }
+
+                      // Format inline markdown tokens safely
+                      const formatInline = (txt: string) =>
+                        txt
+                          .replace(/\[\[(.*?)(?:\|(.*?))?\]\]/g, (_, target, alias) => alias || target)
+                          .replace(/\*\*(.*?)\*\*/g, "$1")
+                          .replace(/==(.*?)==/g, "$1");
+
+                      if (trimmed.startsWith("### ")) {
+                        return (
+                          <h5 key={lIdx} className="text-sm font-bold text-amber-200 print:text-black pt-2">
+                            {formatInline(trimmed.slice(4))}
+                          </h5>
+                        );
+                      }
+                      if (trimmed.startsWith("## ")) {
+                        return (
+                          <h4 key={lIdx} className="text-base font-bold text-amber-300 print:text-black pt-3 border-b border-stone-800/70 print:border-stone-300 pb-1">
+                            {formatInline(trimmed.slice(3))}
+                          </h4>
+                        );
+                      }
+                      if (trimmed.startsWith("# ")) {
+                        return (
+                          <h4 key={lIdx} className="text-lg font-bold text-amber-300 print:text-black pt-3">
+                            {formatInline(trimmed.slice(2))}
+                          </h4>
+                        );
+                      }
+                      if (trimmed.startsWith("> ")) {
+                        const quoteText = trimmed.slice(2).replace(/^\[!(.*?)\]\s*/, "[$1] ");
+                        return (
+                          <blockquote
+                            key={lIdx}
+                            className="border-l-2 border-amber-500/50 print:border-stone-600 pl-3 italic text-stone-300 print:text-stone-800 my-1"
+                          >
+                            {formatInline(quoteText)}
+                          </blockquote>
+                        );
+                      }
+                      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+                        return (
+                          <div key={lIdx} className="flex items-start gap-2 pl-2">
+                            <span className="text-amber-400 print:text-black select-none">•</span>
+                            <span>{formatInline(trimmed.slice(2))}</span>
+                          </div>
+                        );
+                      }
+                      // Image markdown ![alt](url)
+                      const imgMatch = trimmed.match(/^!\[(.*?)\]\((.*?)\)$/);
+                      if (imgMatch && !imgMatch[1].startsWith("audio:") && !imgMatch[1].startsWith("video:")) {
+                        const rawCaption = imgMatch[1].split("|")[0];
+                        return (
+                          <figure key={lIdx} className="my-3 flex flex-col items-center">
+                            <img
+                              src={imgMatch[2]}
+                              alt={rawCaption}
+                              className="max-h-64 w-auto rounded border border-stone-700 print:border-stone-400 object-contain"
+                            />
+                            {rawCaption && (
+                              <figcaption className="text-[11px] font-mono text-stone-400 print:text-stone-600 mt-1">
+                                {rawCaption}
+                              </figcaption>
+                            )}
+                          </figure>
+                        );
+                      }
+
+                      return <p key={lIdx}>{formatInline(line)}</p>;
+                    })}
                   </div>
 
                   {/* Rodapé da Nota */}
                   {(entry.success_rating !== undefined && entry.success_rating !== null) && (
                     <div className="pt-2 text-xs font-mono text-stone-500 print:text-stone-600 flex items-center justify-between border-t border-stone-800/40 print:border-stone-300">
                       <span>Sucesso Mágicko: {entry.success_rating}/10</span>
-                      {entry.oracle_data?.query && <span>Pergunta Oracular: "{entry.oracle_data.query}"</span>}
+                      {entry.oracle_data?.query && <span>Pergunta Oracular: &ldquo;{entry.oracle_data.query}&rdquo;</span>}
                     </div>
                   )}
                 </article>

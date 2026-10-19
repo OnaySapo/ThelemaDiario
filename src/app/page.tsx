@@ -8,7 +8,7 @@ import { SettingsModal } from "@/components/SettingsModal";
 import { GraphView } from "@/components/GraphView";
 import { HomeView } from "@/components/HomeView";
 import { DashboardView } from "@/components/DashboardView";
-import { TreeOfLifeView, SEPHIROT } from "@/components/TreeOfLifeView";
+import { TreeOfLifeView, SEPHIROT, TREE_PATHS } from "@/components/TreeOfLifeView";
 import { RitualTimerModal } from "@/components/RitualTimerModal";
 import { AltarModeModal } from "@/components/AltarModeModal";
 import { SpotlightModal } from "@/components/SpotlightModal";
@@ -113,7 +113,8 @@ export default function Home() {
   const handleNewNote = async (
     prefilledCategory?: CategoryName,
     prefilledContent?: string,
-    prefilledTitle?: string
+    prefilledTitle?: string,
+    prefilledInfluences?: { category: string; name: string }[]
   ) => {
     try {
       // Get astrological data for now
@@ -163,7 +164,7 @@ export default function Home() {
         planetary_day: astro.success ? astro.planetaryDay : "",
         planetary_hour: astro.success ? astro.planetaryHour : "",
         tags: [],
-        influences: [],
+        influences: prefilledInfluences || [],
         connections: [],
         oracle_data: defaultOracleData,
       };
@@ -240,12 +241,44 @@ export default function Home() {
     }
   };
 
-  // Create note under a specific Sephirah from Tree of Life
-  const handleNewNoteUnderSephirah = (sephirahName: string) => {
-    const sephirah = SEPHIROT.find((s) => s.name === sephirahName);
-    const title = `Operação em ${sephirahName} (${sephirah ? sephirah.transliteration : ""})`;
-    const content = `## Aspiração & Operação Mágicka em ${sephirahName}\n\n**Sephirah:** ${sephirahName} (${sephirah?.transliteration || ""}) — ${sephirah?.english || ""}\n**Força Planetária:** ${sephirah?.planet || ""}\n**Nome Divino:** ${sephirah?.godName || ""}\n**Arcanjo:** ${sephirah?.archangel || ""}\n**Experiência Espiritual:** ${sephirah?.spiritualExperience || ""}\n\n### 1. Invocação & Alinhamento\n\n\n### 2. Visão Astral / Ação Ritualística\n\n\n### 3. Registro de Fenômenos & Fechamento\n`;
-    handleNewNote("Prática", content, title);
+  // Create note under a specific Sephirah or Path from Tree of Life
+  const handleNewNoteUnderSephirah = (sephirahOrPathName: string) => {
+    const sephirah = SEPHIROT.find((s) => s.name === sephirahOrPathName);
+    if (sephirah) {
+      const title = `Operação em ${sephirah.name} (${sephirah.english})`;
+      const content = `## Aspiração & Operação Mágicka em ${sephirah.name}\n\n**Sephirah:** ${sephirah.id} · ${sephirah.name} (${sephirah.hebrew}) — ${sephirah.english}\n**Força Planetária:** ${sephirah.planet}\n**Nome Divino:** ${sephirah.godName}\n**Arcanjo:** ${sephirah.archangel}\n**Experiência Espiritual:** ${sephirah.spiritualExperience}\n\n### 1. Invocação & Alinhamento\n\n\n### 2. Visão Astral / Ação Ritualística\n\n\n### 3. Registro de Fenômenos & Fechamento\n`;
+      const prefilledInfluences = [
+        { category: "sephirah", name: `${sephirah.id} · ${sephirah.name} (${sephirah.english})` },
+        { category: "planet", name: sephirah.planet },
+        { category: "deity", name: sephirah.godName },
+        { category: "angel", name: sephirah.archangel },
+      ];
+      handleNewNote("Prática", content, title, prefilledInfluences);
+      return;
+    }
+
+    const pathMatch = TREE_PATHS.find(
+      (p) =>
+        `${p.tarotName} (${p.hebrewName})` === sephirahOrPathName ||
+        p.tarotName === sephirahOrPathName
+    );
+    if (pathMatch) {
+      const sFrom = SEPHIROT.find((s) => s.id === pathMatch.fromId);
+      const sTo = SEPHIROT.find((s) => s.id === pathMatch.toId);
+      const title = `Caminho #${pathMatch.pathNumber} · ${pathMatch.tarotNumber} - ${pathMatch.tarotName} (${pathMatch.hebrewName})`;
+      const content = `## Meditação & Scrying no Caminho #${pathMatch.pathNumber} (${pathMatch.hebrewName})\n\n**Arcano Maior (Atu de Thoth):** ${pathMatch.tarotNumber} · ${pathMatch.tarotName}\n**Letra Hebraica:** ${pathMatch.hebrewName} (${pathMatch.hebrewLetter})\n**Atribuição Astrológica / Elementar:** ${pathMatch.astrological}\n**Esferas Conectadas:** ${sFrom?.name || ""} ↔ ${sTo?.name || ""}\n\n### 1. Sintonização Simbólica & Portal Astral\n\n\n### 2. Visão / Jornada no Caminho\n\n\n### 3. Compreensão Iniciática & Integração\n`;
+      const prefilledInfluences = [
+        { category: "tarot", name: `${pathMatch.tarotNumber} · ${pathMatch.tarotName} (${pathMatch.hebrewName})` },
+        { category: "sephirah", name: `Caminho ${pathMatch.pathNumber} (${sFrom?.name || ""} ↔ ${sTo?.name || ""})` },
+        { category: "planet", name: pathMatch.astrological },
+      ];
+      handleNewNote("Visão Astral", content, title, prefilledInfluences);
+      return;
+    }
+
+    const title = `Operação em ${sephirahOrPathName}`;
+    const content = `## Operação Mágicka: ${sephirahOrPathName}\n\n### 1. Invocação & Alinhamento\n\n\n### 2. Visão Astral / Ação Ritualística\n\n\n### 3. Registro de Fenômenos & Fechamento\n`;
+    handleNewNote("Prática", content, title, [{ category: "sephirah", name: sephirahOrPathName }]);
   };
 
   // Log practice note from Ritual Timer

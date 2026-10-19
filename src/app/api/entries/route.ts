@@ -23,6 +23,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Dados inválidos." }, { status: 400 });
     }
 
+    const batchList = Array.isArray(body)
+      ? body
+      : Array.isArray(body.entries)
+      ? body.entries
+      : null;
+
+    if (batchList) {
+      let importedCount = 0;
+      for (const item of batchList) {
+        if (item && typeof item === "object" && (item.title || item.content)) {
+          saveEntry(item);
+          importedCount++;
+        }
+      }
+      return NextResponse.json({ success: true, importedCount });
+    }
+
     const saved = saveEntry(body);
     return NextResponse.json({ success: true, entry: saved });
   } catch (err: any) {

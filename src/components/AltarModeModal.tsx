@@ -15,6 +15,7 @@ import { DynamicMoonPhase } from "@/components/DynamicMoonPhase";
 import { AstrologicalCoordinates, ReshTideInfo, getReshSolarTide } from "@/lib/astronomy";
 import { playCeremonialGong, playRitualKnock } from "@/lib/audioBell";
 import { EstrelaDeThelema, ZodiacIcon } from "@/components/ThelemicIcons";
+import { formatTime24h } from "@/lib/dateUtils";
 
 interface AltarModeModalProps {
   isOpen: boolean;
@@ -262,7 +263,7 @@ export function AltarModeModal({
             }`}
             style={{ color: isLight ? "#0c0a09" : "#f8fafc" }}
           >
-            <span>{time.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+            <span>{formatTime24h(time)}</span>
             <span
               className={`text-3xl sm:text-4xl md:text-5xl font-mono font-bold ml-3.5 transition-colors ${
                 isLight ? "text-amber-800" : "text-amber-400"

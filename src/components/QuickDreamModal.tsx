@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Moon, Mic, Square, Sparkles, X, Check, CloudMoon, Clock, Eye } from "lucide-react";
 import { MagickEntry } from "@/lib/types";
+import { formatTime24h } from "@/lib/dateUtils";
 
 interface QuickDreamModalProps {
   isOpen: boolean;
@@ -27,7 +28,7 @@ export function QuickDreamModal({ isOpen, onClose, onSaveDream }: QuickDreamModa
   useEffect(() => {
     if (isOpen) {
       const now = new Date();
-      const timeStr = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      const timeStr = formatTime24h(now);
       setTitle(`Sonho Astral (${timeStr})`);
       setContent("");
       setAudioUrl(null);
@@ -70,8 +71,9 @@ export function QuickDreamModal({ isOpen, onClose, onSaveDream }: QuickDreamModa
             body: formData,
           });
           const data = await res.json();
-          if (data.success && data.fileUrl) {
-            setAudioUrl(data.fileUrl);
+          const uploadedUrl = data.url || data.fileUrl;
+          if (data.success && uploadedUrl) {
+            setAudioUrl(uploadedUrl);
           } else {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -135,7 +137,7 @@ export function QuickDreamModal({ isOpen, onClose, onSaveDream }: QuickDreamModa
 
       const now = new Date();
       await onSaveDream({
-        title: title.trim() || `Sonho de ${now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`,
+        title: title.trim() || `Sonho de ${formatTime24h(now)}`,
         content: finalContent,
         type: "Sonho",
         date: now.toISOString(),

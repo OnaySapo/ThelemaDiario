@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import JSZip from "jszip";
 import { getAllEntries } from "@/lib/db";
 import { normalizeCategory } from "@/lib/types";
+import { getLocalDateKey, formatDateTimeBR, getInfluenceCategoryLabel } from "@/lib/dateUtils";
 import path from "path";
 import fs from "fs";
 
@@ -29,22 +30,24 @@ export async function GET() {
         .replace(/[/\\?%*:|"<>]/g, "_")
         .trim()
         .slice(0, 60);
-      const fileName = `${entry.date.slice(0, 10)} - ${sanitizedTitle || "Nota"}.md`;
+      const localDateKey = getLocalDateKey(entry.date);
+      const fileName = `${localDateKey} - ${sanitizedTitle || "Nota"}.md`;
 
       const frontmatterLines = [
         "---",
         `title: "${entry.title.replace(/"/g, '\\"')}"`,
         `category: "${category}"`,
         `date: "${entry.date}"`,
+        `date_br: "${formatDateTimeBR(entry.date, " ")}"`,
         entry.thelemic_date ? `thelemic_date: "${entry.thelemic_date.replace(/"/g, '\\"')}"` : null,
-        entry.success_rating !== undefined ? `success_rating: ${entry.success_rating}` : null,
+        entry.success_rating !== undefined && entry.success_rating !== null ? `success_rating: ${entry.success_rating}` : null,
         entry.sun_sign ? `sun_sign: "${entry.sun_sign}"` : null,
         entry.moon_sign ? `moon_sign: "${entry.moon_sign}"` : null,
         entry.moon_phase ? `moon_phase: "${entry.moon_phase}"` : null,
         entry.planetary_day ? `planetary_day: "${entry.planetary_day}"` : null,
         entry.planetary_hour ? `planetary_hour: "${entry.planetary_hour}"` : null,
         entry.influences && entry.influences.length > 0
-          ? `influences:\n${entry.influences.map((inf) => `  - category: "${inf.category}"\n    name: "${inf.name}"`).join("\n")}`
+          ? `influences:\n${entry.influences.map((inf) => `  - category: "${getInfluenceCategoryLabel(inf.category)}"\n    name: "${inf.name}"`).join("\n")}`
           : null,
         "---",
         "",
@@ -78,7 +81,7 @@ export async function GET() {
     const readmeContent = [
       "# Sanctum Thelêmico — Vault Obsidian",
       "",
-      `Backup completo gerado em: ${new Date().toLocaleString("pt-BR")}`,
+      `Backup completo gerado em: ${formatDateTimeBR(new Date(), " às ")}`,
       `Total de registros: ${entries.length}`,
       "",
       "## Como utilizar:",
@@ -93,7 +96,7 @@ export async function GET() {
     // Gerar o arquivo ZIP em Uint8Array (compatível com BodyInit)
     const zipBytes = await zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
 
-    const nowStr = new Date().toISOString().slice(0, 10);
+    const nowStr = getLocalDateKey(new Date());
     return new NextResponse(zipBytes as unknown as BodyInit, {
       status: 200,
       headers: {

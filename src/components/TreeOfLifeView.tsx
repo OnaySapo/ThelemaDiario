@@ -859,12 +859,14 @@ export function TreeOfLifeView({
         const sName = s.name.toLowerCase();
         const sEng = s.english.toLowerCase();
         const planet = s.planet.toLowerCase().split(" ")[0];
+        const archangel = s.archangel.toLowerCase().split(" ")[0];
 
         if (
           allText.includes(sName) ||
           allText.includes(sEng) ||
           influences.includes(sName) ||
-          (planet.length > 3 && allText.includes(planet))
+          (planet.length >= 3 && allText.includes(planet)) ||
+          (archangel.length >= 4 && allText.includes(archangel))
         ) {
           map.get(s.id)?.push(entry);
         }
@@ -908,7 +910,7 @@ export function TreeOfLifeView({
     });
   }, [selectedSephirah]);
 
-  // Notas vinculadas ao caminho selecionado
+  // Notas vinculadas ao caminho selecionado (Texto, Tags Liber 777 e Tiragens de Oráculo)
   const pathNotes = useMemo(() => {
     if (!selectedPath) return [];
     const query1 = selectedPath.tarotName.toLowerCase();
@@ -916,8 +918,17 @@ export function TreeOfLifeView({
     const query3 = `caminho ${selectedPath.pathNumber}`;
 
     return entries.filter((entry) => {
-      const text = `${entry.title} ${entry.content}`.toLowerCase();
-      return text.includes(query1) || text.includes(query2) || text.includes(query3);
+      const influencesText = (entry.influences || []).map((i) => i.name.toLowerCase()).join(" ");
+      const oracleCardsText = (entry.oracle_data?.cards || [])
+        .map((c) => `${c.cardName} ${c.cardId}`.toLowerCase())
+        .join(" ");
+      const text = `${entry.title} ${entry.content} ${influencesText} ${oracleCardsText}`.toLowerCase();
+      return (
+        text.includes(query1) ||
+        text.includes(query2) ||
+        text.includes(query3) ||
+        oracleCardsText.includes(selectedPath.atuId.toLowerCase())
+      );
     });
   }, [entries, selectedPath]);
 

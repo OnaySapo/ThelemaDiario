@@ -1,7 +1,8 @@
 import { getAllEntries, getAppSetting } from "./db";
 import { getFullAstrologicalData } from "./astronomy";
-import { MagickEntry, AnalyticalSummary, ChatMessage } from "./types";
+import { MagickEntry, AnalyticalSummary, ChatMessage, normalizeCategory } from "./types";
 import { computeStatisticalInsights } from "./insights";
+import { formatDateBR, getInfluenceCategoryLabel } from "./dateUtils";
 
 export type { ChatMessage, AnalyticalSummary };
 
@@ -37,12 +38,12 @@ export function generateLocalAnalyticalResponse(userQuery: string, entries: Magi
 
     if (insights.bestEntities.length > 0) {
       const topEntity = insights.bestEntities[0];
-      response += `* ⚡ **Entidade com Maior Confirmação / Sucesso**: **${topEntity.name}** (Média de sucesso: **${topEntity.avgRating}/10**).\n`;
+      response += `* ⚡ **Entidade / Divindade com Maior Confirmação**: **${topEntity.name}** (Média de sucesso: **${topEntity.avgRating}/10**).\n`;
     }
 
     if (insights.bestIncenses.length > 0) {
       const topIncense = insights.bestIncenses[0];
-      response += `* 🕯️ **Incenso Mais Eficaz**: **${topIncense.name}** (Média de sucesso: **${topIncense.avgRating}/10**).\n`;
+      response += `* 🕯️ **Incenso / Erva Mais Eficaz**: **${topIncense.name}** (Média de sucesso: **${topIncense.avgRating}/10**).\n`;
     }
 
     // Detail high-success rituals
@@ -53,11 +54,12 @@ export function generateLocalAnalyticalResponse(userQuery: string, entries: Magi
     if (topRituals.length > 0) {
       response += `\n### ⚔️ Práticas de Pico de Sucesso Registradas:\n`;
       for (const r of topRituals) {
-        const infNames = r.influences?.map((i) => i.name).join(", ") || "Nenhuma influência listada";
-        response += `1. **${r.title}** (Nota: **${r.success_rating}/10**)\n`;
+        const infNames =
+          r.influences?.map((i) => `${getInfluenceCategoryLabel(i.category)}: ${i.name}`).join(", ") ||
+          "Nenhuma correspondência listada";
+        response += `1. **${r.title}** (${formatDateBR(r.date)} · Nota: **${r.success_rating}/10**)\n`;
         response += `   * *Data Thelêmica*: ${r.thelemic_date || "Não registrada"}\n`;
-        response += `   * *Influências Presentes*: ${infNames}\n`;
-        response += `   * *Estado mental*: ${r.mental_state_after || "Foco estabelecido"}\n`;
+        response += `   * *Correspondências 777*: ${infNames}\n`;
       }
     }
 
@@ -66,19 +68,19 @@ export function generateLocalAnalyticalResponse(userQuery: string, entries: Magi
   }
 
   // Check if asking about tarot / oracle / Thoth
-  if (query.includes("oraculo") || query.includes("tarô") || query.includes("thoth") || query.includes("carta")) {
-    const oracles = entries.filter((e) => e.type === "oracle");
+  if (query.includes("oraculo") || query.includes("oráculo") || query.includes("tarô") || query.includes("tarot") || query.includes("thoth") || query.includes("carta")) {
+    const oracles = entries.filter((e) => normalizeCategory(e.type) === "Oráculo");
     let response = `**Faze o que tu queres há de ser tudo da Lei.**\n\n`;
     response += `Você possui **${oracles.length}** consultas oraculares registradas no diário.\n\n`;
 
     if (oracles.length > 0) {
       response += `### 🎴 Últimas Consultas e Ecos Registrados:\n`;
-      for (const o of oracles.slice(0, 2)) {
-        response += `* **${o.title}** (${o.date.split("T")[0]})\n`;
+      for (const o of oracles.slice(0, 3)) {
+        response += `* **${o.title}** (${formatDateBR(o.date)})\n`;
         if (o.oracle_data?.query) {
           response += `  * *Pergunta*: "${o.oracle_data.query}"\n`;
         }
-        if (o.oracle_data?.cards) {
+        if (o.oracle_data?.cards && o.oracle_data.cards.length > 0) {
           const cardNames = o.oracle_data.cards.map((c) => `${c.position}: ${c.cardName}`).join(" | ");
           response += `  * *Lâminas*: ${cardNames}\n`;
         }
@@ -90,13 +92,16 @@ export function generateLocalAnalyticalResponse(userQuery: string, entries: Magi
   }
 
   // Check if asking about dreams
-  if (query.includes("sonho") || query.includes("astral") || query.includes("lucidez")) {
-    const dreams = entries.filter((e) => e.type === "dream" || e.type === "vision");
+  if (query.includes("sonho") || query.includes("astral") || query.includes("lucidez") || query.includes("visão") || query.includes("visao")) {
+    const dreams = entries.filter((e) => {
+      const cat = normalizeCategory(e.type);
+      return cat === "Sonho" || cat === "Visão Astral";
+    });
     let response = `**Faze o que tu queres há de ser tudo da Lei.**\n\n`;
     response += `Constam **${dreams.length}** experiências astrais e sonhos lúcidos catalogados.\n\n`;
 
     for (const d of dreams.slice(0, 3)) {
-      response += `* **${d.title}** [${d.type.toUpperCase()}]\n`;
+      response += `* **${d.title}** [${normalizeCategory(d.type).toUpperCase()} · ${formatDateBR(d.date)}]\n`;
       response += `  * *Condição Lunar*: ${d.moon_phase || "Lua"} em ${d.moon_sign || ""}\n`;
       response += `  * *Resumo*: ${d.content.slice(0, 150)}...\n\n`;
     }
@@ -106,8 +111,8 @@ export function generateLocalAnalyticalResponse(userQuery: string, entries: Magi
   }
 
   // Check if asking about Liber 777 / correspondences
-  if (query.includes("777") || query.includes("correspond") || query.includes("cabala") || query.includes("arvore")) {
-    const studies = entries.filter((e) => e.type === "study");
+  if (query.includes("777") || query.includes("correspond") || query.includes("cabala") || query.includes("arvore") || query.includes("árvore")) {
+    const studies = entries.filter((e) => normalizeCategory(e.type) === "Estudo");
     let response = `**Faze o que tu queres há de ser tudo da Lei.**\n\n`;
     response += `### 📜 Correspondências Herméticas de Liber 777 Identificadas:\n\n`;
     response += `Seu diário registra **${studies.length}** estudos doutrinários catalogados.\n\n`;
@@ -119,7 +124,7 @@ export function generateLocalAnalyticalResponse(userQuery: string, entries: Magi
     if (insights.bestEntities.length > 0) {
       response += `  * *Hierarquias e Forças Invocadas*: ${insights.bestEntities.map((e) => `**${e.name}**`).join(", ")} (Colunas XVIII e XIX)\n`;
     }
-    response += `\n> **Instrução para a Obra**: Ao planejar suas operações, verifique se as armas mágicas (Vara, Taça, Espada, Disco) e o perfume do templo ressoam estritamente com o Sephira ou Caminho do trânsito astrológico vigente.\n\n*Amor é a lei, amor sob vontade.*`;
+    response += `\n> **Instrução para a Obra**: Ao planejar suas operações, verifique se as armas mágicas (Vara, Taça, Espada, Disco) e o perfume do templo ressoam estritamente com a Sephirah ou Caminho do trânsito astrológico vigente.\n\n*Amor é a lei, amor sob vontade.*`;
     return response;
   }
 
