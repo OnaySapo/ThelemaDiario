@@ -175,6 +175,12 @@ export default function Home() {
       });
       const data = await res.json();
       if (data.success) {
+        if (selectedCategory !== "all" && selectedCategory !== targetCategory) {
+          setSelectedCategory("all");
+        }
+        if (searchQuery.trim()) {
+          setSearchQuery("");
+        }
         setAutoEditEntryId(data.entry.id);
         await loadEntries(data.entry.id);
         setViewMode("article");
@@ -194,10 +200,24 @@ export default function Home() {
       });
       const data = await res.json();
       if (data.success) {
-        await loadEntries(data.entry.id);
+        if (
+          updated.type &&
+          selectedCategory !== "all" &&
+          normalizeCategory(updated.type) !== selectedCategory
+        ) {
+          setSelectedCategory("all");
+        }
+        if (data.entry) {
+          setEntries((prev) =>
+            prev.map((item) => (item.id === data.entry.id ? data.entry : item))
+          );
+        }
+        await loadEntries();
+      } else {
+        console.error("Erro ao salvar nota:", data.error);
       }
     } catch (err: any) {
-      alert("Erro ao atualizar: " + err.message);
+      console.error("Erro ao atualizar:", err);
     }
   };
 
@@ -266,6 +286,12 @@ export default function Home() {
       });
       const data = await res.json();
       if (data.success && data.entry) {
+        if (selectedCategory !== "all" && selectedCategory !== "Sonho") {
+          setSelectedCategory("all");
+        }
+        if (searchQuery.trim()) {
+          setSearchQuery("");
+        }
         await loadEntries(data.entry.id);
         setSelectedEntryId(data.entry.id);
         setViewMode("article");

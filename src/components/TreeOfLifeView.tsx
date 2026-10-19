@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { MagickEntry, normalizeCategory } from "@/lib/types";
+import { formatDateTimeBR } from "@/lib/dateUtils";
 import { THOTH_TAROT_DECK, ThothCard } from "@/lib/thothTarot";
 import { ThemeId, ThemeMode, getStoredTheme } from "@/lib/theme";
 import {
@@ -1739,7 +1740,7 @@ export function TreeOfLifeView({
                       >
                         <div className="min-w-0 pr-2">
                           <span className="text-[10px] font-mono text-medium-400 block">
-                            {normalizeCategory(note.type)} · {new Date(note.date).toLocaleDateString("pt-BR")}
+                            {normalizeCategory(note.type)} · {formatDateTimeBR(note.date)}
                           </span>
                           <h4 className="text-xs font-semibold text-medium-100 truncate group-hover:text-amber-300 transition-colors">
                             {note.title}
@@ -1878,7 +1879,7 @@ export function TreeOfLifeView({
                       >
                         <div className="min-w-0 pr-2">
                           <span className="text-[10px] font-mono text-medium-400 block">
-                            {normalizeCategory(note.type)} · {new Date(note.date).toLocaleDateString("pt-BR")}
+                            {normalizeCategory(note.type)} · {formatDateTimeBR(note.date)}
                           </span>
                           <h4 className="text-xs font-semibold text-medium-100 truncate group-hover:text-amber-400 dark:group-hover:text-amber-300 transition-colors">
                             {note.title}

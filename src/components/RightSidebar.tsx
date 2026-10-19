@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { MagickEntry, ChatMessage } from "@/lib/types";
+import { formatTime24h } from "@/lib/dateUtils";
 import { Send, Bot, Sparkles, User, Network, RotateCcw, Link2, Trash2, Maximize2 } from "lucide-react";
 
 interface RightSidebarProps {
@@ -24,7 +25,7 @@ export function RightSidebar({
       role: "assistant",
       content:
         "**Faze o que tu queres há de ser tudo da Lei.**\n\nSou o seu Frater Auxiliar. Estou analisando em tempo real todas as suas notas, rituais e oráculos.",
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: formatTime24h(new Date()),
     },
   ]);
   const [input, setInput] = useState("");
@@ -77,7 +78,7 @@ export function RightSidebar({
       id: `user-${Date.now()}`,
       role: "user",
       content: text,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: formatTime24h(new Date()),
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -98,7 +99,7 @@ export function RightSidebar({
             id: `assistant-${Date.now()}`,
             role: "assistant",
             content: data.reply,
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            timestamp: formatTime24h(new Date()),
           },
         ]);
       } else {
@@ -111,7 +112,7 @@ export function RightSidebar({
           id: `error-${Date.now()}`,
           role: "assistant",
           content: `Falha na transmissão mágica: ${err.message}`,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          timestamp: formatTime24h(new Date()),
         },
       ]);
     } finally {
@@ -340,7 +341,7 @@ export function RightSidebar({
                   id: "reset",
                   role: "assistant",
                   content: "Memória reiniciada. Em que posso auxiliá-lo na Grande Obra?",
-                  timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                  timestamp: formatTime24h(new Date()),
                 },
               ])
             }

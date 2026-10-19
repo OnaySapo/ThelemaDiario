@@ -722,7 +722,6 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
   const db = customDb || getDatabase();
   const now = new Date().toISOString();
   const entryId = entry.id || `entry-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-  const entryDateStr = entry.date || now;
 
   // Busca registro existente se houver
   let existing: any = null;
@@ -730,16 +729,50 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
     existing = db.prepare("SELECT * FROM entries WHERE id = ?").get(entry.id) as any;
   }
 
-  // Verifica se a data mudou em relação à anterior
-  const dateChanged = !!(existing && existing.date && entry.date && existing.date !== entry.date);
+  const entryDateStr = entry.date || existing?.date || now;
+  const finalType = entry.type || existing?.type || "Prática";
+  const finalTitle =
+    entry.title !== undefined && entry.title.trim() !== ""
+      ? entry.title.trim()
+      : existing?.title || "Nota sem título";
+  const finalContent = entry.content !== undefined ? entry.content : existing?.content || "";
+  const finalRating =
+    entry.success_rating !== undefined
+      ? entry.success_rating
+      : existing?.success_rating !== undefined
+      ? existing.success_rating
+      : null;
+
+  // Verifica se a data mudou significativamente (> 1 minuto) em relação à anterior
+  const dateChanged = !!(
+    existing &&
+    existing.date &&
+    entry.date &&
+    Math.abs(new Date(existing.date).getTime() - new Date(entry.date).getTime()) >= 60000
+  );
 
   let thelemicDate = entry.thelemic_date || (!dateChanged && existing?.thelemic_date) || "";
   let sunSign = entry.sun_sign || (!dateChanged && existing?.sun_sign) || "";
-  let sunDegree = entry.sun_degree !== undefined && entry.sun_degree !== 0 ? entry.sun_degree : (!dateChanged && existing?.sun_degree ? existing.sun_degree : 0);
+  let sunDegree =
+    entry.sun_degree !== undefined && entry.sun_degree !== 0
+      ? entry.sun_degree
+      : !dateChanged && existing?.sun_degree
+      ? existing.sun_degree
+      : 0;
   let moonSign = entry.moon_sign || (!dateChanged && existing?.moon_sign) || "";
-  let moonDegree = entry.moon_degree !== undefined && entry.moon_degree !== 0 ? entry.moon_degree : (!dateChanged && existing?.moon_degree ? existing.moon_degree : 0);
+  let moonDegree =
+    entry.moon_degree !== undefined && entry.moon_degree !== 0
+      ? entry.moon_degree
+      : !dateChanged && existing?.moon_degree
+      ? existing.moon_degree
+      : 0;
   let moonPhase = entry.moon_phase || (!dateChanged && existing?.moon_phase) || "";
-  let moonIllum = entry.moon_illumination !== undefined && entry.moon_illumination !== 0 ? entry.moon_illumination : (!dateChanged && existing?.moon_illumination ? existing.moon_illumination : 0);
+  let moonIllum =
+    entry.moon_illumination !== undefined && entry.moon_illumination !== 0
+      ? entry.moon_illumination
+      : !dateChanged && existing?.moon_illumination
+      ? existing.moon_illumination
+      : 0;
   let planetaryDay = entry.planetary_day || (!dateChanged && existing?.planetary_day) || "";
   let planetaryHour = entry.planetary_hour || (!dateChanged && existing?.planetary_hour) || "";
 
@@ -763,6 +796,13 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
       console.error("Erro ao autocalcular dados astrológicos ao salvar:", err);
     }
   }
+
+  const finalMentalBefore =
+    entry.mental_state_before !== undefined ? entry.mental_state_before : existing?.mental_state_before || "";
+  const finalMentalAfter =
+    entry.mental_state_after !== undefined ? entry.mental_state_after : existing?.mental_state_after || "";
+  const finalTagsJson =
+    entry.tags !== undefined ? JSON.stringify(entry.tags) : existing?.tags_json || "[]";
 
   db.prepare(`
     INSERT INTO entries (
@@ -797,11 +837,11 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
       updated_at = excluded.updated_at
   `).run(
     entryId,
-    entry.type,
-    entry.title,
-    entry.content,
+    finalType,
+    finalTitle,
+    finalContent,
     entryDateStr,
-    (entry.success_rating !== undefined && entry.success_rating !== null) ? entry.success_rating : null,
+    finalRating,
     thelemicDate,
     sunSign,
     sunDegree,
@@ -811,26 +851,28 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
     moonIllum,
     planetaryDay,
     planetaryHour,
-    entry.mental_state_before || "",
-    entry.mental_state_after || "",
-    JSON.stringify(entry.tags || []),
+    finalMentalBefore,
+    finalMentalAfter,
+    finalTagsJson,
     entry.created_at || existing?.created_at || now,
     now
   );
 
-  // Update Influences
-  db.prepare("DELETE FROM entry_influences WHERE entry_id = ?").run(entryId);
-  if (entry.influences && entry.influences.length > 0) {
-    const insertInfluence = db.prepare("INSERT INTO entry_influences (entry_id, category, name) VALUES (?, ?, ?)");
-    for (const inf of entry.influences) {
-      if (inf.name && inf.name.trim()) {
-        insertInfluence.run(entryId, inf.category, inf.name.trim());
+  // Update Influences (apenas quando array for explicitamente enviado)
+  if (entry.influences !== undefined) {
+    db.prepare("DELETE FROM entry_influences WHERE entry_id = ?").run(entryId);
+    if (entry.influences && entry.influences.length > 0) {
+      const insertInfluence = db.prepare("INSERT INTO entry_influences (entry_id, category, name) VALUES (?, ?, ?)");
+      for (const inf of entry.influences) {
+        if (inf.name && inf.name.trim()) {
+          insertInfluence.run(entryId, inf.category, inf.name.trim());
+        }
       }
     }
   }
 
   // Update Connections
-  if (entry.connections) {
+  if (entry.connections !== undefined) {
     db.prepare("DELETE FROM entry_connections WHERE source_id = ?").run(entryId);
     const insertConn = db.prepare("INSERT INTO entry_connections (source_id, target_id, relationship_type, notes) VALUES (?, ?, ?, ?)");
     for (const conn of entry.connections) {
@@ -860,7 +902,7 @@ export function saveEntry(entry: MagickEntry, customDb?: DatabaseSync): MagickEn
     );
   }
 
-  return { ...entry, id: entryId };
+  return getEntryById(entryId) || { ...entry, id: entryId, title: finalTitle, type: finalType, content: finalContent, date: entryDateStr };
 }
 
 export function deleteEntry(id: string): boolean {

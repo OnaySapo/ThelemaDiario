@@ -42,6 +42,7 @@ import {
   Layers,
   Bell,
 } from "lucide-react";
+import { formatDateBR, formatTime24h, formatDateTimeBR } from "@/lib/dateUtils";
 
 interface HomeViewProps {
   entries: MagickEntry[];
@@ -238,10 +239,10 @@ export function HomeView({
               <div className="flex items-center justify-between gap-3 border-b border-medium-750 pb-2 mb-2.5">
                 <span className="text-[10px] font-mono font-bold text-medium-400 uppercase tracking-wider flex items-center gap-1.5 shrink-0">
                   <Clock className="w-3.5 h-3.5 text-white" />
-                  <span>Hora Local & Trânsito</span>
+                  <span>{formatDateBR(now)}</span>
                 </span>
                 <span className="text-xs font-mono font-bold text-white bg-medium-800 px-2 py-0.5 rounded border border-medium-700 tracking-wider shrink-0 shadow-sm">
-                  {now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                  {formatTime24h(now)}
                 </span>
               </div>
 
@@ -446,7 +447,7 @@ export function HomeView({
           <ThelemicCalendar
             entries={entries}
             onSelectEntry={onSelectEntry}
-            onNewNote={(dateStr) => onNewNote("Prática", undefined, dateStr ? `Operação de ${dateStr}` : undefined)}
+            onNewNote={(dateStr) => onNewNote("Prática", undefined, dateStr ? `Operação de ${formatDateBR(dateStr)}` : undefined)}
           />
 
           {/* Afazeres Mágickos (To-Do List) */}
@@ -706,7 +707,7 @@ export function HomeView({
                 </div>
 
                 <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-medium-750 text-[10px] font-mono text-medium-400">
-                  <span>{new Date(entry.date).toLocaleDateString("pt-BR")}</span>
+                  <span>{formatDateTimeBR(entry.date)}</span>
                   <span className="flex items-center gap-1 text-white group-hover:translate-x-1 transition-transform">
                     <span>Ler nota</span>
                     <ArrowRight className="w-3 h-3" />

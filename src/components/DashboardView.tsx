@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { MagicHeatmap } from "@/components/MagicHeatmap";
 import { LiberReshWidget } from "@/components/LiberReshWidget";
+import { formatDateTimeBR, getInfluenceCategoryLabel } from "@/lib/dateUtils";
 
 interface DashboardViewProps {
   entries: MagickEntry[];
@@ -104,13 +105,25 @@ export function DashboardView({
 
     // Filter by influence category
     if (influenceCategory !== "all") {
-      list = list.filter((i) => i.category.toLowerCase() === influenceCategory.toLowerCase());
+      list = list.filter((i) => {
+        const cat = i.category.toLowerCase();
+        const target = influenceCategory.toLowerCase();
+        if (target === "entity") return cat === "entity" || cat === "deity" || cat === "angel";
+        if (target === "color") return cat === "color" || cat === "candle";
+        if (target === "instrument") return cat === "instrument" || cat === "tool";
+        return cat === target;
+      });
     }
 
     // Filter by text search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = list.filter((i) => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q));
+      list = list.filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) ||
+          i.category.toLowerCase().includes(q) ||
+          getInfluenceCategoryLabel(i.category).toLowerCase().includes(q)
+      );
     }
 
     // Sort: Recurrent vs Success
@@ -574,11 +587,15 @@ export function DashboardView({
               className="w-full bg-medium-900 border border-medium-750 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-white font-mono"
             >
               <option value="all">Todas as Influências (Liber 777)</option>
-              <option value="entity">Deidades & Entidades</option>
-              <option value="incense">Incenso & Perfumes</option>
-              <option value="tool">Armas & Instrumentos</option>
-              <option value="candle">Cores & Velas</option>
-              <option value="feeling">Sentimentos & Êxtase</option>
+              <option value="entity">Entidades, Divindades & Anjos</option>
+              <option value="color">Cores & Escalas do 777</option>
+              <option value="element">Elementos (Fogo, Água, Ar, Terra, Espírito)</option>
+              <option value="planet">Planetas & Astros</option>
+              <option value="sephirah">Sephiroth & Caminhos</option>
+              <option value="tarot">Tarot & Atus de Thoth</option>
+              <option value="incense">Incensos & Perfumes</option>
+              <option value="instrument">Armas & Instrumentos Mágickos</option>
+              <option value="herb">Ervas, Plantas & Cristais</option>
             </select>
           </div>
 
@@ -625,8 +642,8 @@ export function DashboardView({
               >
                 <div>
                   <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-medium-800 text-medium-300 border border-medium-700 capitalize">
-                      {item.category}
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-medium-800 text-amber-300 border border-medium-700">
+                      {getInfluenceCategoryLabel(item.category)}
                     </span>
 
                     <span className="flex items-center gap-1 font-mono text-xs font-bold text-white bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
@@ -866,7 +883,7 @@ export function DashboardView({
 
               <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
                 <span className="text-medium-400 text-[10px]">
-                  {new Date(e.date).toLocaleDateString("pt-BR")}
+                  {formatDateTimeBR(e.date)}
                 </span>
                 <span className="flex items-center gap-1 text-white font-bold bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
                   <Star className="w-3 h-3 fill-white text-white" />

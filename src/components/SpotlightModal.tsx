@@ -5,6 +5,7 @@ import { MagickEntry, normalizeCategory } from "@/lib/types";
 import { getCategoryThelemicIcon, ZodiacIcon, ThelemicDateDisplay } from "@/components/ThelemicIcons";
 import { Search, X, Calendar, Star, Compass, ArrowRight, CornerDownLeft, Calculator } from "lucide-react";
 import { calculateGematria } from "@/lib/gematria";
+import { formatDateTimeBR } from "@/lib/dateUtils";
 
 interface SpotlightModalProps {
   isOpen: boolean;
@@ -164,11 +165,7 @@ export function SpotlightModal({
           ) : (
             results.map((entry, idx) => {
               const isSelected = idx === selectedIndex;
-              const formattedDate = new Date(entry.date).toLocaleDateString("pt-BR", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-              });
+              const formattedDate = formatDateTimeBR(entry.date);
 
               return (
                 <div

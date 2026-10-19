@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import { MagickEntry, normalizeCategory } from "@/lib/types";
 import { Flame, Trophy, Calendar, Sparkles, CheckCircle2 } from "lucide-react";
 import { EstrelaDeThelema } from "@/components/ThelemicIcons";
+import { getLocalDateKey, formatDateBR } from "@/lib/dateUtils";
 
 interface MagicHeatmapProps {
   entries: MagickEntry[];
@@ -22,16 +23,13 @@ interface DayData {
 export function MagicHeatmap({ entries, onSelectDate, className = "" }: MagicHeatmapProps) {
   const [hoveredDay, setHoveredDay] = useState<DayData | null>(null);
 
-  // Mapear entradas por data (YYYY-MM-DD)
+  // Mapear entradas por data local (YYYY-MM-DD)
   const { weeks, stats } = useMemo(() => {
     const entryMap = new Map<string, MagickEntry[]>();
 
     entries.forEach((entry) => {
       if (!entry.date) return;
-      // Extrair YYYY-MM-DD
-      const d = new Date(entry.date);
-      if (isNaN(d.getTime())) return;
-      const key = d.toISOString().split("T")[0];
+      const key = getLocalDateKey(entry.date);
       if (!entryMap.has(key)) {
         entryMap.set(key, []);
       }
@@ -50,7 +48,7 @@ export function MagicHeatmap({ entries, onSelectDate, className = "" }: MagicHea
     const curr = new Date(startDate);
 
     while (curr <= today) {
-      const dateStr = curr.toISOString().split("T")[0];
+      const dateStr = getLocalDateKey(curr);
       const dayEntries = entryMap.get(dateStr) || [];
       const count = dayEntries.length;
 
@@ -98,12 +96,13 @@ export function MagicHeatmap({ entries, onSelectDate, className = "" }: MagicHea
 
     // Calcular streak atual (de trás para a frente a partir de hoje/ontem)
     const rev = [...allDays].reverse();
+    const todayKey = getLocalDateKey(today);
     let isTrackingCurrent = true;
     for (const d of rev) {
       if (isTrackingCurrent) {
         if (d.count > 0) {
           currentStreak++;
-        } else if (d.dateStr === today.toISOString().split("T")[0]) {
+        } else if (d.dateStr === todayKey) {
           // Se hoje ainda não teve registro, não zera imediatamente o streak se ontem teve
           continue;
         } else {
@@ -193,7 +192,7 @@ export function MagicHeatmap({ entries, onSelectDate, className = "" }: MagicHea
                       onMouseEnter={() => setHoveredDay(day)}
                       onMouseLeave={() => setHoveredDay(null)}
                       className={`w-3 h-3 rounded-[2.5px] border transition-all ${colorClass}`}
-                      title={`${day.dateStr}: ${day.count} registro(s)`}
+                      title={`${formatDateBR(day.dateStr)}: ${day.count} registro(s)`}
                     />
                   );
                 })}
@@ -207,11 +206,7 @@ export function MagicHeatmap({ entries, onSelectDate, className = "" }: MagicHea
               {hoveredDay ? (
                 <span className="text-white">
                   <strong className="text-amber-400">{hoveredDay.count} prática(s)</strong> em{" "}
-                  {new Date(hoveredDay.dateStr).toLocaleDateString("pt-BR", {
-                    day: "2-digit",
-                    month: "long",
-                    year: "numeric",
-                  })}
+                  {formatDateBR(hoveredDay.dateStr)}
                   {hoveredDay.entries.length > 0 && (
                     <span className="text-medium-300 ml-2 italic">
                       — {hoveredDay.entries.map((e) => e.title).join(", ")}

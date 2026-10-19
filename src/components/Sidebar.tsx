@@ -25,6 +25,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { EstrelaDeThelema, getCategoryThelemicIcon, ZodiacIcon, IconeSolThelema } from "@/components/ThelemicIcons";
+import { formatDateTimeBR, getInfluenceCategoryLabel } from "@/lib/dateUtils";
 
 interface SidebarProps {
   entries: MagickEntry[];
@@ -82,10 +83,16 @@ export function Sidebar({
     if (selectedCategory !== "all" && category !== selectedCategory) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matchesTitle = e.title.toLowerCase().includes(q);
-      const matchesContent = e.content.toLowerCase().includes(q);
+      const matchesTitle = (e.title || "").toLowerCase().includes(q);
+      const matchesContent = (e.content || "").toLowerCase().includes(q);
       const matchesTags = e.tags?.some((t) => t.toLowerCase().includes(q));
-      return matchesTitle || matchesContent || matchesTags;
+      const matchesInfluences = e.influences?.some(
+        (inf) =>
+          inf.name.toLowerCase().includes(q) ||
+          inf.category.toLowerCase().includes(q) ||
+          getInfluenceCategoryLabel(inf.category).toLowerCase().includes(q)
+      );
+      return matchesTitle || matchesContent || matchesTags || matchesInfluences;
     }
     return true;
   });
@@ -284,7 +291,7 @@ export function Sidebar({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Buscar nas notas..."
+            placeholder="Buscar nas notas ou tags 777..."
             className="w-full bg-medium-800 border border-medium-700 rounded-md pl-8 pr-3 py-1.5 text-xs text-white placeholder-medium-400 focus:outline-none focus:border-medium-500 font-sans"
           />
         </div>
@@ -332,10 +339,7 @@ export function Sidebar({
           filteredEntries.map((entry) => {
             const isSelected = selectedEntryId === entry.id;
             const category = normalizeCategory(entry.type);
-            const dateStr = new Date(entry.date).toLocaleDateString("pt-BR", {
-              day: "2-digit",
-              month: "short",
-            });
+            const dateStr = formatDateTimeBR(entry.date);
 
             return (
               <div
@@ -369,6 +373,25 @@ export function Sidebar({
                 <p className="text-[11px] text-medium-400 line-clamp-2 leading-relaxed">
                   {entry.content.replace(/[#*`_>]/g, "")}
                 </p>
+
+                {/* Liber 777 Tags Preview */}
+                {entry.influences && entry.influences.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {entry.influences.slice(0, 3).map((inf, idx) => (
+                      <span
+                        key={idx}
+                        className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-medium-900 border border-amber-500/20 text-amber-300/90 truncate max-w-[110px]"
+                      >
+                        {inf.name}
+                      </span>
+                    ))}
+                    {entry.influences.length > 3 && (
+                      <span className="text-[9px] font-mono text-medium-400">
+                        +{entry.influences.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 {/* Coordinates & Success Micro-Tags */}
                 <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-medium-800/60 text-[10px] font-mono text-medium-400">

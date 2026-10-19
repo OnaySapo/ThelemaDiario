@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { MagickEntry, CategoryName, normalizeCategory } from "@/lib/types";
+import { formatDateTimeBR, getInfluenceCategoryLabel } from "@/lib/dateUtils";
 import { BookOpen, Printer, X, Check, Filter, Download, Sparkles, FileText, Calendar } from "lucide-react";
 
 interface GrimoireCompilerModalProps {
@@ -99,7 +100,7 @@ export function GrimoireCompilerModal({ isOpen, onClose, entries }: GrimoireComp
         <div className="no-print p-3 border-b border-medium-800 bg-medium-900/90 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-mono text-medium-400 text-[11px] uppercase">Categorias:</span>
-            {["Ritual", "Sonho", "Oráculo", "Estudo", "Prática", "Diário"].map((cat) => (
+            {["Prática", "Sonho", "Oráculo", "Estudo", "Diário", "Visão Astral"].map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -214,7 +215,7 @@ export function GrimoireCompilerModal({ isOpen, onClose, entries }: GrimoireComp
                       {entry.title}
                     </span>
                     <span className="text-xs font-mono text-stone-400 print:text-stone-600 shrink-0">
-                      {normalizeCategory(entry.type)} · {entry.date ? entry.date.slice(0, 10) : ""}
+                      {normalizeCategory(entry.type)} · {formatDateTimeBR(entry.date)}
                     </span>
                   </div>
                 ))}
@@ -232,7 +233,7 @@ export function GrimoireCompilerModal({ isOpen, onClose, entries }: GrimoireComp
                   <div className="border-b border-stone-800 print:border-stone-400 pb-3">
                     <div className="flex items-center justify-between text-xs font-mono text-amber-400/80 print:text-stone-600 mb-1">
                       <span>CAPÍTULO {(idx + 1).toString().padStart(2, "0")} · {normalizeCategory(entry.type)}</span>
-                      <span>{entry.date ? entry.date.slice(0, 10) : ""}</span>
+                      <span>{formatDateTimeBR(entry.date, " às ")}</span>
                     </div>
                     <h3 className="text-2xl font-serif font-bold text-amber-200 print:text-black">
                       {entry.title}
@@ -243,6 +244,11 @@ export function GrimoireCompilerModal({ isOpen, onClose, entries }: GrimoireComp
                         {entry.moon_sign && ` · ☽ em ${entry.moon_sign}`}
                         {entry.moon_phase && ` (${entry.moon_phase})`}
                         {entry.planetary_day && ` · ${entry.planetary_day}`}
+                      </p>
+                    )}
+                    {entry.influences && entry.influences.length > 0 && (
+                      <p className="text-[11px] font-mono text-stone-400 print:text-stone-700 mt-1.5">
+                        777: {entry.influences.map((inf) => `${getInfluenceCategoryLabel(inf.category)}: ${inf.name}`).join(" · ")}
                       </p>
                     )}
                   </div>

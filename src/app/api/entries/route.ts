@@ -19,8 +19,8 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    if (!body.title || !body.type) {
-      return NextResponse.json({ success: false, error: "Título e tipo são obrigatórios." }, { status: 400 });
+    if (!body || typeof body !== "object") {
+      return NextResponse.json({ success: false, error: "Dados inválidos." }, { status: 400 });
     }
 
     const saved = saveEntry(body);

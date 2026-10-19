@@ -54,6 +54,7 @@ import {
   Search,
   Sun,
   Calculator,
+  Tag,
 } from "lucide-react";
 import { ImageInsertModal, VideoInsertModal } from "@/components/MediaInsertModais";
 import { SlashCommandMenu, SlashCommandItem } from "@/components/SlashCommandMenu";
@@ -61,6 +62,16 @@ import { WikilinkSuggestMenu } from "@/components/WikilinkSuggestMenu";
 import { GematriaModal } from "@/components/GematriaModal";
 import { calculateGematria } from "@/lib/gematria";
 import { getReshSolarTide, getLiberReshFullText } from "@/lib/astronomy";
+import {
+  toLocalDateTimeValue,
+  localDateTimeToISO,
+  formatDateBR,
+  formatDateTimeBR,
+  formatTime24h,
+  formatTime24hWithSeconds,
+  getInfluenceCategoryLabel,
+} from "@/lib/dateUtils";
+import { BrazilianDateTimeInput, BrazilianDateInput } from "@/components/BrazilianDateTimeInput";
 
 interface ArticleViewProps {
   entry: MagickEntry | null;
@@ -105,8 +116,9 @@ export function ArticleView({
   const [editConnections, setEditConnections] = useState<
     { target_id: string; relationship_type: string; notes?: string }[]
   >([]);
-  const [newConnId, setNewConnId] = useState("");
-  const [newConnRel, setNewConnRel] = useState("result_of");
+  const [newConnTarget, setNewConnTarget] = useState("");
+  const [newConnType, setNewConnType] = useState("synchronic_with");
+  const [newConnNotes, setNewConnNotes] = useState("");
 
   // Oracle edit state
   const [editSpread, setEditSpread] = useState("Tiragem Livre");
@@ -294,10 +306,111 @@ export function ArticleView({
     return "font-serif";
   };
 
-  // Autosave Draft State
+  // Autosave & Safe Entry-Switch Refs
   const [draftSavedTime, setDraftSavedTime] = useState<string | null>(null);
   const [hasRecoverableDraft, setHasRecoverableDraft] = useState(false);
   const [recoverableDraft, setRecoverableDraft] = useState<any | null>(null);
+  const editingEntryIdRef = useRef<string | null>(null);
+  const latestPayloadRef = useRef<Partial<MagickEntry> | null>(null);
+  const isDirtyRef = useRef<boolean>(false);
+
+  // Sugestões Rápidas do Liber 777 por Categoria
+  const LIBER_777_PRESETS: Record<string, string[]> = {
+    entity: [
+      "Nuit",
+      "Hadit",
+      "Ra-Hoor-Khuit",
+      "Babalon",
+      "Thoth / Tahuti",
+      "Hoor-paar-kraat",
+      "Sagrado Anjo Guardião",
+      "Arcanjo Raphael",
+      "Arcanjo Michael",
+      "Arcanjo Gabriel",
+      "Arcanjo Uriel",
+      "Arcanjo Kamael",
+    ],
+    element: [
+      "Fogo (Tejas) 🜂",
+      "Água (Apas) 🜄",
+      "Ar (Vayu) 🜁",
+      "Terra (Prithivi) 🜃",
+      "Espírito (Akasha) 🁢",
+    ],
+    candle: [
+      "Ouro Solar",
+      "Branco Brilhante",
+      "Escarlate / Rubi",
+      "Azul Celeste (Nuit)",
+      "Verde Esmeralda",
+      "Púrpura / Violeta",
+      "Laranja Hermético",
+      "Prata Lunar",
+      "Negro (Binah)",
+    ],
+    incense: [
+      "Olíbano (Olibanum)",
+      "Mirra",
+      "Incenso de Abramelin",
+      "Sangue de Dragão",
+      "Sândalo",
+      "Rosa",
+      "Benjoim",
+      "Canela",
+      "Jasmim",
+      "Dittany de Creta",
+    ],
+    tool: [
+      "Baqueta / Vara (Fogo)",
+      "Taça / Cálice (Água)",
+      "Espada / Adaga (Ar)",
+      "Pantáculo / Disco (Terra)",
+      "Lamen",
+      "Sino Mágicko",
+      "Óleo de Abramelin",
+      "Manto / Robe",
+      "Anel",
+    ],
+    planet: [
+      "Sol · Tiphareth ☉",
+      "Lua · Yesod ☽",
+      "Mercúrio · Hod ☿",
+      "Vênus · Netzach ♀",
+      "Marte · Geburah ♂",
+      "Júpiter · Chesed ♃",
+      "Saturno · Binah ♄",
+      "Kether (Coroa)",
+      "Chokmah (Sabedoria)",
+      "Malkuth (Reino)",
+    ],
+    feeling: [
+      "Êxtase Solar",
+      "Silêncio Interior",
+      "Foco Dharânico",
+      "Clareza Astral",
+      "Devoção (Bhakti)",
+      "Serenidade",
+      "Força Marcial",
+    ],
+  };
+
+  const handleAddInfluence = (customValue?: string) => {
+    const val = (customValue !== undefined ? customValue : newInfVal).trim();
+    if (!val) return;
+    const exists = editInfluences.some(
+      (i) => i.category === newInfCat && i.name.toLowerCase() === val.toLowerCase()
+    );
+    if (!exists) {
+      setEditInfluences((prev) => [...prev, { category: newInfCat, name: val }]);
+    }
+    if (customValue === undefined) {
+      setNewInfVal("");
+    }
+  };
+
+  const handleRemoveInfluence = (index: number) => {
+    setEditInfluences((prev) => prev.filter((_, idx) => idx !== index));
+  };
 
   // Check for recoverable draft when entry changes
   React.useEffect(() => {
@@ -333,7 +446,7 @@ export function ArticleView({
     if (recoverableDraft.category !== undefined) setEditCategory(recoverableDraft.category);
     if (recoverableDraft.hasRating !== undefined) setHasRating(recoverableDraft.hasRating);
     if (recoverableDraft.rating !== undefined) setEditRating(recoverableDraft.rating);
-    if (recoverableDraft.date !== undefined) setEditDate(recoverableDraft.date);
+    if (recoverableDraft.date !== undefined) setEditDate(toLocalDateTimeValue(recoverableDraft.date));
     if (recoverableDraft.thelemicDate !== undefined) setEditThelemicDate(recoverableDraft.thelemicDate);
     if (recoverableDraft.influences !== undefined) setEditInfluences(recoverableDraft.influences);
     if (recoverableDraft.connections !== undefined) setEditConnections(recoverableDraft.connections);
@@ -350,92 +463,39 @@ export function ArticleView({
     setRecoverableDraft(null);
   };
 
-  // Autosave to localStorage while editing with 1s debounce
-  React.useEffect(() => {
-    if (!isEditing || !entry) return;
-
-    const initialHasRating = entry.success_rating !== undefined && entry.success_rating !== null;
-    const isDirty =
-      editTitle !== entry.title ||
-      editContent !== entry.content ||
-      editCategory !== normalizeCategory(entry.type) ||
-      hasRating !== initialHasRating ||
-      (hasRating && editRating !== (entry.success_rating ?? 8));
-
-    if (!isDirty) return;
-
-    const timer = setTimeout(() => {
-      try {
-        const key = `magick_draft_${entry.id}`;
-        const draftData = {
-          title: editTitle,
-          content: editContent,
-          category: editCategory,
-          hasRating,
-          rating: editRating,
-          date: editDate,
-          thelemicDate: editThelemicDate,
-          influences: editInfluences,
-          connections: editConnections,
-          timestamp: Date.now(),
-        };
-        localStorage.setItem(key, JSON.stringify(draftData));
-        setDraftSavedTime(
-          new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
-        );
-      } catch (e) {}
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [
-    isEditing,
-    entry,
-    editTitle,
-    editContent,
-    editCategory,
-    hasRating,
-    editRating,
-    editDate,
-    editThelemicDate,
-    editInfluences,
-    editConnections,
-  ]);
-
-  // Window beforeunload warning if unsaved changes exist
-  React.useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isEditing && entry && (editTitle !== entry.title || editContent !== entry.content)) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [isEditing, entry, editTitle, editContent]);
-
-  // Enter edit mode
-  const handleStartEdit = () => {
-    if (!entry) return;
-    setEditTitle(entry.title);
-    setEditContent(entry.content);
-    setEditCategory(normalizeCategory(entry.type));
-    const entryHasRating = entry.success_rating !== undefined && entry.success_rating !== null;
+  // Enter edit mode for a specific targetEntry
+  const handleStartEdit = (targetEntry?: MagickEntry | React.MouseEvent | null) => {
+    const actualEntry =
+      targetEntry && typeof targetEntry === "object" && "id" in targetEntry
+        ? (targetEntry as MagickEntry)
+        : entry;
+    if (!actualEntry) return;
+    editingEntryIdRef.current = actualEntry.id;
+    isDirtyRef.current = false;
+    setEditTitle(actualEntry.title);
+    setEditContent(actualEntry.content);
+    setEditCategory(normalizeCategory(actualEntry.type));
+    const entryHasRating = actualEntry.success_rating !== undefined && actualEntry.success_rating !== null;
     setHasRating(entryHasRating);
-    setEditRating(entryHasRating ? entry.success_rating! : 8);
-    setEditDate(new Date(entry.date).toISOString().slice(0, 16));
-    setEditThelemicDate(entry.thelemic_date || "");
-    setEditInfluences(entry.influences || []);
-    setEditConnections(entry.connections || []);
+    setEditRating(entryHasRating ? actualEntry.success_rating! : 8);
+    // Usa estritamente horário local (sem deslocamento UTC)
+    setEditDate(toLocalDateTimeValue(actualEntry.date));
+    setEditThelemicDate(actualEntry.thelemic_date || "");
+    setEditInfluences(actualEntry.influences || []);
+    setEditConnections(actualEntry.connections || []);
 
-    const hasExistingCards = !!(entry.oracle_data && entry.oracle_data.cards && entry.oracle_data.cards.length > 0);
-    if (entry.oracle_data) {
-      setEditQuery(entry.oracle_data.query || "");
-      setEditQuerentName(entry.oracle_data.querent_name || "");
-      setEditQuerentBirthdate(entry.oracle_data.querent_birthdate || "");
-      setEditCards((entry.oracle_data.cards as CardOnTable[]) || []);
-      setEditSpread(entry.oracle_data.spread_name || "Tiragem Livre");
-      setEditCardBackStyle(entry.oracle_data.card_back_style || "rosa_cruz");
+    const hasExistingCards = !!(
+      actualEntry.oracle_data &&
+      actualEntry.oracle_data.cards &&
+      actualEntry.oracle_data.cards.length > 0
+    );
+    if (actualEntry.oracle_data) {
+      setEditQuery(actualEntry.oracle_data.query || "");
+      setEditQuerentName(actualEntry.oracle_data.querent_name || "");
+      setEditQuerentBirthdate(actualEntry.oracle_data.querent_birthdate || "");
+      setEditCards((actualEntry.oracle_data.cards as CardOnTable[]) || []);
+      setEditSpread(actualEntry.oracle_data.spread_name || "Tiragem Livre");
+      setEditCardBackStyle(actualEntry.oracle_data.card_back_style || "rosa_cruz");
       setHasOracleTable(hasExistingCards);
     } else {
       setEditQuery("");
@@ -455,42 +515,179 @@ export function ArticleView({
     }, 50);
   };
 
-  // Auto-edit hook when requested by parent (ex: ao criar nova nota)
+  // Mantém payload atualizado e executa Auto-Save real no banco SQLite + localStorage
   React.useEffect(() => {
-    if (autoEdit && entry && !isEditing) {
-      handleStartEdit();
+    if (!isEditing || !entry || editingEntryIdRef.current !== entry.id) return;
+
+    const initialHasRating = entry.success_rating !== undefined && entry.success_rating !== null;
+    const prevLocalDate = toLocalDateTimeValue(entry.date);
+    const prevInfJson = JSON.stringify(entry.influences || []);
+    const curInfJson = JSON.stringify(editInfluences || []);
+    const prevConnJson = JSON.stringify(entry.connections || []);
+    const curConnJson = JSON.stringify(editConnections || []);
+
+    const isDirty =
+      editTitle !== entry.title ||
+      editContent !== entry.content ||
+      editCategory !== normalizeCategory(entry.type) ||
+      hasRating !== initialHasRating ||
+      (hasRating && editRating !== (entry.success_rating ?? 8)) ||
+      editDate !== prevLocalDate ||
+      curInfJson !== prevInfJson ||
+      curConnJson !== prevConnJson;
+
+    isDirtyRef.current = isDirty;
+
+    const payload: Partial<MagickEntry> = {
+      id: entry.id,
+      title: editTitle.trim() || entry.title || "Nota sem título",
+      content: editContent,
+      type: editCategory,
+      success_rating: hasRating ? editRating : null,
+      date: localDateTimeToISO(editDate),
+      thelemic_date: editThelemicDate,
+      sun_sign: entry.sun_sign,
+      sun_degree: entry.sun_degree,
+      moon_sign: entry.moon_sign,
+      moon_degree: entry.moon_degree,
+      moon_phase: entry.moon_phase,
+      moon_illumination: entry.moon_illumination,
+      planetary_day: entry.planetary_day,
+      planetary_hour: entry.planetary_hour,
+      influences: editInfluences,
+      connections: editConnections,
+      oracle_data:
+        hasOracleTable && editCards.length > 0
+          ? {
+              system: "thoth_tarot",
+              spread_name: editSpread.trim() || "Mesa Oracular",
+              query: editQuery.trim(),
+              cards: editCards,
+              card_back_style: editCardBackStyle,
+              querent_name: editQuerentName.trim(),
+              querent_birthdate: editQuerentBirthdate,
+            }
+          : undefined,
+    };
+
+    latestPayloadRef.current = payload;
+
+    if (!isDirty) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const key = `magick_draft_${entry.id}`;
+        const draftData = {
+          title: editTitle,
+          content: editContent,
+          category: editCategory,
+          hasRating,
+          rating: editRating,
+          date: editDate,
+          thelemicDate: editThelemicDate,
+          influences: editInfluences,
+          connections: editConnections,
+          timestamp: Date.now(),
+        };
+        localStorage.setItem(key, JSON.stringify(draftData));
+        // Auto-save real no banco de dados SQLite para evitar sumiço de notas
+        await onUpdateEntry(payload);
+        isDirtyRef.current = false;
+        localStorage.removeItem(key);
+        setDraftSavedTime(formatTime24hWithSeconds(new Date()));
+      } catch (e) {}
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  }, [
+    isEditing,
+    entry,
+    editTitle,
+    editContent,
+    editCategory,
+    hasRating,
+    editRating,
+    editDate,
+    editThelemicDate,
+    editInfluences,
+    editConnections,
+    hasOracleTable,
+    editCards,
+    editSpread,
+    editQuery,
+    editCardBackStyle,
+    editQuerentName,
+    editQuerentBirthdate,
+  ]);
+
+  // Ao trocar de nota (entry?.id) ou receber autoEdit (ex: + Nova Nota):
+  // Salva imediatamente qualquer alteração pendente da nota anterior e carrega a nova nota sem misturar estados!
+  React.useEffect(() => {
+    if (editingEntryIdRef.current && editingEntryIdRef.current !== entry?.id) {
+      if (isDirtyRef.current && latestPayloadRef.current) {
+        const pendingPayload = { ...latestPayloadRef.current };
+        isDirtyRef.current = false;
+        onUpdateEntry(pendingPayload).catch(() => {});
+      }
+      editingEntryIdRef.current = null;
+      latestPayloadRef.current = null;
+      if (!autoEdit) {
+        setIsEditing(false);
+        setDraftSavedTime(null);
+      }
+    }
+
+    if (autoEdit && entry) {
+      handleStartEdit(entry);
       onClearAutoEdit?.();
     }
-  }, [autoEdit, entry?.id]);
+  }, [entry?.id, autoEdit]);
+
+  // Salva alterações pendentes se o componente desmontar (ex: usuário clicou em Início / Métricas / Árvore)
+  React.useEffect(() => {
+    return () => {
+      if (isDirtyRef.current && latestPayloadRef.current) {
+        const pendingPayload = { ...latestPayloadRef.current };
+        isDirtyRef.current = false;
+        onUpdateEntry(pendingPayload).catch(() => {});
+      }
+    };
+  }, []);
+
+  // Atalho Ctrl+S / Cmd+S para salvar imediatamente durante a edição
+  React.useEffect(() => {
+    if (!isEditing) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        handleSaveEdit();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isEditing, entry, editTitle, editContent, editCategory, hasRating, editRating, editDate, editInfluences, editConnections]);
 
   const handleToggleOracleTable = () => {
     setHasOracleTable((prev) => !prev);
   };
 
   const handleCancelEdit = () => {
-    const isDirty =
-      entry &&
-      (editTitle !== entry.title ||
-        editContent !== entry.content ||
-        editCategory !== normalizeCategory(entry.type));
-
-    if (isDirty) {
-      if (!confirm("Existem alterações não salvas. Deseja sair do modo de edição? Seu rascunho continuará salvo localmente.")) {
-        return;
-      }
-    }
+    editingEntryIdRef.current = null;
+    isDirtyRef.current = false;
     setIsEditing(false);
   };
 
   const handleSaveEdit = async () => {
     if (!entry) return;
+    isDirtyRef.current = false;
+    editingEntryIdRef.current = null;
     await onUpdateEntry({
       id: entry.id,
-      title: editTitle.trim(),
+      title: editTitle.trim() || entry.title || "Nota sem título",
       content: editContent.trim(),
       type: editCategory,
       success_rating: hasRating ? editRating : null,
-      date: new Date(editDate).toISOString(),
+      date: localDateTimeToISO(editDate),
       thelemic_date: editThelemicDate,
       sun_sign: entry.sun_sign,
       sun_degree: entry.sun_degree,
@@ -1972,12 +2169,7 @@ export function ArticleView({
             <span>{normalizeCategory(entry.type)}</span>
           </span>
           <span className="text-xs text-medium-400 font-mono">
-            {new Date(entry.date).toLocaleDateString("pt-BR", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}{" "}
-            · {readingTime} min de leitura
+            {formatDateTimeBR(entry.date, " às ")} · {readingTime} min de leitura
           </span>
         </div>
 
@@ -2249,9 +2441,12 @@ export function ArticleView({
               </div>
 
               <div className="flex items-center gap-3">
+                <span className="text-medium-400">
+                  {formatDateTimeBR(entry.date, " às ")}
+                </span>
                 {entry.moon_phase && (
                   <span>
-                    {entry.moon_phase} ({entry.moon_illumination || 0}%)
+                    · {entry.moon_phase} ({entry.moon_illumination || 0}%)
                   </span>
                 )}
                 {entry.success_rating !== undefined && entry.success_rating !== null && (
@@ -2263,7 +2458,7 @@ export function ArticleView({
               </div>
             </div>
 
-            {/* Influences Chips */}
+            {/* Influences Chips (Liber 777 Tags) */}
             {entry.influences && entry.influences.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 py-1">
                 {entry.influences.map((inf, i) => (
@@ -2271,8 +2466,8 @@ export function ArticleView({
                     key={i}
                     className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-medium-800 border border-medium-700 text-xs text-medium-300 font-mono"
                   >
-                    <strong className="text-white capitalize">{inf.category}:</strong>
-                    <span>{inf.name}</span>
+                    <strong className="text-amber-300">{getInfluenceCategoryLabel(inf.category)}:</strong>
+                    <span className="text-white">{inf.name}</span>
                   </span>
                 ))}
               </div>
@@ -2421,7 +2616,7 @@ export function ArticleView({
                           {normalizeCategory(srcEntry.type)}
                         </span>
                         <span className="text-[10px] font-mono text-medium-500">
-                          {srcEntry.date ? srcEntry.date.slice(0, 10) : ""}
+                          {formatDateBR(srcEntry.date)}
                         </span>
                       </div>
                       <div className="font-semibold text-white group-hover:text-amber-300 transition-colors truncate">
@@ -2449,11 +2644,8 @@ export function ArticleView({
                   <div>
                     <span className="font-semibold text-white">Rascunho automático encontrado!</span>
                     <span className="block text-[11px] text-amber-300/80">
-                      Há alterações salvas neste dispositivo em{" "}
-                      {new Date(recoverableDraft.timestamp || Date.now()).toLocaleTimeString("pt-BR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}.
+                      Há alterações salvas neste dispositivo às{" "}
+                      {formatTime24h(recoverableDraft.timestamp || Date.now())}.
                     </span>
                   </div>
                 </div>
@@ -2513,13 +2705,11 @@ export function ArticleView({
 
               <div>
                 <label className="block text-[11px] font-mono text-medium-400 mb-1">
-                  DATA & HORA
+                  DATA (DD/MM/AA) & HORA (24H)
                 </label>
-                <input
-                  type="datetime-local"
+                <BrazilianDateTimeInput
                   value={editDate}
-                  onChange={(e) => setEditDate(e.target.value)}
-                  className="w-full bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-white"
+                  onChange={(val) => setEditDate(val)}
                 />
               </div>
 
@@ -2551,6 +2741,121 @@ export function ArticleView({
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Painel de Correspondências & Tags do Liber 777 (Entidades, Cores, Elementos, Instrumentos, Incensos, etc.) */}
+            <div className="p-4 rounded-xl bg-medium-850 border border-medium-700 space-y-3 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Tag className="w-3.5 h-3.5 text-amber-400" />
+                  <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-white">
+                    Tags & Correspondências do Liber 777 (Entidades, Cores, Elementos, Incensos...)
+                  </label>
+                </div>
+                <span className="text-[10px] font-mono text-medium-400">
+                  Indexa automaticamente na Árvore da Vida, Métricas e Busca Global
+                </span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={newInfCat}
+                  onChange={(e) => setNewInfCat(e.target.value)}
+                  className="bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono sm:w-64"
+                >
+                  <option value="entity">Entidade / Espírito / Inteligência</option>
+                  <option value="deity">Divindade / Forma-Deus</option>
+                  <option value="color">Cor (Escalas do Liber 777)</option>
+                  <option value="element">Elemento (Fogo, Água, Ar, Terra, Espírito)</option>
+                  <option value="planet">Planeta / Astro</option>
+                  <option value="sephirah">Sephirah / Caminho da Árvore</option>
+                  <option value="tarot">Tarot / Atu de Thoth</option>
+                  <option value="incense">Incenso / Perfume / Óleo</option>
+                  <option value="instrument">Instrumento / Arma Mágicka</option>
+                  <option value="angel">Coro Angelical / Arcanjo</option>
+                  <option value="herb">Erva / Planta / Cristal</option>
+                </select>
+
+                <div className="flex-1 flex gap-2">
+                  <input
+                    type="text"
+                    value={newInfVal}
+                    onChange={(e) => setNewInfVal(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddInfluence();
+                      }
+                    }}
+                    placeholder={`Digite ou escolha abaixo (${getInfluenceCategoryLabel(newInfCat)})...`}
+                    className="flex-1 bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-amber-400 font-sans"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleAddInfluence()}
+                    className="px-3.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-md text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Adicionar</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Sugestões Rápidas da Categoria Selecionada */}
+              {LIBER_777_PRESETS[newInfCat] && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[10px] font-mono text-medium-400 mr-1">
+                    Sugestões ({getInfluenceCategoryLabel(newInfCat)}):
+                  </span>
+                  {LIBER_777_PRESETS[newInfCat].map((preset) => {
+                    const isSelected = editInfluences.some(
+                      (inf) => inf.category === newInfCat && inf.name.toLowerCase() === preset.toLowerCase()
+                    );
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => handleAddInfluence(preset)}
+                        disabled={isSelected}
+                        className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-all ${
+                          isSelected
+                            ? "bg-amber-500/20 border-amber-500/50 text-amber-300 opacity-60 cursor-default"
+                            : "bg-medium-800 hover:bg-medium-750 border-medium-700 hover:border-amber-400/50 text-medium-300 hover:text-white"
+                        }`}
+                      >
+                        + {preset}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Chips das Tags 777 Adicionadas na Nota */}
+              {editInfluences.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-medium-750">
+                  {editInfluences.map((inf, idx) => (
+                    <span
+                      key={`${inf.category}-${inf.name}-${idx}`}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-medium-800 border border-amber-500/30 text-xs font-mono text-white shadow-sm"
+                    >
+                      <strong className="text-amber-300">{getInfluenceCategoryLabel(inf.category)}:</strong>
+                      <span>{inf.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveInfluence(idx)}
+                        className="ml-0.5 text-medium-400 hover:text-red-400 transition-colors"
+                        title="Remover correspondência"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[11px] font-mono text-medium-500 italic pt-1">
+                  Nenhuma tag 777 adicionada ainda. Escolha uma categoria acima (ex: Entidade, Cor, Elemento) para catalogar esta nota.
+                </div>
+              )}
             </div>
 
             {/* Oracle Spread & Table Cloth Editor (quando ativado pelo botão ou notas oraculares) */}
@@ -2617,15 +2922,15 @@ export function ArticleView({
                   </div>
                   <div>
                     <label className="block text-[10px] font-mono text-medium-400 mb-1">
-                      DATA DE NASCIMENTO <span className="text-medium-500">(opcional · Arcanos Pessoais)</span>
+                      DATA DE NASCIMENTO <span className="text-medium-500">(DD/MM/AAAA · Arcanos Pessoais)</span>
                     </label>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="date"
-                        value={editQuerentBirthdate}
-                        onChange={(e) => setEditQuerentBirthdate(e.target.value)}
-                        className="flex-1 bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-white font-mono"
-                      />
+                      <div className="flex-1">
+                        <BrazilianDateInput
+                          value={editQuerentBirthdate}
+                          onChange={(val) => setEditQuerentBirthdate(val)}
+                        />
+                      </div>
                       {editQuerentBirthdate && (
                         <button
                           type="button"
@@ -3283,14 +3588,127 @@ export function ArticleView({
               </div>
             )}
 
+            {/* Conexões Mágicas com Outras Notas (Causalidade / Sincronicidade) */}
+            {allEntries.filter((e) => !entry || e.id !== entry.id).length > 0 && (
+              <div className="p-4 rounded-xl bg-medium-850 border border-medium-700 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <LinkIcon className="w-3.5 h-3.5 text-amber-400" />
+                    <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-white">
+                      Conexões Mágicas com Outras Notas (Causalidade & Sincronicidade)
+                    </label>
+                  </div>
+                  <span className="text-[10px] font-mono text-medium-400">
+                    Dica: Você também pode digitar [[ no texto para linkar palavras
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                  <select
+                    value={newConnType}
+                    onChange={(e) => setNewConnType(e.target.value)}
+                    className="sm:col-span-3 bg-medium-800 border border-medium-700 rounded-md px-2.5 py-2 text-xs text-white font-mono focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="synchronic_with">Sincrônico com</option>
+                    <option value="result_of">Resultado de</option>
+                    <option value="predicted_by">Profetizado por</option>
+                    <option value="reference">Referência de</option>
+                  </select>
+
+                  <select
+                    value={newConnTarget}
+                    onChange={(e) => setNewConnTarget(e.target.value)}
+                    className="sm:col-span-5 bg-medium-800 border border-medium-700 rounded-md px-2.5 py-2 text-xs text-white font-sans focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="">Selecione uma nota do diário...</option>
+                    {allEntries
+                      .filter((e) => !entry || e.id !== entry.id)
+                      .map((e) => (
+                        <option key={e.id} value={e.id}>
+                          [{formatDateBR(e.date)}] {e.title}
+                        </option>
+                      ))}
+                  </select>
+
+                  <div className="sm:col-span-4 flex gap-2">
+                    <input
+                      type="text"
+                      value={newConnNotes}
+                      onChange={(e) => setNewConnNotes(e.target.value)}
+                      placeholder="Nota sobre o vínculo (opcional)..."
+                      className="flex-1 bg-medium-800 border border-medium-700 rounded-md px-2.5 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-amber-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!newConnTarget) return;
+                        if (!editConnections.some((c) => c.target_id === newConnTarget)) {
+                          setEditConnections((prev) => [
+                            ...prev,
+                            {
+                              target_id: newConnTarget,
+                              relationship_type: newConnType,
+                              notes: newConnNotes.trim() || undefined,
+                            },
+                          ]);
+                        }
+                        setNewConnTarget("");
+                        setNewConnNotes("");
+                      }}
+                      className="px-3 py-2 bg-medium-800 hover:bg-medium-750 text-white border border-medium-700 rounded-md text-xs font-mono font-semibold flex items-center gap-1 transition-colors shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Vincular</span>
+                    </button>
+                  </div>
+                </div>
+
+                {editConnections.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-medium-750">
+                    {editConnections.map((conn, idx) => {
+                      const target = allEntries.find((e) => e.id === conn.target_id);
+                      const relLabel =
+                        conn.relationship_type === "result_of"
+                          ? "Resultado de"
+                          : conn.relationship_type === "predicted_by"
+                          ? "Profetizado por"
+                          : conn.relationship_type === "synchronic_with"
+                          ? "Sincrônico com"
+                          : "Referência de";
+                      return (
+                        <span
+                          key={`${conn.target_id}-${idx}`}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-medium-800 border border-medium-700 text-xs font-mono text-medium-200"
+                        >
+                          <strong className="text-amber-300">{relLabel}:</strong>
+                          <span className="text-white">{target ? target.title : conn.target_id}</span>
+                          {conn.notes && <span className="text-medium-400 italic">({conn.notes})</span>}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditConnections((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                            className="ml-1 text-medium-400 hover:text-red-400 transition-colors"
+                            title="Remover conexão"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Bottom Actions */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-medium-700">
               <button
                 type="button"
-                onClick={() => setIsEditing(false)}
+                onClick={handleCancelEdit}
                 className="px-4 py-2 text-xs font-semibold text-medium-300 hover:text-white"
               >
-                Descartar
+                Cancelar
               </button>
               <button
                 type="button"

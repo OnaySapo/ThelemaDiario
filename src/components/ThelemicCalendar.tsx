@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { getCategoryThelemicIcon, EstrelaDeThelema } from "@/components/ThelemicIcons";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Plus, Star, X, ArrowRight } from "lucide-react";
+import { getLocalDateKey, formatDateBR, formatTime24h } from "@/lib/dateUtils";
 
 interface ThelemicCalendarProps {
   entries: MagickEntry[];
@@ -21,6 +22,21 @@ const WEEKDAYS = [
   { short: "Dom", thelemic: "Dies ☉", full: "Dies Solis" },
 ];
 
+const PT_MONTHS = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
 export function ThelemicCalendar({
   entries,
   onSelectEntry,
@@ -32,12 +48,12 @@ export function ThelemicCalendar({
   const currentYear = viewDate.getFullYear();
   const currentMonth = viewDate.getMonth(); // 0 - 11
 
-  // Pre-index entries by date string (YYYY-MM-DD)
+  // Pre-index entries by local date string (YYYY-MM-DD)
   const entriesByDate = useMemo(() => {
     const map = new Map<string, MagickEntry[]>();
     for (const e of entries) {
       if (!e.date) continue;
-      const dateKey = e.date.slice(0, 10);
+      const dateKey = getLocalDateKey(e.date);
       const list = map.get(dateKey) || [];
       list.push(e);
       map.set(dateKey, list);
@@ -63,14 +79,14 @@ export function ThelemicCalendar({
       entries: MagickEntry[];
     }> = [];
 
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = getLocalDateKey(new Date());
 
     // Previous month padding
     const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
     for (let i = startingDayOfWeek - 1; i >= 0; i--) {
       const prevDay = prevMonthLastDay - i;
       const prevDate = new Date(currentYear, currentMonth - 1, prevDay);
-      const dateStr = prevDate.toISOString().slice(0, 10);
+      const dateStr = getLocalDateKey(prevDate);
       days.push({
         dateStr,
         dayNum: prevDay,
@@ -82,7 +98,6 @@ export function ThelemicCalendar({
 
     // Current month days
     for (let day = 1; day <= totalDays; day++) {
-      const d = new Date(currentYear, currentMonth, day);
       const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       days.push({
         dateStr,
@@ -97,7 +112,7 @@ export function ThelemicCalendar({
     const remainingCells = (7 - (days.length % 7)) % 7;
     for (let day = 1; day <= remainingCells; day++) {
       const nextDate = new Date(currentYear, currentMonth + 1, day);
-      const dateStr = nextDate.toISOString().slice(0, 10);
+      const dateStr = getLocalDateKey(nextDate);
       days.push({
         dateStr,
         dayNum: day,
@@ -119,8 +134,9 @@ export function ThelemicCalendar({
   };
 
   const handleToday = () => {
-    setViewDate(new Date());
-    setSelectedDateStr(new Date().toISOString().slice(0, 10));
+    const now = new Date();
+    setViewDate(now);
+    setSelectedDateStr(getLocalDateKey(now));
   };
 
   const selectedDayNotes = selectedDateStr ? entriesByDate.get(selectedDateStr) || [] : [];
@@ -131,8 +147,8 @@ export function ThelemicCalendar({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-medium-750 pb-3">
         <div className="flex items-center gap-2.5">
           <CalendarIcon className="w-4 h-4 text-white" />
-          <h3 className="text-sm font-sans font-bold text-white tracking-wide capitalize">
-            {viewDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+          <h3 className="text-sm font-sans font-bold text-white tracking-wide">
+            {PT_MONTHS[currentMonth]} de {currentYear}
           </h3>
           <span className="text-[10px] font-mono text-medium-400 bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
             Calendário Thelêmico
@@ -267,12 +283,7 @@ export function ThelemicCalendar({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                Registros de {new Date(selectedDateStr + "T12:00:00").toLocaleDateString("pt-BR", {
-                  weekday: "long",
-                  day: "2-digit",
-                  month: "long",
-                  year: "numeric",
-                })}
+                Registros de {formatDateBR(selectedDateStr)}
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-medium-800 text-medium-300 border border-medium-700">
                 {selectedDayNotes.length} {selectedDayNotes.length === 1 ? "nota" : "notas"}
@@ -338,7 +349,7 @@ export function ThelemicCalendar({
                   </div>
 
                   <div className="flex items-center justify-between mt-2 pt-2 border-t border-medium-800/70 text-[10px] font-mono text-medium-400">
-                    <span>{note.thelemic_date || note.date.slice(11, 16) || "Thelema"}</span>
+                    <span>{formatTime24h(note.date)} · {note.thelemic_date || "Thelema"}</span>
                     <span className="flex items-center gap-1 text-white group-hover:translate-x-0.5 transition-transform">
                       <span>Abrir</span>
                       <ArrowRight className="w-3 h-3" />

@@ -1,4 +1,5 @@
 import * as Astronomy from "astronomy-engine";
+import { formatTime24h, formatDateTimeBR } from "@/lib/dateUtils";
 
 export interface AstrologicalCoordinates {
   date: string;
@@ -213,8 +214,7 @@ export function calculatePlanetaryHour(date: Date, latitude = -23.5505, longitud
     const currentChaldeanIndex = (dayInfo.chaldeanIndex + hourIndex) % 7;
     const planet = CHALDEAN_ORDER[currentChaldeanIndex];
 
-    const formatTime = (d: Date) =>
-      d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const formatTime = (d: Date) => formatTime24h(d);
 
     return {
       day: dayInfo.name,
@@ -360,12 +360,7 @@ export function getUpcomingMoonPhases(startDate: Date = new Date()): UpcomingMoo
           name: p.name,
           phaseCode: p.code,
           date: moonDate.toISOString(),
-          formattedDate: moonDate.toLocaleDateString("pt-BR", {
-            day: "2-digit",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+          formattedDate: formatDateTimeBR(moonDate, " às "),
           icon: p.icon,
           illuminationPct: p.pct,
           zodiacSign: zodiac.sign,
