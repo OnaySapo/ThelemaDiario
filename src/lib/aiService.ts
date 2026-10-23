@@ -145,41 +145,63 @@ export function generateLocalAnalyticalResponse(userQuery: string, entries: Magi
   );
 }
 
-export async function processChatRequest(userQuery: string): Promise<string> {
-  const entries = getAllEntries();
+export interface AIProviderConfig {
+  provider: "openrouter" | "ollama";
+  openRouterKey?: string;
+  openRouterModel: string;
+  ollamaEndpoint: string;
+  ollamaModel: string;
+}
+
+export function getAIProviderConfig(): AIProviderConfig {
+  const provider = (getAppSetting("ai_provider") || "openrouter") as "openrouter" | "ollama";
   const openRouterKey =
     getAppSetting("openrouter_api_key") ||
     process.env.OPENROUTER_API_KEY ||
     getAppSetting("gemini_api_key") ||
-    process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY ||
+    "";
+  const openRouterModel = getAppSetting("openrouter_model") || "google/gemini-2.5-flash";
+  const ollamaEndpoint = (getAppSetting("ollama_endpoint") || "http://localhost:11434").replace(/\/+$/, "");
+  const ollamaModel = getAppSetting("ollama_model") || "llama3:latest";
 
-  if (!openRouterKey) {
-    // Return offline analytical engine
+  return {
+    provider,
+    openRouterKey,
+    openRouterModel,
+    ollamaEndpoint,
+    ollamaModel,
+  };
+}
+
+export async function processChatRequest(userQuery: string): Promise<string> {
+  const entries = getAllEntries();
+  const config = getAIProviderConfig();
+
+  // Se o provedor for OpenRouter mas não houver chave, ou se não houver backend
+  if (config.provider === "openrouter" && !config.openRouterKey) {
     return generateLocalAnalyticalResponse(userQuery, entries);
   }
 
-  const modelName = getAppSetting("openrouter_model") || "google/gemini-2.5-flash";
+  const astro = getFullAstrologicalData();
+  const insights = computeStatisticalInsights(entries);
 
-  try {
-    const astro = getFullAstrologicalData();
-    const insights = computeStatisticalInsights(entries);
+  // Amostra estruturada para o contexto da conversa
+  const entriesSummary = entries.slice(0, 20).map((e) => ({
+    id: e.id,
+    categoria: e.type,
+    titulo: e.title,
+    data: e.date,
+    dataThelemica: e.thelemic_date,
+    sucessoRating: e.success_rating,
+    faseLunar: e.moon_phase,
+    signoLunar: e.moon_sign,
+    influencias: e.influences,
+    oraculo: e.oracle_data ? { pergunta: e.oracle_data.query, laminas: e.oracle_data.cards } : undefined,
+    trecho: e.content.slice(0, 300),
+  }));
 
-    // Format concise entries for prompt context
-    const entriesSummary = entries.slice(0, 20).map((e) => ({
-      id: e.id,
-      categoria: e.type,
-      titulo: e.title,
-      data: e.date,
-      dataThelemica: e.thelemic_date,
-      sucessoRating: e.success_rating,
-      faseLunar: e.moon_phase,
-      signoLunar: e.moon_sign,
-      influencias: e.influences,
-      oraculo: e.oracle_data ? { pergunta: e.oracle_data.query, laminas: e.oracle_data.cards } : undefined,
-      trecho: e.content.slice(0, 300),
-    }));
-
-    const systemPrompt = `Você é o Frater Auxiliar, Secretário Hermético e Guia do Magista no Diário Mágicko Thelêmico.
+  const systemPrompt = `Você é o Frater Auxiliar, Secretário Hermético e Guia do Magista no Diário Mágicko Thelêmico.
 Sua postura é erudita, atenciosa, científica e profundamente versada no Thelema (Aleister Crowley, Liber AL vel Legis, Liber 777, O Livro de Thoth, Magick in Theory and Practice) e no lema: "O Método da Ciência -- O Alvo da Religião".
 Sempre cumprimente e encerre com as saudações tradicionais thelêmicas ("Faze o que tu queres há de ser tudo da Lei." e "Amor é a lei, amor sob vontade.").
 
@@ -199,16 +221,45 @@ Instruções:
 - Forneça recomendações práticas e fundamentadas na Cabala Hermética e no Liber 777.
 - Utilize formatação Markdown limpa e moderna.`;
 
+  // Execução via OLLAMA (100% Local / Soberano)
+  if (config.provider === "ollama") {
+    try {
+      const res = await fetch(`${config.ollamaEndpoint}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: config.ollamaModel,
+          stream: false,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userQuery },
+          ],
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const reply = data.message?.content;
+        if (reply) return reply;
+      }
+    } catch (e) {
+      console.warn("Falha ao comunicar com Ollama local, caindo para motor analítico:", e);
+    }
+    return generateLocalAnalyticalResponse(userQuery, entries);
+  }
+
+  // Execução via OPENROUTER (Nuvem)
+  try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${openRouterKey}`,
+        "Authorization": `Bearer ${config.openRouterKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": "http://localhost:3000",
         "X-Title": "Diario Magicko Thelemico",
       },
       body: JSON.stringify({
-        model: modelName,
+        model: config.openRouterModel,
         max_tokens: 1500,
         temperature: 0.7,
         messages: [
@@ -277,7 +328,9 @@ ${cardsDescription}
 Momento Astrológico e Thelêmico:
 ${astro.thelemicDate} (Sol em ${astro.sunSign}, Lua em ${astro.moonSign} - ${astro.moonPhaseName})`;
 
-  if (!openRouterKey) {
+  const config = getAIProviderConfig();
+
+  if (config.provider === "openrouter" && !config.openRouterKey) {
     // Retorno analítico offline
     let localResponse = `**Faze o que tu queres há de ser tudo da Lei.**\n\n`;
     localResponse += `### 🎴 Análise da Tiragem Oracular: *${spreadName || "Mesa de Thoth"}*\n\n`;
@@ -300,10 +353,7 @@ ${astro.thelemicDate} (Sol em ${astro.sunSign}, Lua em ${astro.moonSign} - ${ast
     return localResponse;
   }
 
-  const modelName = getAppSetting("openrouter_model") || "google/gemini-2.5-flash";
-
-  try {
-    const systemPrompt = `Você é o Frater Auxiliar, Secretário Hermético e Mestre Iniciado versado no Livro de Thoth (Liber LXXVIII) de Aleister Crowley, no Liber 777 e na Cabala da Aurora Dourada / Thelema.
+  const systemPrompt = `Você é o Frater Auxiliar, Secretário Hermético e Mestre Iniciado versado no Livro de Thoth (Liber LXXVIII) de Aleister Crowley, no Liber 777 e na Cabala da Aurora Dourada / Thelema.
 O magista realizou uma tiragem de Tarot de Thoth e pede seu palpite hermético e interpretação profunda.
 
 Instruções para a interpretação:
@@ -314,16 +364,44 @@ Instruções para a interpretação:
 5. Finalize formalmente com a saudação: "Amor é a lei, amor sob vontade."
 Use formatação Markdown elegante, clara e erudita.`;
 
+  // Execução via OLLAMA (100% Local / Soberano)
+  if (config.provider === "ollama") {
+    try {
+      const res = await fetch(`${config.ollamaEndpoint}/api/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: config.ollamaModel,
+          stream: false,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: promptText },
+          ],
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const reply = data.message?.content;
+        if (reply) return reply;
+      }
+    } catch (e) {
+      console.warn("Falha no Ollama local para oráculo:", e);
+    }
+  }
+
+  // Execução via OPENROUTER
+  try {
     const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${openRouterKey}`,
+        "Authorization": `Bearer ${config.openRouterKey}`,
         "Content-Type": "application/json",
         "HTTP-Referer": "http://localhost:3000",
         "X-Title": "Diario Magicko Thelemico",
       },
       body: JSON.stringify({
-        model: modelName,
+        model: config.openRouterModel,
         max_tokens: 1800,
         temperature: 0.7,
         messages: [

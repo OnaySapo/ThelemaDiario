@@ -111,11 +111,15 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
   // Vault Zip Export State
   const [isExportingVault, setIsExportingVault] = useState(false);
 
-  // OpenRouter States
+  // AI Provider States (OpenRouter vs Ollama Local)
+  const [aiProvider, setAiProvider] = useState<"openrouter" | "ollama">("openrouter");
   const [apiKey, setApiKey] = useState("");
   const [hasKey, setHasKey] = useState(false);
   const [maskedKey, setMaskedKey] = useState("");
   const [selectedModel, setSelectedModel] = useState("google/gemini-2.5-flash");
+  const [ollamaEndpoint, setOllamaEndpoint] = useState("http://localhost:11434");
+  const [ollamaModel, setOllamaModel] = useState("llama3:latest");
+  const [ollamaStatus, setOllamaStatus] = useState<{ testing: boolean; online?: boolean; models?: string[]; error?: string } | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -146,7 +150,16 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
         })
         .catch(() => {});
 
-      // Fetch OpenRouter Key
+      // Fetch AI Settings (Provider, OpenRouter, Ollama)
+      fetch("/api/settings?key=ai_provider")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.value) {
+            setAiProvider(data.value as "openrouter" | "ollama");
+          }
+        })
+        .catch(() => {});
+
       fetch("/api/settings?key=openrouter_api_key")
         .then((res) => res.json())
         .then((data) => {
@@ -157,7 +170,6 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
         })
         .catch((err) => console.error("Erro ao carregar key:", err));
 
-      // Fetch OpenRouter Model
       fetch("/api/settings?key=openrouter_model")
         .then((res) => res.json())
         .then((data) => {
@@ -166,6 +178,20 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
           }
         })
         .catch((err) => console.error("Erro ao carregar modelo:", err));
+
+      fetch("/api/settings?key=ollama_endpoint")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.value) setOllamaEndpoint(data.value);
+        })
+        .catch(() => {});
+
+      fetch("/api/settings?key=ollama_model")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.value) setOllamaModel(data.value);
+        })
+        .catch(() => {});
 
       // Fetch Geolocation Settings
       fetch("/api/settings?key=geo_city")
@@ -422,8 +448,42 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
     }
   };
 
+  const handleTestOllama = async () => {
+    setOllamaStatus({ testing: true });
+    try {
+      const res = await fetch(`/api/ai/status?endpoint=${encodeURIComponent(ollamaEndpoint.trim())}`);
+      const data = await res.json();
+      if (data.success && data.online) {
+        setOllamaStatus({
+          testing: false,
+          online: true,
+          models: data.models || [],
+        });
+      } else {
+        setOllamaStatus({
+          testing: false,
+          online: false,
+          error: data.error || "Ollama offline ou inacessível.",
+        });
+      }
+    } catch (err: any) {
+      setOllamaStatus({
+        testing: false,
+        online: false,
+        error: err.message,
+      });
+    }
+  };
+
   const handleSaveSettings = async () => {
     try {
+      // Salva provedor ativo (OpenRouter ou Ollama)
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "ai_provider", value: aiProvider }),
+      });
+
       if (apiKey.trim()) {
         await fetch("/api/settings", {
           method: "POST",
@@ -441,8 +501,20 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
         body: JSON.stringify({ key: "openrouter_model", value: selectedModel.trim() }),
       });
 
-      setSaveStatus("Configurações do OpenRouter salvas com sucesso!");
-      setTimeout(() => setSaveStatus(null), 3000);
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "ollama_endpoint", value: ollamaEndpoint.trim() }),
+      });
+
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "ollama_model", value: ollamaModel.trim() }),
+      });
+
+      setSaveStatus("Configurações de Inteligência Artificial salvas com sucesso!");
+      setTimeout(() => setSaveStatus(null), 3500);
     } catch (err) {
       alert("Erro ao salvar configurações.");
     }
@@ -808,68 +880,198 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
             )}
           </div>
 
-          {/* OpenRouter Configuration */}
-          <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-3">
-            <div className="flex items-center justify-between">
+          {/* Inteligência Artificial: OpenRouter vs Ollama Local */}
+          <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-medium-750 pb-2.5">
               <div className="flex items-center gap-2 text-white font-semibold font-mono text-xs">
-                <Cpu className="w-4 h-4 text-white" />
-                <span>IA do Frater Auxiliar (OpenRouter)</span>
+                <Cpu className="w-4 h-4 text-amber-400" />
+                <span>Inteligência Artificial & Frater Auxiliar</span>
               </div>
-              {hasKey && (
-                <span className="px-2 py-0.5 rounded bg-medium-800 text-white border border-medium-700 text-[10px] font-mono">
-                  Ativa: {maskedKey}
-                </span>
-              )}
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-medium-700 bg-medium-900 text-medium-300">
+                {aiProvider === "ollama" ? "🦙 100% Local (Ollama)" : "☁️ Nuvem (OpenRouter)"}
+              </span>
             </div>
 
-            <p className="text-medium-300 leading-relaxed font-sans">
-              O Frater Auxiliar utiliza sua chave do <strong>OpenRouter</strong> para responder consultas e correlacionar dados do diário com alta inteligência hermética.
-            </p>
-
-            <div>
-              <label className="block text-[11px] font-mono text-medium-400 mb-1">
-                CHAVE DE API OPENROUTER
-              </label>
-              <input
-                type="password"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={hasKey ? "Chave configurada (digite para substituir)..." : "sk-or-v1-..."}
-                className="w-full bg-medium-900 border border-medium-700 rounded px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-white font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-mono text-medium-400 mb-1">
-                MODELO DE IA DO OPENROUTER
-              </label>
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="w-full bg-medium-900 border border-medium-700 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-white font-mono"
+            {/* Alternador de Provedor */}
+            <div className="flex gap-2 p-1 bg-medium-900 rounded-lg border border-medium-750">
+              <button
+                type="button"
+                onClick={() => setAiProvider("openrouter")}
+                className={`flex-1 py-1.5 px-3 rounded text-xs font-mono font-semibold transition-all ${
+                  aiProvider === "openrouter"
+                    ? "bg-amber-400 text-black shadow-sm"
+                    : "text-medium-400 hover:text-white"
+                }`}
               >
-                <option value="google/gemini-2.5-flash">google/gemini-2.5-flash (Recomendado: Rápido & Econômico)</option>
-                <option value="anthropic/claude-3.5-sonnet">anthropic/claude-3.5-sonnet (Máxima Erudição & Profundidade)</option>
-                <option value="deepseek/deepseek-chat">deepseek/deepseek-chat (Alta Eficiência)</option>
-                <option value="meta-llama/llama-3.3-70b-instruct">meta-llama/llama-3.3-70b-instruct (Open Source)</option>
-              </select>
+                ☁️ Nuvem (OpenRouter / Gemini)
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiProvider("ollama")}
+                className={`flex-1 py-1.5 px-3 rounded text-xs font-mono font-semibold transition-all ${
+                  aiProvider === "ollama"
+                    ? "bg-emerald-400 text-black shadow-sm"
+                    : "text-medium-400 hover:text-white"
+                }`}
+              >
+                🦙 100% Local / Soberano (Ollama)
+              </button>
             </div>
 
-            <div className="flex items-center justify-between pt-1">
+            {aiProvider === "ollama" ? (
+              /* Configuração Ollama Local */
+              <div className="space-y-3 pt-1">
+                <div className="p-2.5 rounded bg-emerald-950/20 border border-emerald-500/30 text-emerald-200 text-xs font-sans leading-relaxed">
+                  🛡️ <strong>Privacidade Absoluta:</strong> No modo local com Ollama, todas as suas notas, sonhos lúcidos, operações e oráculos são processados diretamente na sua máquina. Zero dados saem para a internet.
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-mono text-medium-400 mb-1">
+                      ENDPOINT DO OLLAMA
+                    </label>
+                    <input
+                      type="text"
+                      value={ollamaEndpoint}
+                      onChange={(e) => setOllamaEndpoint(e.target.value)}
+                      placeholder="http://localhost:11434"
+                      className="w-full bg-medium-900 border border-medium-700 rounded px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-emerald-400 font-mono"
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={handleTestOllama}
+                      disabled={ollamaStatus?.testing}
+                      className="w-full py-2 px-3 bg-medium-800 hover:bg-medium-750 text-emerald-300 border border-emerald-500/40 rounded text-xs font-mono font-semibold transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Sparkles className={`w-3.5 h-3.5 ${ollamaStatus?.testing ? "animate-spin" : ""}`} />
+                      <span>{ollamaStatus?.testing ? "Testando..." : "Testar Conexão"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-medium-400 mb-1">
+                    MODELO OLLAMA INSTALADO
+                  </label>
+                  <input
+                    type="text"
+                    value={ollamaModel}
+                    onChange={(e) => setOllamaModel(e.target.value)}
+                    placeholder="llama3:latest, mistral:latest, qwen2.5:latest..."
+                    className="w-full bg-medium-900 border border-medium-700 rounded px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-emerald-400 font-mono"
+                  />
+                  <span className="block text-[10px] text-medium-400 font-mono mt-1">
+                    Exemplos populares: <code>llama3:latest</code>, <code>mistral:latest</code>, <code>qwen2.5:7b</code>, <code>deepseek-r1:8b</code>.
+                  </span>
+                </div>
+
+                {ollamaStatus && (
+                  <div
+                    className={`p-2.5 rounded-lg border text-xs font-mono ${
+                      ollamaStatus.online
+                        ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-200"
+                        : "bg-rose-950/40 border-rose-500/40 text-rose-200"
+                    }`}
+                  >
+                    {ollamaStatus.online ? (
+                      <div>
+                        <div className="flex items-center gap-1.5 text-emerald-400 font-bold mb-1">
+                          <Check className="w-4 h-4" />
+                          <span>Ollama conectado com sucesso!</span>
+                        </div>
+                        {ollamaStatus.models && ollamaStatus.models.length > 0 ? (
+                          <div className="text-[11px] text-medium-300">
+                            Modelos detectados:{" "}
+                            {ollamaStatus.models.map((m) => (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => setOllamaModel(m)}
+                                className="inline-block px-1.5 py-0.5 rounded bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 border border-emerald-500/30 mr-1 mt-1 text-[10px]"
+                                title="Clique para selecionar este modelo"
+                              >
+                                {m}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-medium-400">
+                            Nenhum modelo baixado ainda. Execute <code>ollama run llama3</code> no terminal.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-1.5 text-rose-300">
+                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                        <span>{ollamaStatus.error}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Configuração OpenRouter Nuvem */
+              <div className="space-y-3 pt-1">
+                <p className="text-medium-300 leading-relaxed font-sans text-xs">
+                  O Frater Auxiliar utiliza sua chave do <strong>OpenRouter</strong> para responder consultas e correlacionar dados do diário com alta inteligência hermética na nuvem.
+                </p>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-mono text-medium-400">
+                      CHAVE DE API OPENROUTER
+                    </label>
+                    {hasKey && (
+                      <span className="text-[10px] font-mono text-emerald-400">
+                        Chave ativa ({maskedKey})
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={hasKey ? "Chave configurada (digite para substituir)..." : "sk-or-v1-..."}
+                    className="w-full bg-medium-900 border border-medium-700 rounded px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-amber-400 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-mono text-medium-400 mb-1">
+                    MODELO DE IA DO OPENROUTER
+                  </label>
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="w-full bg-medium-900 border border-medium-700 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                  >
+                    <option value="google/gemini-2.5-flash">google/gemini-2.5-flash (Recomendado: Rápido & Econômico)</option>
+                    <option value="anthropic/claude-3.5-sonnet">anthropic/claude-3.5-sonnet (Máxima Erudição & Profundidade)</option>
+                    <option value="deepseek/deepseek-chat">deepseek/deepseek-chat (Alta Eficiência)</option>
+                    <option value="meta-llama/llama-3.3-70b-instruct">meta-llama/llama-3.3-70b-instruct (Open Source)</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between pt-2 border-t border-medium-750">
               <span className="text-[10px] text-medium-400 font-mono">
-                Tokens limitados automaticamente para economia de créditos.
+                {aiProvider === "ollama" ? "Processamento 100% offline local." : "Tokens limitados para economia de créditos."}
               </span>
               <button
                 type="button"
                 onClick={handleSaveSettings}
-                className="px-4 py-2 bg-white hover:bg-medium-200 text-black font-semibold rounded text-xs transition-colors"
+                className="px-4 py-2 bg-white hover:bg-medium-200 text-black font-semibold rounded text-xs transition-colors shadow-sm"
               >
-                Salvar Configurações
+                Salvar Configurações de IA
               </button>
             </div>
 
             {saveStatus && (
-              <div className="flex items-center gap-1.5 text-white text-xs font-mono">
+              <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-mono animate-fadeIn">
                 <Check className="w-3.5 h-3.5" />
                 <span>{saveStatus}</span>
               </div>

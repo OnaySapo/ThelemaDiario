@@ -85,7 +85,10 @@ Ao preencher a data de nascimento do consulente, o sistema calcula instantaneame
 
 ---
 
-### 6. ✍️ Editor Científico de Notas Estilo Medium & Split-Screen
+### 6. ✍️ Editor Científico de Notas com CodeMirror 6 & Split-Screen
+* **Motor Duplo de Edição (CodeMirror 6 + Clássico)**:
+  * **CodeMirror 6**: Editor baseado em AST com coloração sintática viva para Markdown (títulos `#`, ênfase `*`, links, blocos de código, listas e callouts), números de linha, quebra automática inteligente e alto desempenho;
+  * **Alternância Imediata**: Botão na barra do editor para alternar entre `CodeMirror 6` e `Clássico` conforme a sua preferência;
 * **Editor Split-Screen (Tela Dividida)**: Escreva em Markdown à esquerda e visualize em tempo real a tipografia e formatação à direita;
 * **Barra de Símbolos Mágickos Herméticos**: Insira com um clique símbolos planetários (`☉ ☽ ☿ ♀ ♂ ♃ ♄`), elementais (`🜂 🜄 🜁 🜃 🁢`), herméticos (`⛤ 𓁹 ☥ ⚚ ∴`) e do zodíaco no cursor;
 * **Callouts Esotéricos Estilizados**: Blocos com iluminação mística para `> [!INSIGHT]` (gnose e revelações), `> [!RITUAL]` (operações), `> [!AVISO]` (alertas) e `> [!777]` (Liber 777);
@@ -98,33 +101,41 @@ Ao preencher a data de nascimento do consulente, o sistema calcula instantaneame
 
 ---
 
-### 7. 🔍 Busca Global Instantânea (Spotlight — `Ctrl + K`)
+### 7. 🦙 Inteligência Artificial Soberana / Local (Ollama) & Nuvem
+* **Privacidade Absoluta (Zero Leak)**: Suporte nativo a modelos locais via **Ollama** (`http://localhost:11434`), permitindo que oráculos, interpretações e diálogos com o *Frater Auxiliar* ocorram 100% no seu hardware, sem conexão com a internet;
+* **Compatibilidade Multimodelo**: Utilize Llama 3, Mistral, Qwen 2.5, DeepSeek, Phi ou qualquer modelo instalado no seu Ollama;
+* **Teste de Conexão em Tempo Real**: Na aba de Configurações, selecione entre `☁️ Nuvem (OpenRouter / Gemini)` ou `🦙 100% Local / Soberano (Ollama)` e teste o status e modelos instalados com 1 clique;
+* **Modo Nuvem Híbrido**: Opção de usar OpenRouter com modelos de ponta quando desejar maior capacidade de síntese.
+
+---
+
+### 8. 🔍 Busca Global Instantânea (Spotlight — `Ctrl + K`)
 * **Pesquisa Universal em Tempo Real**: Localize notas instantaneamente por título, corpo de texto, influências, deidades, signos ou datas thelêmicas;
 * **Harmonia Dinâmica com os Temas**: O modal herda 100% da identidade visual da paleta selecionada (tanto no claro quanto no escuro);
 * **Navegação Fluida por Teclado**: Use `↑` e `↓` para navegar, `Enter` para abrir a nota e `Esc` para fechar.
 
 ---
 
-### 8. 🧭 Bússola Solar de Liber Resh (Modo Altar)
+### 9. 🧭 Bússola Solar de Liber Resh (Modo Altar)
 * **Mostrador Circular Cardinal**: Representação dos 4 quadrantes cardeais herméticos (*Norte / Khephra, Leste / Ra, Sul / Hathor, Oeste / Tum*);
 * **Agulha Solar Animada**: Gira e aponta automaticamente em tempo real para a maré solar e adoração thelêmica ativa no momento.
 
 ---
 
-### 9. 📊 Matriz Analítica, Dashboard & Autocálculo Astronômico
+### 10. 📊 Matriz Analítica, Dashboard & Autocálculo Astronômico
 * **Autocálculo Contínuo**: Todas as notas calculam automaticamente seu signo solar, signo lunar, fase da lua, porcentagem de iluminação e dia planetário temporal exatos para a data informada;
 * **Auto-Reparação Retroativa**: O banco de dados preenche automaticamente notas históricas ou importadas que estejam sem coordenadas astrais;
 * **Correlações Herméticas Empíricas**: Gráficos estatísticos que cruzam seu índice de Sucesso Mágicko com fases lunares, signos do zodíaco, dias planetários e entidades invocadas.
 
 ---
 
-### 10. 🕸️ Grafo de Conexões & Inteligência do Frater Auxiliar
+### 11. 🕸️ Grafo de Conexões & Inteligência do Frater Auxiliar
 * **Grafo Interativo em Força Dirigida**: Conecte notas por tipos de relação (*Resultado Fenomênico de*, *Profetizado por*, *Sincrônico com*, *Referência de Estudo*);
 * **Frater Auxiliar**: Assistente analítico integrado que cruza as condições astrais registradas com suas notas para indicar correlações de sucesso nas operações.
 
 ---
 
-### 11. 🎨 Sistema Multi-Paletas de Temas
+### 12. 🎨 Sistema Multi-Paletas de Temas
 Suporte completo a 7 esquemas de cores inspirados em editores clássicos, todos com versões para **Modo Escuro** e **Modo Claro**:
 1. **Medium** (Preto & Branco minimalista);
 2. **Rosé Pine** (Tons aveludados e sóbrios);
@@ -133,6 +144,13 @@ Suporte completo a 7 esquemas de cores inspirados em editores clássicos, todos 
 5. **Gruvbox** (Tons quentes de pergaminho e couro);
 6. **Dracula** (Alto contraste);
 7. **Tokyo Night** (Cores neon elegantes).
+
+---
+
+### 13. 🪟 Execução Desktop Silenciosa & Atalho com 1 Clique
+* **Iniciar sem Janela de Terminal**: Arquivo `iniciar_sem_console.vbs` que inicia o servidor e abre o Diário sem deixar a janela preta de prompt do DOS aberta em segundo plano;
+* **Criar Atalho na Área de Trabalho**: Script `criar_atalho_area_de_trabalho.bat` que cria automaticamente um atalho oficial na Área de Trabalho do Windows apontando para o inicializador silencioso.
+* **Preparado para Desktop Nativo (Tauri v2)**: Suporte arquitetural configurado na pasta `src-tauri/` e esteira de CI no GitHub Actions (`.github/workflows/build-tauri.yml`) para compilação automática de executáveis `.exe` nativos e leves.
 
 ---
 

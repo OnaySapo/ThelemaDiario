@@ -73,6 +73,7 @@ import {
   getInfluenceCategoryLabel,
 } from "@/lib/dateUtils";
 import { BrazilianDateTimeInput, BrazilianDateInput } from "@/components/BrazilianDateTimeInput";
+import { MagickCodeMirror, MagickCodeMirrorHandle } from "@/components/editor/MagickCodeMirror";
 
 interface ArticleViewProps {
   entry: MagickEntry | null;
@@ -305,6 +306,22 @@ export function ArticleView({
     if (fontFamily === "sans") return "font-sans";
     if (fontFamily === "mono") return "font-mono";
     return "font-serif";
+  };
+
+  // Editor Engine (CodeMirror 6 AST vs Textarea Clássico)
+  const codeMirrorRef = useRef<MagickCodeMirrorHandle>(null);
+  const [editorEngine, setEditorEngine] = useState<"codemirror" | "classic">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("magick_editor_engine") as "codemirror" | "classic") || "codemirror";
+    }
+    return "codemirror";
+  });
+
+  const toggleEditorEngine = (engine: "codemirror" | "classic") => {
+    setEditorEngine(engine);
+    try {
+      localStorage.setItem("magick_editor_engine", engine);
+    } catch (e) {}
   };
 
   // Autosave & Safe Entry-Switch Refs
@@ -808,6 +825,12 @@ export function ArticleView({
 
   // Formatting toolbar helper
   const insertFormatting = (prefix: string, suffix: string = "") => {
+    isDirtyRef.current = true;
+    if (editorEngine === "codemirror" && codeMirrorRef.current) {
+      codeMirrorRef.current.insertFormatting(prefix, suffix);
+      return;
+    }
+
     const textarea = textareaRef.current;
     if (!textarea) return;
     const start = textarea.selectionStart;
@@ -3547,6 +3570,34 @@ export function ArticleView({
 
               <div className="w-[1px] h-5 bg-medium-700 mx-1 hidden sm:block" />
 
+              {/* Seletor de Motor do Editor (CodeMirror 6 vs Clássico) */}
+              <div className="flex items-center gap-1 bg-medium-800 p-0.5 rounded border border-medium-700 text-[10px] font-mono">
+                <button
+                  type="button"
+                  onClick={() => toggleEditorEngine("codemirror")}
+                  className={`px-2 py-0.5 rounded transition-all flex items-center gap-1 ${
+                    editorEngine === "codemirror"
+                      ? "bg-amber-400 text-black font-bold shadow-xs"
+                      : "text-medium-400 hover:text-white"
+                  }`}
+                  title="Motor CodeMirror 6 moderno com AST, realce de sintaxe Markdown e alta performance"
+                >
+                  <span>⚡ CodeMirror 6</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleEditorEngine("classic")}
+                  className={`px-2 py-0.5 rounded transition-all ${
+                    editorEngine === "classic"
+                      ? "bg-amber-400 text-black font-bold shadow-xs"
+                      : "text-medium-400 hover:text-white"
+                  }`}
+                  title="Modo clássico com Textarea simples"
+                >
+                  Clássico
+                </button>
+              </div>
+
               {/* Botão Split-Screen */}
               <button
                 type="button"
@@ -3594,25 +3645,43 @@ export function ArticleView({
               </div>
             )}
 
-            {/* Content Textarea & Live Split-Screen Preview */}
+            {/* Content Textarea / CodeMirror 6 & Live Split-Screen Preview */}
             {editorLayout === "split" ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                 <div className="space-y-1">
                   <div className="flex items-center justify-between text-[11px] font-mono text-medium-400 px-1">
-                    <span>EDITOR (MARKDOWN · Cole Ctrl+V ou Arraste Imagens aqui)</span>
+                    <span>
+                      {editorEngine === "codemirror" ? "⚡ EDITOR CODEMIRROR 6 (MARKDOWN VIVO)" : "EDITOR CLÁSSICO"}
+                    </span>
                     <span className="text-amber-400/90 font-semibold">{fontFamily} · {fontSize}px</span>
                   </div>
-                  <textarea
-                    ref={textareaRef}
-                    rows={22}
-                    value={editContent}
-                    onChange={handleContentChange}
-                    onPaste={handleTextareaPaste}
-                    onDrop={handleTextareaDrop}
-                    placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Digite '/' para comandos rápidos ou cole imagens diretamente!)"
-                    className={`w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed resize-y min-h-[480px] ${getFontClass()}`}
-                    style={{ fontSize: `${fontSize}px` }}
-                  />
+
+                  {editorEngine === "codemirror" ? (
+                    <MagickCodeMirror
+                      ref={codeMirrorRef}
+                      value={editContent}
+                      onChange={(val) => {
+                        isDirtyRef.current = true;
+                        setEditContent(val);
+                      }}
+                      onSave={handleSaveEdit}
+                      minHeight="480px"
+                      className="border border-medium-700 bg-medium-850 rounded-lg shadow-inner"
+                    />
+                  ) : (
+                    <textarea
+                      ref={textareaRef}
+                      rows={22}
+                      value={editContent}
+                      onChange={handleContentChange}
+                      onPaste={handleTextareaPaste}
+                      onDrop={handleTextareaDrop}
+                      placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Digite '/' para comandos rápidos ou cole imagens diretamente!)"
+                      className={`w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed resize-y min-h-[480px] ${getFontClass()}`}
+                      style={{ fontSize: `${fontSize}px` }}
+                    />
+                  )}
+
                   {/* Barra de Métricas em Tempo Real */}
                   <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-medium-400 pt-1.5 px-1 border-t border-medium-750/60 mt-1 select-none">
                     <div className="flex items-center gap-2.5">
@@ -3647,17 +3716,38 @@ export function ArticleView({
               </div>
             ) : (
               <div className="space-y-1">
-                <textarea
-                  ref={textareaRef}
-                  rows={16}
-                  value={editContent}
-                  onChange={handleContentChange}
-                  onPaste={handleTextareaPaste}
-                  onDrop={handleTextareaDrop}
-                  placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Digite '/' para comandos rápidos ou cole imagens diretamente!)"
-                  className={`w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed ${getFontClass()}`}
-                  style={{ fontSize: `${fontSize}px` }}
-                />
+                <div className="flex items-center justify-between text-[11px] font-mono text-medium-400 px-1">
+                  <span>
+                    {editorEngine === "codemirror" ? "⚡ EDITOR CODEMIRROR 6 (MARKDOWN VIVO)" : "EDITOR CLÁSSICO"}
+                  </span>
+                  <span className="text-amber-400/90 font-semibold">{fontFamily} · {fontSize}px</span>
+                </div>
+
+                {editorEngine === "codemirror" ? (
+                  <MagickCodeMirror
+                    ref={codeMirrorRef}
+                    value={editContent}
+                    onChange={(val) => {
+                      isDirtyRef.current = true;
+                      setEditContent(val);
+                    }}
+                    onSave={handleSaveEdit}
+                    minHeight="420px"
+                    className="border border-medium-700 bg-medium-850 rounded-lg shadow-inner"
+                  />
+                ) : (
+                  <textarea
+                    ref={textareaRef}
+                    rows={16}
+                    value={editContent}
+                    onChange={handleContentChange}
+                    onPaste={handleTextareaPaste}
+                    onDrop={handleTextareaDrop}
+                    placeholder="Escreva livremente com formatação rica, reflexões, invocações e visões... (Digite '/' para comandos rápidos ou cole imagens diretamente!)"
+                    className={`w-full bg-medium-850 border border-medium-700 rounded-lg p-4 text-white placeholder-medium-500 focus:outline-none focus:border-white leading-relaxed ${getFontClass()}`}
+                    style={{ fontSize: `${fontSize}px` }}
+                  />
+                )}
                 {/* Barra de Métricas em Tempo Real */}
                 <div className="flex flex-wrap items-center justify-between text-[11px] font-mono text-medium-400 pt-1.5 px-1 border-t border-medium-750/60 mt-1 select-none">
                   <div className="flex items-center gap-2.5">
