@@ -22,6 +22,7 @@ import {
 import { MagicHeatmap } from "@/components/MagicHeatmap";
 import { LiberReshWidget } from "@/components/LiberReshWidget";
 import { formatDateTimeBR, getInfluenceCategoryLabel } from "@/lib/dateUtils";
+import { analyzeDreamTotemsAcrossEntries } from "@/lib/dreamAnalytics";
 
 interface DashboardViewProps {
   entries: MagickEntry[];
@@ -108,6 +109,8 @@ export function DashboardView({
       list = list.filter((i) => {
         const cat = i.category.toLowerCase();
         const target = influenceCategory.toLowerCase();
+        if (target === "orixa")
+          return cat === "orixa" || cat === "guia" || cat === "ponto_forca" || cat === "banho_defumacao";
         if (target === "entity") return cat === "entity" || cat === "deity" || cat === "angel";
         if (target === "color") return cat === "color" || cat === "candle";
         if (target === "instrument") return cat === "instrument" || cat === "tool";
@@ -232,6 +235,67 @@ export function DashboardView({
       .filter((e) => e.success_rating !== undefined && e.success_rating !== null)
       .sort((a, b) => (b.success_rating || 0) - (a.success_rating || 0))
       .slice(0, 5);
+  }, [filteredEntries]);
+
+  // Pentagrama de Equilíbrio Elemental (Espírito, Ar, Fogo, Água, Terra)
+  const elementalRadar = useMemo(() => {
+    const counts = {
+      Espirito: 1,
+      Ar: 1,
+      Fogo: 1,
+      Agua: 1,
+      Terra: 1,
+    };
+
+    for (const e of filteredEntries) {
+      const cat = normalizeCategory(e.type);
+      if (cat === "Oráculo" || cat === "Visão Astral") counts.Espirito += 1;
+      if (cat === "Estudo") counts.Ar += 1;
+      if (cat === "Prática") counts.Fogo += 1;
+      if (cat === "Sonho") counts.Agua += 1;
+      if (cat === "Diário") counts.Terra += 1;
+
+      for (const inf of e.influences || []) {
+        const val = `${inf.category} ${inf.name}`.toLowerCase();
+        if (val.includes("fogo") || val.includes("marte") || val.includes("sol") || val.includes("xangô") || val.includes("ogum") || val.includes("exu")) {
+          counts.Fogo += 2;
+        }
+        if (val.includes("água") || val.includes("agua") || val.includes("lua") || val.includes("oxum") || val.includes("iemanjá") || val.includes("nanã")) {
+          counts.Agua += 2;
+        }
+        if (val.includes("ar") || val.includes("mercúrio") || val.includes("oyá") || val.includes("iansã") || val.includes("espada")) {
+          counts.Ar += 2;
+        }
+        if (val.includes("terra") || val.includes("saturno") || val.includes("oxóssi") || val.includes("omolu") || val.includes("caboclo") || val.includes("jurema")) {
+          counts.Terra += 2;
+        }
+        if (val.includes("espírito") || val.includes("kether") || val.includes("oxalá") || val.includes("akasha")) {
+          counts.Espirito += 2;
+        }
+      }
+    }
+
+    const maxVal = Math.max(counts.Espirito, counts.Ar, counts.Fogo, counts.Agua, counts.Terra, 1);
+    const axes = [
+      { key: "Espirito", label: "🁢 Espírito (Akasha / Oxalá)", value: counts.Espirito, angle: -90 },
+      { key: "Ar", label: "🜁 Ar (Intelecto / Oyá)", value: counts.Ar, angle: -18 },
+      { key: "Fogo", label: "🜂 Fogo (Vontade / Ogum & Xangô)", value: counts.Fogo, angle: 54 },
+      { key: "Agua", label: "🜄 Água (Astral / Iemanjá & Oxum)", value: counts.Agua, angle: 126 },
+      { key: "Terra", label: "🜃 Terra (Reino / Oxóssi & Omolu)", value: counts.Terra, angle: 198 },
+    ];
+
+    const sorted = [...axes].sort((a, b) => b.value - a.value);
+    return {
+      axes,
+      maxVal,
+      dominant: sorted[0],
+      deficient: sorted[sorted.length - 1],
+    };
+  }, [filteredEntries]);
+
+  // Análise Onironáutica (Totens de Lucidez)
+  const dreamAnalysis = useMemo(() => {
+    return analyzeDreamTotemsAcrossEntries(filteredEntries);
   }, [filteredEntries]);
 
   // Padrão de Ouro Empírico & Síntese Hermética (Cruzamento Automatizado)
@@ -471,7 +535,7 @@ export function DashboardView({
       )}
 
       {/* ========================================================
-          DISCIPLINA MÁGICA & MARÉ SOLAR
+          DISCIPLINA MÁGICA, PENTAGRAMA ELEMENTAL & TOTENS ONÍRICOS
           ======================================================== */}
       <div className="space-y-4">
         <LiberReshWidget />
@@ -481,6 +545,170 @@ export function DashboardView({
             setSearchQuery(dateStr);
           }}
         />
+
+        {/* Grid: Pentagrama de Equilíbrio Elemental + Totens Oníricos (Yesod) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Card 1: Pentagrama de Equilíbrio Elemental */}
+          <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 flex flex-col justify-between space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-medium-750 pb-3">
+              <div className="flex items-center gap-2">
+                <Flame className="w-4 h-4 text-amber-400" />
+                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                  Pentagrama de Equilíbrio Elemental & Forças
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-amber-300">
+                5 Pontas do Templo
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-6">
+              {/* SVG Radar Pentagram */}
+              <svg viewBox="0 0 220 220" className="w-44 h-44 shrink-0">
+                {/* Grade concêntrica */}
+                {[0.33, 0.66, 1].map((scale, sIdx) => {
+                  const pts = elementalRadar.axes
+                    .map((ax) => {
+                      const rad = (ax.angle * Math.PI) / 180;
+                      const r = 78 * scale;
+                      return `${110 + Math.cos(rad) * r},${110 + Math.sin(rad) * r}`;
+                    })
+                    .join(" ");
+                  return (
+                    <polygon
+                      key={sIdx}
+                      points={pts}
+                      fill="none"
+                      stroke="rgba(255,255,255,0.12)"
+                      strokeWidth="1"
+                    />
+                  );
+                })}
+
+                {/* Eixos */}
+                {elementalRadar.axes.map((ax) => {
+                  const rad = (ax.angle * Math.PI) / 180;
+                  return (
+                    <line
+                      key={ax.key}
+                      x1={110}
+                      y1={110}
+                      x2={110 + Math.cos(rad) * 78}
+                      y2={110 + Math.sin(rad) * 78}
+                      stroke="rgba(255,255,255,0.12)"
+                      strokeWidth="1"
+                    />
+                  );
+                })}
+
+                {/* Polígono preenchido do praticante */}
+                <polygon
+                  points={elementalRadar.axes
+                    .map((ax) => {
+                      const rad = (ax.angle * Math.PI) / 180;
+                      const ratio = Math.max(0.18, ax.value / elementalRadar.maxVal);
+                      const r = 78 * ratio;
+                      return `${110 + Math.cos(rad) * r},${110 + Math.sin(rad) * r}`;
+                    })
+                    .join(" ")}
+                  fill="rgba(234, 179, 8, 0.25)"
+                  stroke="#EAB308"
+                  strokeWidth="2"
+                />
+
+                {/* Rótulos das 5 Pontas */}
+                {elementalRadar.axes.map((ax) => {
+                  const rad = (ax.angle * Math.PI) / 180;
+                  const lx = 110 + Math.cos(rad) * 95;
+                  const ly = 110 + Math.sin(rad) * 95;
+                  return (
+                    <text
+                      key={`lbl-${ax.key}`}
+                      x={lx}
+                      y={ly}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill="#F8FAFC"
+                      className="text-[8px] font-mono font-bold"
+                    >
+                      {ax.key.toUpperCase()}
+                    </text>
+                  );
+                })}
+              </svg>
+
+              {/* Barras e Diagnóstico */}
+              <div className="flex-1 w-full space-y-2 text-xs font-mono">
+                {elementalRadar.axes.map((ax) => (
+                  <div key={ax.key} className="space-y-0.5">
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-medium-200">{ax.label}</span>
+                      <strong className="text-amber-300">{ax.value} pts</strong>
+                    </div>
+                    <div className="w-full h-1.5 bg-medium-900 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-amber-400 rounded-full"
+                        style={{ width: `${Math.round((ax.value / elementalRadar.maxVal) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                <p className="text-[11px] font-sans text-medium-300 pt-2 border-t border-medium-750 leading-relaxed">
+                  <strong>Diagnóstico do Templo:</strong> Força dominante em{" "}
+                  <span className="text-amber-300 font-semibold">{elementalRadar.dominant.label}</span>. Para equilíbrio hermético, trabalhe mais{" "}
+                  <span className="text-emerald-300 font-semibold">{elementalRadar.deficient.label}</span>.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Mapa de Totens Oníricos & Viagem Astral (Dream Signs) */}
+          <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 flex flex-col justify-between space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-medium-750 pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-indigo-400" />
+                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
+                  Totens de Lucidez & Onironáutica (Yesod)
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono text-indigo-300">
+                {dreamAnalysis.dreamNotesCount} sonhos · {dreamAnalysis.astralNotesCount} viagens astrais
+              </span>
+            </div>
+
+            {dreamAnalysis.totems.length === 0 ? (
+              <p className="text-xs text-medium-400 italic py-6 text-center">
+                Registre sonhos ou visões astrais para que o motor de Yesod detecte automaticamente seus Totens de Lucidez (Águas, Mata, Encruzilhada, Serpente, Voo, Terreiro...).
+              </p>
+            ) : (
+              <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                {dreamAnalysis.totems.map((totem) => (
+                  <div
+                    key={totem.id}
+                    className="p-3 rounded-lg bg-medium-900 border border-medium-750 flex items-center justify-between gap-3"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">{totem.icon}</span>
+                        <strong className="text-xs text-white font-serif">{totem.name}</strong>
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">
+                          {totem.brasilisRuler}
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-mono text-medium-400 mt-1">
+                        {totem.meaning777}
+                      </p>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-indigo-300 bg-indigo-950/60 px-2.5 py-1 rounded border border-indigo-500/30 shrink-0">
+                      {totem.count}x
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* ========================================================
@@ -586,7 +814,8 @@ export function DashboardView({
               onChange={(e) => setInfluenceCategory(e.target.value)}
               className="w-full bg-medium-900 border border-medium-750 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-white font-mono"
             >
-              <option value="all">Todas as Influências (Liber 777)</option>
+              <option value="all">Todas as Influências (Liber 777 & Brasilis)</option>
+              <option value="orixa">🌿 Orixás, Guias, Jurema & Pontos de Força</option>
               <option value="entity">Entidades, Divindades & Anjos</option>
               <option value="color">Cores & Escalas do 777</option>
               <option value="element">Elementos (Fogo, Água, Ar, Terra, Espírito)</option>

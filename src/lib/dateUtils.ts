@@ -121,26 +121,46 @@ export function formatDateTimeBR(dateInput?: string | Date | null, separator = "
 }
 
 /**
- * Traduz a categoria de influência do Liber 777 para português claro
+ * Traduz a categoria de influência do Liber 777 & Brasilis para português claro
  */
 export function getInfluenceCategoryLabel(category: string): string {
   switch ((category || "").toLowerCase().trim()) {
+    case "orixa":
+      return "Orixá / Vodun / Inquice";
+    case "guia":
+      return "Guia / Exu / Mestre da Jurema";
+    case "ponto_forca":
+      return "Ponto de Força / Reino";
+    case "banho_defumacao":
+      return "Banho / Defumação / Firmeza";
     case "entity":
-      return "Entidade / Divindade";
+      return "Entidade / Espírito";
+    case "deity":
+      return "Divindade / Forma-Deus";
     case "element":
       return "Elemento / Tattwa";
     case "candle":
+    case "color":
       return "Cor / Vela";
     case "incense":
       return "Incenso / Perfume";
+    case "herb":
+      return "Erva Sagrada (Ewê) / Pedra";
     case "tool":
+    case "instrument":
       return "Instrumento Mágicko";
     case "planet":
-      return "Planeta / Sephirah";
+      return "Planeta / Força Astral";
+    case "sephirah":
+      return "Sephirah / Caminho (777)";
+    case "tarot":
+      return "Arcano / Tarot de Thoth";
+    case "angel":
+      return "Arcanjo / Coro Angelical";
     case "feeling":
-      return "Estado / Sentimento";
+      return "Estado / Gnose / Sentimento";
     case "person":
-      return "Pessoa";
+      return "Pessoa / Consulente";
     default:
       return category;
   }

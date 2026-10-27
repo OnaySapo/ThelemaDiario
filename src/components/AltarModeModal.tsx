@@ -16,6 +16,7 @@ import { AstrologicalCoordinates, ReshTideInfo, getReshSolarTide } from "@/lib/a
 import { playCeremonialGong, playRitualKnock } from "@/lib/audioBell";
 import { EstrelaDeThelema, ZodiacIcon } from "@/components/ThelemicIcons";
 import { formatTime24h } from "@/lib/dateUtils";
+import { getAfroBrazilianDayRuler } from "@/lib/brasilidade777";
 
 interface AltarModeModalProps {
   isOpen: boolean;
@@ -343,6 +344,19 @@ export function AltarModeModal({
                 Nascer: {astroData.sunrise} · Ocaso: {astroData.sunset}
               </span>
             )}
+            {(() => {
+              const afro = getAfroBrazilianDayRuler(time);
+              return (
+                <div
+                  className={`mt-3 pt-2.5 border-t w-full text-[11px] font-mono ${
+                    isLight ? "border-amber-200/80 text-emerald-900" : "border-white/10 text-emerald-300"
+                  }`}
+                >
+                  <span className="font-bold block">🌿 {afro.orixas}</span>
+                  <span className="text-[10px] opacity-85 block mt-0.5">{afro.greeting}</span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Card 2: Lua Mágicka & Iluminação */}

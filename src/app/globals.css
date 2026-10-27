@@ -333,6 +333,52 @@
   --theme-border-color: #a8aec4;
 }
 
+/* 8. Terra Brasilis (Dark - Mata de Jurema & Ouro de Oxum) */
+[data-theme="terra-brasilis"][data-mode="dark"] {
+  --color-medium-950: 10 19 15;
+  --color-medium-900: 14 25 20;
+  --color-medium-850: 21 38 30;
+  --color-medium-800: 28 50 40;
+  --color-medium-750: 38 66 53;
+  --color-medium-700: 50 84 68;
+  --color-medium-600: 74 114 94;
+  --color-medium-500: 105 148 126;
+  --color-medium-400: 148 186 165;
+  --color-medium-300: 194 222 206;
+  --color-medium-200: 233 242 236;
+  --color-medium-100: 229 184 66;
+  --color-medium-50: 245 215 110;
+  --theme-accent: 229 184 66;
+  --theme-heading-color: #e5b842;
+  --theme-body-color: #e9f2ec;
+  --theme-primary-btn-bg: #e5b842;
+  --theme-primary-btn-text: #0e1914;
+  --theme-border-color: #325444;
+}
+
+/* 8. Terra Brasilis (Light - Pemba & Barro Sagrado) */
+[data-theme="terra-brasilis"][data-mode="light"] {
+  --color-medium-950: 230 223 206;
+  --color-medium-900: 246 242 232;
+  --color-medium-850: 239 233 216;
+  --color-medium-800: 224 215 193;
+  --color-medium-750: 206 196 170;
+  --color-medium-700: 185 173 145;
+  --color-medium-600: 150 138 112;
+  --color-medium-500: 118 107 84;
+  --color-medium-400: 74 96 82;
+  --color-medium-300: 44 74 56;
+  --color-medium-200: 24 40 31;
+  --color-medium-100: 30 94 58;
+  --color-medium-50: 180 83 9;
+  --theme-accent: 30 94 58;
+  --theme-heading-color: #1e5e3a;
+  --theme-body-color: #18281f;
+  --theme-primary-btn-bg: #1e5e3a;
+  --theme-primary-btn-text: #f6f2e8;
+  --theme-border-color: #b9ad91;
+}
+
 /* =========================================================================
    ADAPTAÇÕES DINÂMICAS PARA MODO CLARO (LIGHT)
    Garante contraste adequado no modo claro, sem vazar para containers isolados

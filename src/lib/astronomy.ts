@@ -1,6 +1,28 @@
 import * as Astronomy from "astronomy-engine";
 import { formatTime24h, formatDateTimeBR } from "@/lib/dateUtils";
 
+export interface ClassicalPlanetPosition {
+  name: string;
+  symbol: string;
+  longitude: number;
+  sign: string;
+  signSymbol: string;
+  element: string;
+  degree: number;
+  formatted: string;
+}
+
+export interface PlanetaryAspect {
+  planet1: string;
+  symbol1: string;
+  planet2: string;
+  symbol2: string;
+  aspectName: "Conjunção" | "Sextil" | "Quadratura" | "Trígono" | "Oposição";
+  aspectSymbol: "☌" | "⚹" | "□" | "△" | "☍";
+  orb: number;
+  nature: "Harmônico" | "Tenso" | "Fusão";
+}
+
 export interface AstrologicalCoordinates {
   date: string;
   thelemicDate: string;
@@ -24,6 +46,8 @@ export interface AstrologicalCoordinates {
   hourNumber?: number;
   sunrise?: string;
   sunset?: string;
+  sevenPlanets?: ClassicalPlanetPosition[];
+  aspects?: PlanetaryAspect[];
 }
 
 const ZODIAC_SIGNS = [
@@ -248,6 +272,98 @@ export function calculatePlanetaryHour(date: Date, latitude = -23.5505, longitud
   }
 }
 
+export function getSevenClassicalPlanets(targetDate: Date = new Date()): ClassicalPlanetPosition[] {
+  const bodies: { name: string; symbol: string; body: Astronomy.Body }[] = [
+    { name: "Sol", symbol: "☉", body: Astronomy.Body.Sun },
+    { name: "Lua", symbol: "☽", body: Astronomy.Body.Moon },
+    { name: "Mercúrio", symbol: "☿", body: Astronomy.Body.Mercury },
+    { name: "Vênus", symbol: "♀", body: Astronomy.Body.Venus },
+    { name: "Marte", symbol: "♂", body: Astronomy.Body.Mars },
+    { name: "Júpiter", symbol: "♃", body: Astronomy.Body.Jupiter },
+    { name: "Saturno", symbol: "♄", body: Astronomy.Body.Saturn },
+  ];
+
+  return bodies.map((b) => {
+    try {
+      let lon = 0;
+      if (b.body === Astronomy.Body.Sun) {
+        lon = Astronomy.SunPosition(targetDate).elon;
+      } else {
+        const vec = Astronomy.GeoVector(b.body, targetDate, true);
+        lon = Astronomy.Ecliptic(vec).elon;
+      }
+      const z = getZodiacFromLongitude(lon);
+      return {
+        name: b.name,
+        symbol: b.symbol,
+        longitude: ((lon % 360) + 360) % 360,
+        sign: z.sign,
+        signSymbol: z.symbol,
+        element: z.element,
+        degree: z.degree,
+        formatted: z.formatted,
+      };
+    } catch {
+      return {
+        name: b.name,
+        symbol: b.symbol,
+        longitude: 0,
+        sign: "Áries",
+        signSymbol: "♈",
+        element: "Fogo",
+        degree: 0,
+        formatted: "0°00' ♈",
+      };
+    }
+  });
+}
+
+export function getPlanetaryAspects(planets: ClassicalPlanetPosition[]): PlanetaryAspect[] {
+  const aspectDefs: {
+    name: PlanetaryAspect["aspectName"];
+    symbol: PlanetaryAspect["aspectSymbol"];
+    angle: number;
+    maxOrb: number;
+    nature: PlanetaryAspect["nature"];
+  }[] = [
+    { name: "Conjunção", symbol: "☌", angle: 0, maxOrb: 7, nature: "Fusão" },
+    { name: "Sextil", symbol: "⚹", angle: 60, maxOrb: 5, nature: "Harmônico" },
+    { name: "Quadratura", symbol: "□", angle: 90, maxOrb: 6, nature: "Tenso" },
+    { name: "Trígono", symbol: "△", angle: 120, maxOrb: 6, nature: "Harmônico" },
+    { name: "Oposição", symbol: "☍", angle: 180, maxOrb: 7, nature: "Tenso" },
+  ];
+
+  const aspects: PlanetaryAspect[] = [];
+
+  for (let i = 0; i < planets.length; i++) {
+    for (let j = i + 1; j < planets.length; j++) {
+      const p1 = planets[i];
+      const p2 = planets[j];
+      let diff = Math.abs(p1.longitude - p2.longitude);
+      if (diff > 180) diff = 360 - diff;
+
+      for (const def of aspectDefs) {
+        const orb = Math.abs(diff - def.angle);
+        if (orb <= def.maxOrb) {
+          aspects.push({
+            planet1: p1.name,
+            symbol1: p1.symbol,
+            planet2: p2.name,
+            symbol2: p2.symbol,
+            aspectName: def.name,
+            aspectSymbol: def.symbol,
+            orb: Math.round(orb * 10) / 10,
+            nature: def.nature,
+          });
+          break;
+        }
+      }
+    }
+  }
+
+  return aspects;
+}
+
 export function getFullAstrologicalData(
   targetDate: Date = new Date(),
   latitude = -23.5505,
@@ -270,6 +386,10 @@ export function getFullAstrologicalData(
     // 3. Thelemic Date & Planetary Coordinates (real temporal calculation)
     const thelemicYear = calculateThelemicYear(targetDate);
     const planetary = calculatePlanetaryHour(targetDate, latitude, longitude);
+
+    // 4. Seven Classical Planets & Aspects
+    const sevenPlanets = getSevenClassicalPlanets(targetDate);
+    const aspects = getPlanetaryAspects(sevenPlanets);
 
     // Crowley format: ☉ in ♎ 15°, ☽ in ♍ 21°, Dies Mercurii, Anno V:xii
     const thelemicDateFormatted = `☉ in ${sunZodiac.symbol} ${Math.floor(sunZodiac.degree)}°, ☽ in ${moonZodiac.symbol} ${Math.floor(moonZodiac.degree)}°, ${planetary.day}, ${thelemicYear}`;
@@ -297,6 +417,8 @@ export function getFullAstrologicalData(
       hourNumber: planetary.hourNumber,
       sunrise: planetary.sunrise,
       sunset: planetary.sunset,
+      sevenPlanets,
+      aspects,
     };
   } catch (err) {
     console.error("Erro ao calcular efemérides astrológicas:", err);

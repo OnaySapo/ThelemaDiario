@@ -43,8 +43,47 @@ function performAutoBackup(dbPath: string, dataDir: string) {
 
 const STORAGE_CONFIG_FILE = path.join(process.cwd(), "storage_config.json");
 
+export interface RecentVaultItem {
+  name: string;
+  storagePath: string;
+  dbFileName: string;
+  dbFile: string;
+  lastOpened: string;
+  entryCount?: number;
+}
+
+export interface StorageConfigData {
+  storagePath?: string;
+  dbFileName?: string;
+  isConfigured?: boolean;
+  seedExamples?: boolean;
+  updatedAt?: string;
+  recentVaults?: RecentVaultItem[];
+}
+
+export function readStorageConfig(): StorageConfigData {
+  try {
+    if (fs.existsSync(STORAGE_CONFIG_FILE)) {
+      const content = fs.readFileSync(STORAGE_CONFIG_FILE, "utf-8");
+      return JSON.parse(content) || {};
+    }
+  } catch (err) {
+    console.warn("Erro ao ler storage_config.json:", err);
+  }
+  return {};
+}
+
 export function getDefaultStorageDirectory(): string {
   return path.join(process.cwd(), "data");
+}
+
+export function getActiveDbFileName(): string {
+  const cfg = readStorageConfig();
+  if (cfg.dbFileName && typeof cfg.dbFileName === "string" && cfg.dbFileName.trim()) {
+    const clean = path.basename(cfg.dbFileName.trim());
+    return clean.endsWith(".db") || clean.endsWith(".sqlite") ? clean : `${clean}.db`;
+  }
+  return "magick_diary.db";
 }
 
 export function getStorageDirectory(): string {
@@ -61,34 +100,167 @@ export function getStorageDirectory(): string {
 
   // 2. Arquivo de configuração local privado (storage_config.json)
   try {
-    if (fs.existsSync(STORAGE_CONFIG_FILE)) {
-      const content = fs.readFileSync(STORAGE_CONFIG_FILE, "utf-8");
-      const parsed = JSON.parse(content);
-      if (parsed && parsed.storagePath && typeof parsed.storagePath === "string") {
-        const customPath = path.resolve(parsed.storagePath.trim());
-        if (!fs.existsSync(customPath)) {
-          try {
-            fs.mkdirSync(customPath, { recursive: true });
-          } catch (e) {
-            console.warn("Não foi possível acessar a pasta customizada configurada, usando padrão local:", e);
-            return getDefaultStorageDirectory();
-          }
+    const parsed = readStorageConfig();
+    if (parsed && parsed.storagePath && typeof parsed.storagePath === "string") {
+      const customPath = path.resolve(parsed.storagePath.trim());
+      if (!fs.existsSync(customPath)) {
+        try {
+          fs.mkdirSync(customPath, { recursive: true });
+        } catch (e) {
+          console.warn("Não foi possível acessar a pasta customizada configurada, usando padrão local:", e);
+          return getDefaultStorageDirectory();
         }
-        return customPath;
       }
+      return customPath;
     }
   } catch (err) {
-    console.warn("Erro ao ler storage_config.json:", err);
+    console.warn("Erro ao processar storage_config.json:", err);
   }
 
   return getDefaultStorageDirectory();
 }
 
+export function getMediaDirectory(): string {
+  const storageDir = getStorageDirectory();
+  const mediaDir = path.join(storageDir, "media");
+  if (!fs.existsSync(mediaDir)) {
+    try {
+      fs.mkdirSync(mediaDir, { recursive: true });
+    } catch (e) {}
+  }
+  return mediaDir;
+}
+
+export function inspectDatabaseLocation(inputPath: string) {
+  try {
+    const trimmed = (inputPath || "").trim();
+    const targetResolved = trimmed ? path.resolve(trimmed) : getDefaultStorageDirectory();
+
+    let directory = targetResolved;
+    let dbFileName = "magick_diary.db";
+
+    // Se o usuário apontou diretamente para um arquivo .db ou .sqlite
+    if (
+      /\.(db|sqlite|sqlite3)$/i.test(targetResolved) ||
+      (fs.existsSync(targetResolved) && fs.statSync(targetResolved).isFile())
+    ) {
+      directory = path.dirname(targetResolved);
+      dbFileName = path.basename(targetResolved);
+    }
+
+    const dirExists = fs.existsSync(directory);
+    let availableDbFiles: { name: string; fullPath: string; sizeBytes: number; mtime: string }[] = [];
+
+    if (dirExists) {
+      try {
+        const files = fs.readdirSync(directory);
+        for (const f of files) {
+          if (/\.(db|sqlite|sqlite3)$/i.test(f)) {
+            const full = path.join(directory, f);
+            const st = fs.statSync(full);
+            if (st.isFile()) {
+              availableDbFiles.push({
+                name: f,
+                fullPath: full,
+                sizeBytes: st.size,
+                mtime: st.mtime.toISOString(),
+              });
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Se magick_diary.db não existir mas houver outro .db na pasta, seleciona o primeiro disponível
+    let dbFile = path.join(directory, dbFileName);
+    if (!fs.existsSync(dbFile) && availableDbFiles.length > 0) {
+      dbFileName = availableDbFiles[0].name;
+      dbFile = availableDbFiles[0].fullPath;
+    }
+
+    const dbExists = fs.existsSync(dbFile) && fs.statSync(dbFile).isFile() && fs.statSync(dbFile).size > 0;
+    let entryCount = 0;
+    let sampleEntries: { id: string; title: string; type: string; date: string }[] = [];
+    let dbSizeBytes = 0;
+    let isValidMagickDb = false;
+
+    if (dbExists) {
+      dbSizeBytes = fs.statSync(dbFile).size;
+      let tempDb: DatabaseSync | null = null;
+      try {
+        tempDb = new DatabaseSync(dbFile);
+        const tableCheck = tempDb
+          .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='entries'")
+          .get() as { name?: string } | undefined;
+        if (tableCheck?.name === "entries") {
+          isValidMagickDb = true;
+          const row = tempDb.prepare("SELECT COUNT(*) as c FROM entries").get() as { c: number };
+          entryCount = row?.c || 0;
+          sampleEntries = tempDb
+            .prepare("SELECT id, title, type, date FROM entries ORDER BY date DESC LIMIT 6")
+            .all() as { id: string; title: string; type: string; date: string }[];
+        }
+      } catch (e) {
+        // Caso o arquivo seja o próprio banco ativo já aberto
+        try {
+          if (dbInstance && path.resolve(dbFile).toLowerCase() === path.resolve(getStorageDirectory(), getActiveDbFileName()).toLowerCase()) {
+            isValidMagickDb = true;
+            const row = dbInstance.prepare("SELECT COUNT(*) as c FROM entries").get() as { c: number };
+            entryCount = row?.c || 0;
+            sampleEntries = dbInstance
+              .prepare("SELECT id, title, type, date FROM entries ORDER BY date DESC LIMIT 6")
+              .all() as { id: string; title: string; type: string; date: string }[];
+          }
+        } catch {}
+      } finally {
+        if (tempDb) {
+          try {
+            tempDb.close();
+          } catch {}
+        }
+      }
+    }
+
+    return {
+      success: true,
+      directory,
+      dirExists,
+      dbFile,
+      dbFileName,
+      dbExists,
+      isValidMagickDb,
+      dbSizeBytes,
+      entryCount,
+      sampleEntries,
+      availableDbFiles,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err.message || "Falha ao inspecionar caminho",
+      directory: inputPath,
+      dirExists: false,
+      dbFile: "",
+      dbFileName: "magick_diary.db",
+      dbExists: false,
+      isValidMagickDb: false,
+      dbSizeBytes: 0,
+      entryCount: 0,
+      sampleEntries: [],
+      availableDbFiles: [],
+    };
+  }
+}
+
 export function getStorageInfo() {
+  const cfg = readStorageConfig();
   const currentPath = getStorageDirectory();
   const defaultPath = getDefaultStorageDirectory();
-  const isCustom = path.resolve(currentPath).toLowerCase() !== path.resolve(defaultPath).toLowerCase();
-  const dbFile = path.join(currentPath, "magick_diary.db");
+  const dbFileName = getActiveDbFileName();
+  const isCustom =
+    path.resolve(currentPath).toLowerCase() !== path.resolve(defaultPath).toLowerCase() ||
+    dbFileName !== "magick_diary.db";
+  const dbFile = path.join(currentPath, dbFileName);
 
   let dbSizeBytes = 0;
   if (fs.existsSync(dbFile)) {
@@ -117,37 +289,57 @@ export function getStorageInfo() {
     defaultPath,
     isCustom,
     dbFile,
+    dbFileName,
     dbSizeBytes,
     backupCount,
     totalEntries,
+    isConfigured: Boolean(cfg.isConfigured),
+    recentVaults: cfg.recentVaults || [],
   };
 }
 
 export function setStorageDirectory(
   newPath: string,
-  copyExisting: boolean = true
-): { success: boolean; message: string; activePath: string } {
+  copyExisting: boolean = false,
+  options?: { seedExamples?: boolean; dbFileName?: string; vaultName?: string }
+): { success: boolean; message: string; activePath: string; dbFile: string; totalEntries: number } {
   try {
     const trimmed = (newPath || "").trim();
     if (!trimmed || trimmed.toUpperCase() === "DEFAULT") {
       return resetStorageDirectory();
     }
 
-    const resolvedPath = path.resolve(trimmed);
+    let resolvedDir = path.resolve(trimmed);
+    let targetDbFileName = options?.dbFileName?.trim() || "magick_diary.db";
+
+    // Suporte direto caso o usuário selecione um arquivo .db / .sqlite existente
+    if (
+      /\.(db|sqlite|sqlite3)$/i.test(resolvedDir) ||
+      (fs.existsSync(resolvedDir) && fs.statSync(resolvedDir).isFile())
+    ) {
+      targetDbFileName = path.basename(resolvedDir);
+      resolvedDir = path.dirname(resolvedDir);
+    }
+
+    if (!targetDbFileName.endsWith(".db") && !targetDbFileName.endsWith(".sqlite")) {
+      targetDbFileName = `${targetDbFileName}.db`;
+    }
 
     // Valida se diretório existe ou se pode ser criado
-    if (!fs.existsSync(resolvedPath)) {
-      fs.mkdirSync(resolvedPath, { recursive: true });
+    if (!fs.existsSync(resolvedDir)) {
+      fs.mkdirSync(resolvedDir, { recursive: true });
     }
 
     // Teste de permissão de escrita
-    const testFile = path.join(resolvedPath, `.test_write_${Date.now()}`);
+    const testFile = path.join(resolvedDir, `.test_write_${Date.now()}`);
     fs.writeFileSync(testFile, "ok");
     fs.unlinkSync(testFile);
 
     const oldDataDir = getStorageDirectory();
-    const oldDbPath = path.join(oldDataDir, "magick_diary.db");
-    const newDbPath = path.join(resolvedPath, "magick_diary.db");
+    const oldDbFileName = getActiveDbFileName();
+    const oldDbPath = path.join(oldDataDir, oldDbFileName);
+    const newDbPath = path.join(resolvedDir, targetDbFileName);
+    const targetDbAlreadyExists = fs.existsSync(newDbPath) && fs.statSync(newDbPath).size > 0;
 
     // Fecha a conexão atual do SQLite antes da troca
     if (dbInstance) {
@@ -157,44 +349,78 @@ export function setStorageDirectory(
       dbInstance = null;
     }
 
-    // Copiar dados se solicitado e se o novo local não tiver banco ainda
-    if (copyExisting && fs.existsSync(oldDbPath) && oldDbPath.toLowerCase() !== newDbPath.toLowerCase()) {
-      if (!fs.existsSync(newDbPath)) {
-        fs.copyFileSync(oldDbPath, newDbPath);
-      }
+    // Copiar dados APENAS se copyExisting=true E se o destino NÃO tiver um banco existente
+    if (
+      copyExisting &&
+      !targetDbAlreadyExists &&
+      fs.existsSync(oldDbPath) &&
+      oldDbPath.toLowerCase() !== newDbPath.toLowerCase()
+    ) {
+      fs.copyFileSync(oldDbPath, newDbPath);
 
-      // Copiar também backups
-      const oldBackupsDir = path.join(oldDataDir, "backups");
-      const newBackupsDir = path.join(resolvedPath, "backups");
-      if (fs.existsSync(oldBackupsDir)) {
-        if (!fs.existsSync(newBackupsDir)) {
-          fs.mkdirSync(newBackupsDir, { recursive: true });
+      // Copiar também pasta de mídias se existir
+      const oldMediaDir = path.join(oldDataDir, "media");
+      const newMediaDir = path.join(resolvedDir, "media");
+      if (fs.existsSync(oldMediaDir)) {
+        if (!fs.existsSync(newMediaDir)) {
+          fs.mkdirSync(newMediaDir, { recursive: true });
         }
-        const backups = fs.readdirSync(oldBackupsDir).filter((f) => f.endsWith(".db"));
-        for (const b of backups) {
-          const dest = path.join(newBackupsDir, b);
-          if (!fs.existsSync(dest)) {
+        for (const mf of fs.readdirSync(oldMediaDir)) {
+          const destMf = path.join(newMediaDir, mf);
+          if (!fs.existsSync(destMf)) {
             try {
-              fs.copyFileSync(path.join(oldBackupsDir, b), dest);
-            } catch (e) {}
+              fs.copyFileSync(path.join(oldMediaDir, mf), destMf);
+            } catch {}
           }
         }
       }
     }
 
-    // Salva configuração em storage_config.json
-    fs.writeFileSync(
-      STORAGE_CONFIG_FILE,
-      JSON.stringify({ storagePath: resolvedPath, updatedAt: new Date().toISOString() }, null, 2)
-    );
+    // Atualiza lista de Grimórios / Bancos Recentes
+    const prevCfg = readStorageConfig();
+    const prevRecents = Array.isArray(prevCfg.recentVaults) ? prevCfg.recentVaults : [];
+    const vaultLabel = options?.vaultName?.trim() || path.basename(resolvedDir) || "Grimório Thelêmico";
 
-    // Reabre e inicializa banco no novo local
-    getDatabase();
+    const nextConfig: StorageConfigData = {
+      storagePath: resolvedDir,
+      dbFileName: targetDbFileName,
+      isConfigured: true,
+      seedExamples: options?.seedExamples !== undefined ? options.seedExamples : false,
+      updatedAt: new Date().toISOString(),
+      recentVaults: prevRecents,
+    };
+
+    fs.writeFileSync(STORAGE_CONFIG_FILE, JSON.stringify(nextConfig, null, 2));
+
+    // Reabre e inicializa banco no local selecionado (puxando as notas existentes se já houver banco!)
+    const db = getDatabase();
+    const countRow = db.prepare("SELECT COUNT(*) as c FROM entries").get() as { c: number };
+    const totalEntries = countRow?.c || 0;
+
+    // Salva contagem atualizada nos recentes
+    const updatedRecents: RecentVaultItem[] = [
+      {
+        name: vaultLabel,
+        storagePath: resolvedDir,
+        dbFileName: targetDbFileName,
+        dbFile: newDbPath,
+        lastOpened: new Date().toISOString(),
+        entryCount: totalEntries,
+      },
+      ...prevRecents.filter((r) => path.resolve(r.dbFile || "").toLowerCase() !== path.resolve(newDbPath).toLowerCase()),
+    ].slice(0, 8);
+
+    nextConfig.recentVaults = updatedRecents;
+    fs.writeFileSync(STORAGE_CONFIG_FILE, JSON.stringify(nextConfig, null, 2));
 
     return {
       success: true,
-      message: `Local do diário alterado com sucesso para: ${resolvedPath}`,
-      activePath: resolvedPath,
+      message: targetDbAlreadyExists
+        ? `Banco de dados existente conectado com sucesso! (${totalEntries} notas carregadas de ${newDbPath})`
+        : `Novo grimório configurado em: ${newDbPath}`,
+      activePath: resolvedDir,
+      dbFile: newDbPath,
+      totalEntries,
     };
   } catch (err: any) {
     console.error("Falha ao configurar local de armazenamento:", err);
@@ -203,16 +429,20 @@ export function setStorageDirectory(
       success: false,
       message: `Erro ao alterar caminho: ${err.message}`,
       activePath: getStorageDirectory(),
+      dbFile: path.join(getStorageDirectory(), getActiveDbFileName()),
+      totalEntries: 0,
     };
   }
 }
 
-export function resetStorageDirectory(): { success: boolean; message: string; activePath: string } {
-  try {
-    if (fs.existsSync(STORAGE_CONFIG_FILE)) {
-      fs.unlinkSync(STORAGE_CONFIG_FILE);
-    }
-  } catch (e) {}
+export function resetStorageDirectory(): {
+  success: boolean;
+  message: string;
+  activePath: string;
+  dbFile: string;
+  totalEntries: number;
+} {
+  const prevCfg = readStorageConfig();
 
   if (dbInstance) {
     try {
@@ -222,12 +452,28 @@ export function resetStorageDirectory(): { success: boolean; message: string; ac
   }
 
   const defaultDir = getDefaultStorageDirectory();
-  getDatabase();
+  const defaultDbFile = path.join(defaultDir, "magick_diary.db");
+
+  const nextCfg: StorageConfigData = {
+    storagePath: defaultDir,
+    dbFileName: "magick_diary.db",
+    isConfigured: true,
+    updatedAt: new Date().toISOString(),
+    recentVaults: prevCfg.recentVaults || [],
+  };
+  try {
+    fs.writeFileSync(STORAGE_CONFIG_FILE, JSON.stringify(nextCfg, null, 2));
+  } catch (e) {}
+
+  const db = getDatabase();
+  const countRow = db.prepare("SELECT COUNT(*) as c FROM entries").get() as { c: number };
 
   return {
     success: true,
     message: `Armazenamento restaurado para a pasta padrão: ${defaultDir}`,
     activePath: defaultDir,
+    dbFile: defaultDbFile,
+    totalEntries: countRow?.c || 0,
   };
 }
 
@@ -239,7 +485,9 @@ export function getDatabase(): DatabaseSync {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
-  const dbPath = path.join(dataDir, "magick_diary.db");
+  const dbFileName = getActiveDbFileName();
+  const dbPath = path.join(dataDir, dbFileName);
+  const existedBeforeOpen = fs.existsSync(dbPath) && fs.statSync(dbPath).size > 0;
   performAutoBackup(dbPath, dataDir);
 
   const db = new DatabaseSync(dbPath);
@@ -344,14 +592,36 @@ export function getDatabase(): DatabaseSync {
     if (!oracleCols.some((c) => c.name === "querent_birthdate")) {
       db.exec("ALTER TABLE oracle_records ADD COLUMN querent_birthdate TEXT;");
     }
+
+    // FTS5 Full-Text Search virtual table & triggers (estilo Obsidian PKM)
+    db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS entries_fts USING fts5(
+        entry_id UNINDEXED,
+        title,
+        content,
+        type
+      );
+    `);
   } catch (err) {
     console.warn("Aviso ao verificar migrações do banco:", err);
   }
 
-  // Check if initial seed is needed
+  // Check if initial seed is needed (somente uma única vez em bancos novos se o usuário desejar exemplos)
   const countRow = db.prepare("SELECT COUNT(*) as count FROM entries").get() as { count: number };
-  if (countRow.count === 0) {
-    seedInitialData(db);
+  const seedFlagRow = db
+    .prepare("SELECT value FROM app_settings WHERE key = 'initial_seed_status'")
+    .get() as { value?: string } | undefined;
+
+  if (countRow.count === 0 && !seedFlagRow?.value && !existedBeforeOpen) {
+    const cfg = readStorageConfig();
+    if (cfg.seedExamples !== false) {
+      seedInitialData(db);
+      db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('initial_seed_status', 'seeded')").run();
+    } else {
+      db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('initial_seed_status', 'empty_by_choice')").run();
+    }
+  } else if (countRow.count > 0 && !seedFlagRow?.value) {
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('initial_seed_status', 'existing_data')").run();
   }
 
   // Auto-reparação: preencher coordenadas astrológicas para qualquer nota que esteja com moon_sign ou moon_phase vazios

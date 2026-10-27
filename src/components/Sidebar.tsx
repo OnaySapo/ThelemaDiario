@@ -23,6 +23,7 @@ import {
   Calculator,
   ChevronDown,
   ChevronUp,
+  Database,
 } from "lucide-react";
 import { EstrelaDeThelema, getCategoryThelemicIcon, ZodiacIcon, IconeSolThelema } from "@/components/ThelemicIcons";
 import { formatDateTimeBR, getInfluenceCategoryLabel } from "@/lib/dateUtils";
@@ -46,6 +47,9 @@ interface SidebarProps {
   onOpenQuickDream?: () => void;
   onOpenGrimoireCompiler?: () => void;
   onOpenGematria?: () => void;
+  onOpenSigilStudio?: () => void;
+  onOpenVaultSelector?: () => void;
+  activeVaultLabel?: string;
 }
 
 export function Sidebar({
@@ -67,6 +71,9 @@ export function Sidebar({
   onOpenQuickDream,
   onOpenGrimoireCompiler,
   onOpenGematria,
+  onOpenSigilStudio,
+  onOpenVaultSelector,
+  activeVaultLabel,
 }: SidebarProps) {
   const categories: { name: string; label: string; icon: React.ReactNode }[] = [
     { name: "all", label: "Todas", icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
@@ -102,28 +109,48 @@ export function Sidebar({
   return (
     <aside className="w-full h-full bg-medium-900 border-r border-medium-700 flex flex-col select-none">
       {/* Brand Header */}
-      <div className="p-4 border-b border-medium-700 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-medium-850 border border-medium-700 flex items-center justify-center text-white">
-            <EstrelaDeThelema className="w-4 h-4 text-white" />
+      <div className="p-4 border-b border-medium-700 space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-md bg-medium-850 border border-medium-700 flex items-center justify-center text-white">
+              <EstrelaDeThelema className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-sans font-bold tracking-tight text-white uppercase flex items-center gap-1.5">
+                <span>Diário Mágicko</span>
+              </h1>
+              <span className="text-[10px] text-medium-400 font-mono tracking-wider block">
+                THELEMA · OBSIDIAN EDITION
+              </span>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-sans font-bold tracking-tight text-white uppercase flex items-center gap-1.5">
-              <span>Diário Mágicko</span>
-            </h1>
-            <span className="text-[10px] text-medium-400 font-mono tracking-wider block">
-              THELEMA · OBSIDIAN EDITION
-            </span>
-          </div>
+
+          <button
+            onClick={onOpenSettings}
+            className="p-1.5 text-medium-400 hover:text-white rounded hover:bg-medium-800 transition-colors"
+            title="Configurações e Soberania"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
         </div>
 
-        <button
-          onClick={onOpenSettings}
-          className="p-1.5 text-medium-400 hover:text-white rounded hover:bg-medium-800 transition-colors"
-          title="Configurações e Soberania"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
+        {/* Botão de Seleção / Troca Rápida de Grimório (Banco de Dados .db) */}
+        {onOpenVaultSelector && (
+          <button
+            type="button"
+            onClick={onOpenVaultSelector}
+            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-medium-850 hover:bg-medium-800 border border-medium-750 hover:border-amber-400/50 text-left transition-all group"
+            title="Clique para escolher a pasta das notas ou carregar um banco de dados (.db) existente"
+          >
+            <span className="flex items-center gap-2 truncate text-[11px] font-mono text-medium-200 group-hover:text-amber-300">
+              <Database className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span className="truncate">{activeVaultLabel || "magick_diary.db"}</span>
+            </span>
+            <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-medium-800 group-hover:bg-amber-400/20 text-amber-300 border border-medium-700 group-hover:border-amber-400/40 shrink-0">
+              Trocar Banco
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Navigation Quick Bar Simplificada & Consolidada */}
@@ -263,11 +290,26 @@ export function Sidebar({
                     onOpenGematria();
                     setIsTempleMenuOpen(false);
                   }}
-                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-medium-800 hover:bg-medium-750 text-amber-200 border border-medium-700 transition-all text-left truncate col-span-2"
+                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-medium-800 hover:bg-medium-750 text-amber-200 border border-medium-700 transition-all text-left truncate"
                   title="Calculadora de Gematria Thelêmica"
                 >
                   <Calculator className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span className="truncate">Gematria Thelêmica (777)</span>
+                  <span className="truncate">Gematria (777)</span>
+                </button>
+              )}
+
+              {onOpenSigilStudio && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenSigilStudio();
+                    setIsTempleMenuOpen(false);
+                  }}
+                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-200 border border-emerald-500/30 transition-all text-left truncate"
+                  title="Tábua de Ponto Riscado (Pemba Digital) & Oficina de Sigilos"
+                >
+                  <span className="text-xs leading-none shrink-0">🥁</span>
+                  <span className="truncate">Ponto Riscado</span>
                 </button>
               )}
             </div>

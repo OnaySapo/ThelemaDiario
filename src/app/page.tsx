@@ -15,6 +15,8 @@ import { SpotlightModal } from "@/components/SpotlightModal";
 import { QuickDreamModal } from "@/components/QuickDreamModal";
 import { GrimoireCompilerModal } from "@/components/GrimoireCompilerModal";
 import { GematriaModal } from "@/components/GematriaModal";
+import { VaultSelectorModal } from "@/components/VaultSelectorModal";
+import { SigilStudioModal } from "@/components/SigilStudioModal";
 import { AstrologicalCoordinates } from "@/lib/astronomy";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { getDefaultTemplateForCategory } from "@/lib/templates";
@@ -34,6 +36,10 @@ export default function Home() {
   const [isQuickDreamOpen, setIsQuickDreamOpen] = useState(false);
   const [isGrimoireOpen, setIsGrimoireOpen] = useState(false);
   const [isGematriaOpen, setIsGematriaOpen] = useState(false);
+  const [isSigilStudioOpen, setIsSigilStudioOpen] = useState(false);
+  const [isVaultModalOpen, setIsVaultModalOpen] = useState(false);
+  const [isInitialVaultOnboarding, setIsInitialVaultOnboarding] = useState(false);
+  const [activeVaultLabel, setActiveVaultLabel] = useState<string>("magick_diary.db");
   const [astroData, setAstroData] = useState<AstrologicalCoordinates | null>(null);
   const [loading, setLoading] = useState(true);
   const [isZenMode, setIsZenMode] = useState(false);
@@ -65,6 +71,22 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, [isGraphModalOpen]);
 
+  const checkStorageAndVaultStatus = async () => {
+    try {
+      const res = await fetch("/api/storage");
+      const data = await res.json();
+      if (data.success) {
+        const dbName = data.dbFileName || "magick_diary.db";
+        const count = data.totalEntries ?? 0;
+        setActiveVaultLabel(`${dbName} · ${count} notas`);
+        if (!data.isConfigured) {
+          setIsInitialVaultOnboarding(true);
+          setIsVaultModalOpen(true);
+        }
+      }
+    } catch (e) {}
+  };
+
   // Load entries
   const loadEntries = async (preferSelectedId?: string) => {
     try {
@@ -75,11 +97,14 @@ export default function Home() {
         if (data.entries.length > 0) {
           if (preferSelectedId) {
             setSelectedEntryId(preferSelectedId);
-          } else if (!selectedEntryId) {
+          } else if (!selectedEntryId || !data.entries.some((e: MagickEntry) => e.id === selectedEntryId)) {
             setSelectedEntryId(data.entries[0].id);
           }
+        } else {
+          setSelectedEntryId(null);
         }
       }
+      await checkStorageAndVaultStatus();
     } catch (err) {
       console.error("Erro ao carregar entradas:", err);
     } finally {
@@ -364,6 +389,12 @@ export default function Home() {
           onOpenQuickDream={() => setIsQuickDreamOpen(true)}
           onOpenGrimoireCompiler={() => setIsGrimoireOpen(true)}
           onOpenGematria={() => setIsGematriaOpen(true)}
+          onOpenSigilStudio={() => setIsSigilStudioOpen(true)}
+          onOpenVaultSelector={() => {
+            setIsInitialVaultOnboarding(false);
+            setIsVaultModalOpen(true);
+          }}
+          activeVaultLabel={activeVaultLabel}
         />
       </div>
 
@@ -381,6 +412,7 @@ export default function Home() {
             onOpenTree={() => setViewMode("tree")}
             onOpenTimer={() => setIsTimerModalOpen(true)}
             onOpenAltar={() => setIsAltarModalOpen(true)}
+            onOpenSigilStudio={() => setIsSigilStudioOpen(true)}
           />
         ) : viewMode === "dashboard" ? (
           <DashboardView
@@ -528,6 +560,32 @@ export default function Home() {
         onSelectEntry={(entry) => {
           setSelectedEntryId(entry.id);
           setViewMode("article");
+        }}
+      />
+
+      {/* Oficina de Sigilos & Tábua de Ponto Riscado Digital */}
+      <SigilStudioModal
+        isOpen={isSigilStudioOpen}
+        onClose={() => setIsSigilStudioOpen(false)}
+        onInsertSigil={(mdImage, sigilTitle, sigilDesc) => {
+          handleNewNote(
+            "Prática",
+            `## 🥁 ${sigilTitle}\n\n${sigilDesc}\n\n${mdImage}\n\n### Consagração & Firmeza:\n`,
+            sigilTitle
+          );
+        }}
+      />
+
+      {/* Portal do Grimório — Seletor e Criador de Banco de Dados (.db) */}
+      <VaultSelectorModal
+        isOpen={isVaultModalOpen}
+        isInitialOnboarding={isInitialVaultOnboarding}
+        onClose={() => {
+          setIsVaultModalOpen(false);
+          setIsInitialVaultOnboarding(false);
+        }}
+        onVaultSelected={async () => {
+          await loadEntries();
         }}
       />
     </div>

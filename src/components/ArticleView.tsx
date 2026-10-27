@@ -5,7 +5,10 @@ import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { THOTH_TAROT_DECK, TAROT_SPREADS, ThothCard } from "@/lib/thothTarot";
 import { getCategoryThelemicIcon, ThelemicDateDisplay, ZodiacIcon } from "@/components/ThelemicIcons";
 import { OracleTable, CardOnTable } from "@/components/OracleTable";
-import { getDefaultTemplateForCategory } from "@/lib/templates";
+import { getDefaultTemplateForCategory, SPECIAL_RITUAL_TEMPLATES } from "@/lib/templates";
+import { BRASILIS_INFLUENCE_PRESETS, getAfroBrazilianDayRuler } from "@/lib/brasilidade777";
+import { SigilStudioModal } from "@/components/SigilStudioModal";
+import { EntityDossierModal } from "@/components/EntityDossierModal";
 import {
   Edit3,
   Trash2,
@@ -73,7 +76,11 @@ import {
   getInfluenceCategoryLabel,
 } from "@/lib/dateUtils";
 import { BrazilianDateTimeInput, BrazilianDateInput } from "@/components/BrazilianDateTimeInput";
-import { MagickCodeMirror, MagickCodeMirrorHandle } from "@/components/editor/MagickCodeMirror";
+import {
+  MagickCodeMirror,
+  MagickCodeMirrorHandle,
+  normalizeMediaSrc,
+} from "@/components/editor/MagickCodeMirror";
 
 interface ArticleViewProps {
   entry: MagickEntry | null;
@@ -162,6 +169,7 @@ export function ArticleView({
   const [isTarotPickerOpen, setIsTarotPickerOpen] = useState(false);
   const [tarotPickerSearch, setTarotPickerSearch] = useState("");
   const [selectedTarotCardForZoom, setSelectedTarotCardForZoom] = useState<ThothCard | null>(null);
+  const [selectedNoteImageZoom, setSelectedNoteImageZoom] = useState<{ src: string; alt: string } | null>(null);
 
   // Color Picker & Media Modals State
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
@@ -187,6 +195,15 @@ export function ArticleView({
   const [floatingGematria, setFloatingGematria] = useState<{
     text: string;
     value: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Oficina de Sigilos & Tábua de Ponto Riscado + Dossiê Vivo de Entidades + Hover Preview Wikilinks
+  const [isSigilStudioOpen, setIsSigilStudioOpen] = useState(false);
+  const [dossierEntity, setDossierEntity] = useState<{ name: string; category?: string } | null>(null);
+  const [hoveredWikilink, setHoveredWikilink] = useState<{
+    entry: MagickEntry;
     x: number;
     y: number;
   } | null>(null);
@@ -480,19 +497,25 @@ export function ArticleView({
       "Uriel (Terra)",
     ],
     herb: [
+      "Arruda",
+      "Guiné",
+      "Alecrim",
+      "Espada-de-São-Jorge",
+      "Manjericão",
+      "Alfazema / Lavanda",
+      "Boldo (Tapete de Oxalá)",
+      "Aroeira",
+      "Jurema Preta",
+      "Peregum",
+      "Saião",
+      "Levante",
+      "Rosa Branca",
+      "Rosa Vermelha",
       "Lótus",
-      "Rosa",
       "Acácia",
       "Absinto (Artemísia)",
-      "Louro Solar",
-      "Verbena",
-      "Mandrágora",
-      "Arruda",
-      "Alecrim",
       "Quartzo Cristal",
-      "Lápis-Lazúli",
-      "Rubi",
-      "Esmeralda",
+      "Ametista",
     ],
     feeling: [
       "Êxtase Solar",
@@ -503,7 +526,9 @@ export function ArticleView({
       "Serenidade",
       "Força Marcial",
       "Vontade Inabalável",
+      "Firmeza de Terreiro (Axé)",
     ],
+    ...BRASILIS_INFLUENCE_PRESETS,
   };
 
   const handleAddInfluence = (customValue?: string) => {
@@ -850,17 +875,28 @@ export function ArticleView({
 
   // Inserir carimbo do trânsito astral atual no cursor
   const handleInsertAstralStamp = async () => {
+    const afro = getAfroBrazilianDayRuler(new Date());
     try {
       const res = await fetch("/api/astronomy");
       const astro = await res.json();
       if (astro.success) {
-        const stamp = `\n> ☉ **Trânsito Astral:** Sol em ${astro.sunDegree}° ${astro.sunSign} · ☽ Lua em ${astro.moonDegree}° ${astro.moonSign} (${astro.moonPhaseName}, ${astro.moonIllumination}%) · Dia: ${astro.planetaryDay} · Hora: ${astro.planetaryHour}\n\n`;
+        const planetsLine =
+          astro.sevenPlanets && astro.sevenPlanets.length > 0
+            ? `\n> 🪐 **Efemérides Clássicas:** ` +
+              astro.sevenPlanets.map((p: any) => `${p.symbol} ${p.name} em ${p.formatted}`).join(" · ")
+            : "";
+        const afroLine = `\n> 🌿 **Regência Afro-Brasileira (${afro.dayNamePt}):** ${afro.orixas} · *${afro.greeting}*`;
+        const stamp = `\n> ☉ **Trânsito Astral:** Sol em ${astro.sunDegree}° ${astro.sunSign} · ☽ Lua em ${astro.moonDegree}° ${astro.moonSign} (${astro.moonPhaseName}, ${astro.moonIllumination}%) · Dia: ${astro.planetaryDay} · Hora: ${astro.planetaryHour}${planetsLine}${afroLine}\n\n`;
         insertFormatting(stamp);
       } else {
-        insertFormatting(`\n> ☉ **Trânsito Astral:** Sol em Tiphareth · ☽ Lua em Yesod\n\n`);
+        insertFormatting(
+          `\n> ☉ **Trânsito Astral:** Sol em Tiphareth · ☽ Lua em Yesod\n> 🌿 **Regência Afro-Brasileira:** ${afro.orixas} (${afro.greeting})\n\n`
+        );
       }
     } catch (e) {
-      insertFormatting(`\n> ☉ **Trânsito Astral:** Sol em Tiphareth · ☽ Lua em Yesod\n\n`);
+      insertFormatting(
+        `\n> ☉ **Trânsito Astral:** Sol em Tiphareth · ☽ Lua em Yesod\n> 🌿 **Regência Afro-Brasileira:** ${afro.orixas} (${afro.greeting})\n\n`
+      );
     }
   };
 
@@ -1266,6 +1302,18 @@ export function ArticleView({
 
   const slashCommands: SlashCommandItem[] = [
     {
+      id: "sigil-studio",
+      title: "Ponto Riscado & Oficina de Sigilos",
+      description: "Pemba Digital (Umbanda/Quimbanda/Jurema), Kameas Planetários e Monograma de Spare",
+      icon: <Compass className="w-4 h-4 text-emerald-400" />,
+      category: "hermético",
+      keywords: ["sigilo", "ponto", "riscado", "pemba", "kamea", "spare", "umbanda", "quimbanda"],
+      action: () => {
+        setIsSlashMenuOpen(false);
+        setIsSigilStudioOpen(true);
+      },
+    },
+    {
       id: "resh",
       title: "Adoração do Liber Resh",
       description: "Insere a adoração solar da maré atual (Ra, Hathor, Tum, Khephra)",
@@ -1631,20 +1679,20 @@ export function ArticleView({
       // Imagens Embedadas estilo Obsidian: ![[arquivo.ext]] ou ![[arquivo.ext|Legenda]]
       .replace(/!\[\[(.*?)(?:\|(.*?))?\]\]/g, (_, target, captionOrWidth) => {
         const fileName = target.trim();
-        const isImage = /\.(png|jpe?g|webp|gif|svg|avif)$/i.test(fileName);
+        const isImage = /\.(png|jpe?g|webp|gif|svg|avif|bmp)$/i.test(fileName);
         if (isImage) {
           const src = fileName.startsWith("http") || fileName.startsWith("/")
-            ? fileName
-            : `/uploads/${fileName}`;
+            ? normalizeMediaSrc(fileName)
+            : `/api/media/${fileName}`;
           const altText = captionOrWidth?.trim() || fileName;
-          return `<figure class="my-4 text-center"><img src="${src}" alt="${altText}" class="rounded-lg max-h-[500px] w-auto border border-medium-700 mx-auto shadow-sm" />${captionOrWidth ? `<figcaption class="text-center text-xs text-medium-400 mt-1.5 font-mono italic">${captionOrWidth}</figcaption>` : ""}</figure>`;
+          return `<figure class="my-4 text-center"><img src="${src}" alt="${altText}" class="rounded-lg max-h-[550px] w-auto border border-medium-700 mx-auto shadow-sm" />${captionOrWidth ? `<figcaption class="text-center text-xs text-medium-400 mt-1.5 font-mono italic">${captionOrWidth}</figcaption>` : ""}</figure>`;
         }
         return `![[${target}]]`;
       })
       // Imagens Markdown inline: ![alt](url)
       .replace(/!\[(.*?)\]\((.*?)\)/g, (_, alt, url) => {
-        const cleanUrl = url.trim().replace(/^["']|["']$/g, "").split(/\s+/)[0];
-        return `<figure class="my-4 text-center"><img src="${cleanUrl}" alt="${alt || 'Imagem'}" class="rounded-lg max-h-[500px] w-auto border border-medium-700 mx-auto shadow-sm" />${alt ? `<figcaption class="text-center text-xs text-medium-400 mt-1.5 font-mono italic">${alt}</figcaption>` : ""}</figure>`;
+        const cleanUrl = normalizeMediaSrc(url.trim().replace(/\s+["'].*["']$/, ""));
+        return `<figure class="my-4 text-center"><img src="${cleanUrl}" alt="${alt || 'Imagem'}" class="rounded-lg max-h-[550px] w-auto border border-medium-700 mx-auto shadow-sm" />${alt ? `<figcaption class="text-center text-xs text-medium-400 mt-1.5 font-mono italic">${alt}</figcaption>` : ""}</figure>`;
       })
       // Wikilinks estilo Obsidian: [[Nome da Nota]] ou [[Alvo|Texto Exibido]]
       .replace(/\[\[(.*?)(?:\|(.*?))?\]\]/g, (_, target, alias) => {
@@ -1719,8 +1767,7 @@ export function ArticleView({
       return (
         getYouTubeId(url) !== null ||
         getVimeoId(url) !== null ||
-        /\.(mp4|webm|ogg|mov|mkv)(\?.*)?$/i.test(url) ||
-        url.startsWith("/uploads/")
+        /\.(mp4|webm|ogg|mov|mkv)(\?.*)?$/i.test(url)
       );
     };
 
@@ -2000,7 +2047,8 @@ export function ArticleView({
       const audioSyntaxMatch = trimmedLine.match(/^!\[audio(?::(.*?))?\]\((.*?)\)/i);
       const htmlAudioMatch = trimmedLine.match(/<audio[^>]*src=["']([^"']+)["'][^>]*>/i);
       if (audioSyntaxMatch || htmlAudioMatch) {
-        const url = audioSyntaxMatch ? audioSyntaxMatch[2].trim() : htmlAudioMatch![1].trim();
+        const rawAudioUrl = audioSyntaxMatch ? audioSyntaxMatch[2].trim() : htmlAudioMatch![1].trim();
+        const url = normalizeMediaSrc(rawAudioUrl);
         const caption = audioSyntaxMatch ? audioSyntaxMatch[1]?.trim() : "Gravação de Áudio";
         elements.push(
           <div
@@ -2028,17 +2076,18 @@ export function ArticleView({
       if (obsidianImgMatch) {
         const fileName = obsidianImgMatch[1].trim();
         const caption = obsidianImgMatch[2]?.trim() || fileName;
-        const isImage = /\.(png|jpe?g|webp|gif|svg|avif)$/i.test(fileName);
+        const isImage = /\.(png|jpe?g|webp|gif|svg|avif|bmp)$/i.test(fileName);
         if (isImage) {
           const src = fileName.startsWith("http") || fileName.startsWith("/")
-            ? fileName
-            : `/uploads/${fileName}`;
+            ? normalizeMediaSrc(fileName)
+            : `/api/media/${fileName}`;
           elements.push(
             <figure key={`obs-img-${i}`} className="my-6">
               <img
                 src={src}
                 alt={caption}
-                className="rounded-lg max-h-[550px] w-auto border border-medium-700 mx-auto shadow-sm"
+                onClick={() => setSelectedNoteImageZoom({ src, alt: caption })}
+                className="rounded-xl max-h-[580px] w-auto border border-medium-700 hover:border-amber-400/60 mx-auto shadow-md cursor-zoom-in transition-all"
               />
               {caption && (
                 <figcaption className="text-center text-xs text-medium-400 mt-2 font-mono italic">
@@ -2052,11 +2101,15 @@ export function ArticleView({
         }
       }
 
-      // 3.5. Bloco de Imagem Markdown: ![alt](url)
+      // 3.5. Bloco de Imagem Markdown: ![alt](url) ou tag <img src="..." />
       const imgMatch = trimmedLine.match(/^!\[(.*?)\]\((.*?)\)/);
-      if (imgMatch) {
-        const alt = imgMatch[1];
-        let url = imgMatch[2].trim().replace(/^["']|["']$/g, "").split(/\s+/)[0];
+      const htmlImgMatch = trimmedLine.match(/^<img[^>]*src=["']([^"']+)["'][^>]*>/i);
+      if (imgMatch || htmlImgMatch) {
+        const alt = imgMatch ? imgMatch[1] : "Imagem";
+        const rawUrl = imgMatch
+          ? imgMatch[2].trim().replace(/\s+["'].*["']$/, "")
+          : htmlImgMatch![1].trim();
+        const url = normalizeMediaSrc(rawUrl);
 
         if (isVideoUrl(url)) {
           const ytId = getYouTubeId(url);
@@ -2084,7 +2137,8 @@ export function ArticleView({
             <img
               src={url}
               alt={alt}
-              className="rounded-lg max-h-[550px] w-auto border border-medium-700 mx-auto shadow-sm"
+              onClick={() => setSelectedNoteImageZoom({ src: url, alt: alt || "Imagem" })}
+              className="rounded-xl max-h-[580px] w-auto border border-medium-700 hover:border-amber-400/60 mx-auto shadow-md cursor-zoom-in transition-all"
             />
             {alt && (
               <figcaption className="text-center text-xs text-medium-400 mt-2 font-mono italic">
@@ -2566,17 +2620,20 @@ export function ArticleView({
               </div>
             </div>
 
-            {/* Influences Chips (Liber 777 Tags) */}
+            {/* Influences Chips (Liber 777 & Brasilis Tags — Clicáveis para abrir Dossiê Vivo) */}
             {entry.influences && entry.influences.length > 0 && (
               <div className="flex flex-wrap items-center gap-1.5 py-1">
                 {entry.influences.map((inf, i) => (
-                  <span
+                  <button
                     key={i}
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-medium-800 border border-medium-700 text-xs text-medium-300 font-mono"
+                    type="button"
+                    onClick={() => setDossierEntity({ name: inf.name, category: inf.category })}
+                    title="Clique para abrir o Dossiê Vivo desta força no seu Diário"
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-medium-800 hover:bg-medium-750 border border-medium-700 hover:border-amber-400/60 text-xs text-medium-300 font-mono transition-all cursor-pointer"
                   >
                     <strong className="text-amber-300">{getInfluenceCategoryLabel(inf.category)}:</strong>
                     <span className="text-white">{inf.name}</span>
-                  </span>
+                  </button>
                 ))}
               </div>
             )}
@@ -2641,6 +2698,26 @@ export function ArticleView({
             {/* Article Body Content */}
             <div
               onClick={handleArticleClick}
+              onMouseOver={(e) => {
+                const target = (e.target as HTMLElement).closest("[data-note-target]") as HTMLElement | null;
+                if (target) {
+                  const titleAttr = target.getAttribute("data-note-target") || "";
+                  const found = allEntries.find(
+                    (n) => n.title.toLowerCase().trim() === titleAttr.toLowerCase().trim()
+                  );
+                  if (found) {
+                    const rect = target.getBoundingClientRect();
+                    setHoveredWikilink({
+                      entry: found,
+                      x: Math.min(window.innerWidth - 320, Math.max(16, rect.left)),
+                      y: Math.min(window.innerHeight - 180, rect.bottom + 8),
+                    });
+                  }
+                } else {
+                  setHoveredWikilink(null);
+                }
+              }}
+              onMouseLeave={() => setHoveredWikilink(null)}
               className={`pt-4 border-t border-medium-800 ${getFontClass()}`}
               style={{ fontSize: `${fontSize}px` }}
             >
@@ -2871,9 +2948,13 @@ export function ArticleView({
                   onChange={(e) => setNewInfCat(e.target.value)}
                   className="bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono sm:w-64"
                 >
+                  <option value="orixa">🌿 Orixá / Vodum / Nkisi (Brasilidade)</option>
+                  <option value="guia">🥁 Guia / Exu / Caboclo / Mestre da Jurema</option>
+                  <option value="ponto_forca">⛰️ Ponto de Força / Domínio da Natureza</option>
+                  <option value="banho_defumacao">💨 Banho de Ervas / Defumação (Ewê)</option>
                   <option value="entity">Entidade / Espírito / Inteligência</option>
                   <option value="deity">Divindade / Forma-Deus</option>
-                  <option value="color">Cor (Escalas do Liber 777)</option>
+                  <option value="color">Cor (Escalas do Liber 777 & Fios de Conta)</option>
                   <option value="element">Elemento (Fogo, Água, Ar, Terra, Espírito)</option>
                   <option value="planet">Planeta / Astro</option>
                   <option value="sephirah">Sephirah / Caminho da Árvore</option>
@@ -3495,6 +3576,17 @@ export function ArticleView({
                 )}
               </div>
 
+              {/* Ponto Riscado & Oficina de Sigilos */}
+              <button
+                type="button"
+                onClick={() => setIsSigilStudioOpen(true)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded transition-all text-xs font-mono text-emerald-300 hover:text-emerald-200 hover:bg-emerald-950/30 border border-emerald-500/30"
+                title="Abrir Tábua de Ponto Riscado (Pemba Digital) & Oficina de Sigilos (Kameas e Spare)"
+              >
+                <span>🥁</span>
+                <span className="hidden sm:inline font-sans font-semibold">Ponto Riscado / Sigilo</span>
+              </button>
+
               {/* Carimbo Astral do Momento */}
               <button
                 type="button"
@@ -3617,6 +3709,37 @@ export function ArticleView({
 
               <div className="flex-1" />
 
+              {/* Seletor de Estruturas Rituais (Brasilidade & Thelema) */}
+              <select
+                value=""
+                onChange={(e) => {
+                  const tplId = e.target.value;
+                  if (!tplId) return;
+                  const found = SPECIAL_RITUAL_TEMPLATES.find((t) => t.id === tplId);
+                  if (!found) return;
+                  if (editContent.trim()) {
+                    if (
+                      !confirm(
+                        `Deseja carregar o modelo "${found.label}"? O conteúdo atual será substituído.`
+                      )
+                    ) {
+                      return;
+                    }
+                  }
+                  setEditCategory(found.category);
+                  setEditContent(found.content);
+                }}
+                className="bg-medium-800 border border-emerald-500/40 rounded px-2 py-1 text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-400 cursor-pointer"
+                title="Carregar modelo ritualístico (Umbanda/Candomblé, Quimbanda, Jurema Sagrada, Thelema ou Liber E)"
+              >
+                <option value="">🌿 Modelos de Terreiro & Rituais...</option>
+                {SPECIAL_RITUAL_TEMPLATES.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {tpl.label}
+                  </option>
+                ))}
+              </select>
+
               <button
                 type="button"
                 onClick={() => {
@@ -3665,6 +3788,7 @@ export function ArticleView({
                         setEditContent(val);
                       }}
                       onSave={handleSaveEdit}
+                      onFileUpload={handleMediaUploadFile}
                       minHeight="480px"
                       className="border border-medium-700 bg-medium-850 rounded-lg shadow-inner"
                     />
@@ -3732,6 +3856,7 @@ export function ArticleView({
                       setEditContent(val);
                     }}
                     onSave={handleSaveEdit}
+                    onFileUpload={handleMediaUploadFile}
                     minHeight="420px"
                     className="border border-medium-700 bg-medium-850 rounded-lg shadow-inner"
                   />
@@ -4133,6 +4258,67 @@ export function ArticleView({
         onInsertGematriaNote={(md) => insertFormatting(md)}
         onSelectEntry={onSelectEntry}
       />
+
+      {/* Oficina de Sigilos & Tábua de Ponto Riscado Digital */}
+      <SigilStudioModal
+        isOpen={isSigilStudioOpen}
+        onClose={() => setIsSigilStudioOpen(false)}
+        onInsertSigil={(mdImage, sigilTitle, sigilDesc) => {
+          insertFormatting(`\n### 🥁 ${sigilTitle}\n${sigilDesc}\n\n${mdImage}\n\n`);
+        }}
+      />
+
+      {/* Dossiê Vivo de Entidade / Orixá / Sephirah */}
+      <EntityDossierModal
+        isOpen={Boolean(dossierEntity)}
+        onClose={() => setDossierEntity(null)}
+        entityName={dossierEntity?.name || ""}
+        entityCategory={dossierEntity?.category}
+        entries={allEntries}
+        onSelectEntry={onSelectEntry}
+      />
+
+      {/* Hover Preview Popover de [[Wikilinks]] */}
+      {hoveredWikilink && (
+        <div
+          style={{
+            position: "fixed",
+            top: `${hoveredWikilink.y}px`,
+            left: `${hoveredWikilink.x}px`,
+          }}
+          className="z-50 w-80 p-3.5 rounded-xl bg-medium-900/95 border border-amber-500/50 shadow-2xl pointer-events-none animate-in fade-in duration-100 space-y-1.5"
+        >
+          <div className="flex items-center justify-between text-[10px] font-mono text-amber-300">
+            <span className="uppercase font-bold">{normalizeCategory(hoveredWikilink.entry.type)}</span>
+            <span>{formatDateBR(hoveredWikilink.entry.date)}</span>
+          </div>
+          <h4 className="text-sm font-serif font-bold text-white line-clamp-1">
+            {hoveredWikilink.entry.title}
+          </h4>
+          <p className="text-xs text-medium-300 line-clamp-3 leading-relaxed">
+            {hoveredWikilink.entry.content.replace(/[#*`_>!\[\]]/g, "").slice(0, 180)}
+          </p>
+        </div>
+      )}
+
+      {/* Lightbox Zoom de Imagens nas Notas */}
+      {selectedNoteImageZoom && (
+        <div
+          onClick={() => setSelectedNoteImageZoom(null)}
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in duration-150 cursor-zoom-out"
+        >
+          <img
+            src={selectedNoteImageZoom.src}
+            alt={selectedNoteImageZoom.alt}
+            className="max-h-[85vh] max-w-[92vw] object-contain rounded-xl border border-medium-700 shadow-2xl"
+          />
+          {selectedNoteImageZoom.alt && (
+            <p className="mt-3 text-xs font-mono text-medium-200 bg-medium-850/90 px-4 py-1.5 rounded-full border border-medium-700">
+              {selectedNoteImageZoom.alt}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Floating Gematria Badge ao selecionar palavras */}
       {floatingGematria && (

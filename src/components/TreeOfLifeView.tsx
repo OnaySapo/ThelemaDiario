@@ -5,6 +5,7 @@ import { MagickEntry, normalizeCategory } from "@/lib/types";
 import { formatDateTimeBR } from "@/lib/dateUtils";
 import { THOTH_TAROT_DECK, ThothCard } from "@/lib/thothTarot";
 import { ThemeId, ThemeMode, getStoredTheme } from "@/lib/theme";
+import { OTZ_CHIIM_BRASILIS } from "@/lib/brasilidade777";
 import {
   Sparkles,
   BookOpen,
@@ -217,6 +218,30 @@ export const THEME_TREE_PALETTE: Record<
       bevelRim: "#565F89",
       daathStroke: "#7847BD",
       daathText: "#2E7DE9",
+    },
+  },
+  "terra-brasilis": {
+    dark: {
+      accent: "#EAB308",
+      glow: "#22C55E",
+      pathLine: "rgba(74, 222, 128, 0.45)",
+      pathLineHover: "#FEF08A",
+      badgeBorder: "#EAB308",
+      badgeText: "#FEF08A",
+      bevelRim: "#4ADE80",
+      daathStroke: "#DC2626",
+      daathText: "#FDE047",
+    },
+    light: {
+      accent: "#15803D",
+      glow: "#CA8A04",
+      pathLine: "rgba(21, 128, 61, 0.55)",
+      pathLineHover: "#14532D",
+      badgeBorder: "#15803D",
+      badgeText: "#14532D",
+      bevelRim: "#166534",
+      daathStroke: "#B91C1C",
+      daathText: "#15803D",
     },
   },
 };
@@ -860,13 +885,19 @@ export function TreeOfLifeView({
         const sEng = s.english.toLowerCase();
         const planet = s.planet.toLowerCase().split(" ")[0];
         const archangel = s.archangel.toLowerCase().split(" ")[0];
+        const brasilis = OTZ_CHIIM_BRASILIS[s.id];
+        const orixaMatch = brasilis?.orixas.some((o) => {
+          const clean = o.split("(")[0].trim().toLowerCase();
+          return clean.length >= 3 && allText.includes(clean);
+        });
 
         if (
           allText.includes(sName) ||
           allText.includes(sEng) ||
           influences.includes(sName) ||
           (planet.length >= 3 && allText.includes(planet)) ||
-          (archangel.length >= 4 && allText.includes(archangel))
+          (archangel.length >= 4 && allText.includes(archangel)) ||
+          orixaMatch
         ) {
           map.get(s.id)?.push(entry);
         }
@@ -1822,6 +1853,61 @@ export function TreeOfLifeView({
                   </div>
                 </div>
               </div>
+
+              {/* CORRESPONDÊNCIAS AFRO-BRASILEIRAS & JUREMA SAGRADA (LIBER 777 BRASILIS) */}
+              {OTZ_CHIIM_BRASILIS[selectedSephirah.id] && (() => {
+                const br = OTZ_CHIIM_BRASILIS[selectedSephirah.id];
+                return (
+                  <div className="p-3.5 rounded-lg bg-emerald-950/20 border border-emerald-500/30 space-y-2.5 shadow-sm">
+                    <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5">
+                      <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                        <span>🌿</span>
+                        <span>Liber 777 Brasilis (Terreiro & Jurema)</span>
+                      </span>
+                      <span className="text-[9px] font-mono text-amber-300 font-bold">
+                        {br.greeting.split(" / ")[0]}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 text-[11px]">
+                      <div>
+                        <span className="text-medium-400 block text-[9px] uppercase font-bold">Orixás & Voduns Regentes:</span>
+                        <span className="text-emerald-200 font-semibold">{br.orixas.join(" · ")}</span>
+                      </div>
+
+                      <div>
+                        <span className="text-medium-400 block text-[9px] uppercase font-bold">Linhas de Umbanda (Direita):</span>
+                        <span className="text-medium-200">{br.umbandaLines.join(" · ")}</span>
+                      </div>
+
+                      <div>
+                        <span className="text-medium-400 block text-[9px] uppercase font-bold">Quimbanda & Guardiões (Esquerda):</span>
+                        <span className="text-red-300/90">{br.quimbandaGuardians.join(" · ")}</span>
+                      </div>
+
+                      <div>
+                        <span className="text-medium-400 block text-[9px] uppercase font-bold">Jurema Sagrada (Catimbó):</span>
+                        <span className="text-amber-200/90">{br.juremaMasters.join(" · ")}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-emerald-500/15">
+                        <div>
+                          <span className="text-medium-400 block text-[9px] uppercase font-bold">Ervas Sagradas (Ewê):</span>
+                          <span className="text-medium-300 text-[10px]">{br.sacredHerbs.join(", ")}</span>
+                        </div>
+                        <div>
+                          <span className="text-medium-400 block text-[9px] uppercase font-bold">Ponto de Força:</span>
+                          <span className="text-medium-300 text-[10px]">{br.elementsAndPointsOfPower.join(" · ")}</span>
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] font-serif italic text-medium-300 pt-1 border-t border-emerald-500/15 leading-relaxed">
+                        {br.synthesis}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Caminhos Conectados & Arcanos */}
               <div className="p-3.5 rounded-lg bg-medium-900/80 border border-medium-750 space-y-2">

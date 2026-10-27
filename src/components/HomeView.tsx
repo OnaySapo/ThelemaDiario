@@ -21,6 +21,7 @@ import {
   ReshTideInfo,
 } from "@/lib/astronomy";
 import { getDailyNumerologyCard } from "@/lib/thothTarot";
+import { getAfroBrazilianDayRuler } from "@/lib/brasilidade777";
 import {
   Sparkles,
   Clock,
@@ -52,6 +53,7 @@ interface HomeViewProps {
   onOpenTree?: () => void;
   onOpenTimer?: () => void;
   onOpenAltar?: () => void;
+  onOpenSigilStudio?: () => void;
 }
 
 export function HomeView({
@@ -62,6 +64,7 @@ export function HomeView({
   onOpenTree,
   onOpenTimer,
   onOpenAltar,
+  onOpenSigilStudio,
 }: HomeViewProps) {
   // Live Clock & Astronomy
   const [now, setNow] = useState(new Date());
@@ -70,8 +73,9 @@ export function HomeView({
   const [upcomingMoons, setUpcomingMoons] = useState<UpcomingMoonPhase[]>([]);
   const [showReshModal, setShowReshModal] = useState(false);
 
-  // Daily Tarot Card
+  // Daily Tarot Card & Afro-Brazilian Day Ruler
   const dailyNumerology = useMemo(() => getDailyNumerologyCard(now), [now]);
+  const afroDay = useMemo(() => getAfroBrazilianDayRuler(now), [now]);
 
   // Magickal To-Do List State
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -281,6 +285,12 @@ export function HomeView({
                     <span>{astro?.moonSign || "Lua"}</span>
                   </span>
                 </div>
+                <div className="flex items-center justify-between text-medium-300 pt-1 border-t border-medium-800">
+                  <span className="text-emerald-400/90 text-[10px] font-bold">Regência Afro-BR:</span>
+                  <span className="text-emerald-300 text-[11px] font-semibold truncate max-w-[140px]" title={`${afroDay.orixas} — ${afroDay.greeting}`}>
+                    {afroDay.orixas.split(",")[0]}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -313,9 +323,9 @@ export function HomeView({
       </section>
 
       {/* ========================================================
-          TEMPLE TOOLS (ÁRVORE DA VIDA, DHARANA TIMER, MODO ALTAR)
+          TEMPLE TOOLS (ÁRVORE DA VIDA, DHARANA TIMER, MODO ALTAR, SIGILOS/PEMBA)
           ======================================================== */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {onOpenAltar && (
           <button
             type="button"
@@ -332,6 +342,29 @@ export function HomeView({
                 </span>
                 <span className="text-[10px] font-mono text-medium-400 block">
                   Visão em tela cheia para rituais
+                </span>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-medium-500 group-hover:text-white transition-transform group-hover:translate-x-0.5" />
+          </button>
+        )}
+
+        {onOpenSigilStudio && (
+          <button
+            type="button"
+            onClick={onOpenSigilStudio}
+            className="p-3.5 rounded-xl bg-medium-850 hover:bg-medium-800 border border-medium-700 hover:border-emerald-500/50 transition-all text-left flex items-center justify-between group shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+                <Compass className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-white block group-hover:text-emerald-300 transition-colors">
+                  Ponto Riscado & Sigilos
+                </span>
+                <span className="text-[10px] font-mono text-medium-400 block">
+                  Pemba Digital, Kameas e Spare
                 </span>
               </div>
             </div>
@@ -601,6 +634,54 @@ export function HomeView({
                 <Plus className="w-3.5 h-3.5" />
                 <span>Registrar Meditação com a Carta</span>
               </button>
+            </div>
+          </div>
+
+          {/* REGÊNCIA AFRO-BRASILEIRA & ERVAS DO DIA (LIBER 777 BRASILIS) */}
+          <div className="bg-medium-850 rounded-xl border border-emerald-500/30 p-5 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between border-b border-medium-750 pb-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🌿</span>
+                <h3 className="text-xs font-mono font-bold text-emerald-300 uppercase tracking-wider">
+                  Regência do Terreiro ({afroDay.dayNamePt})
+                </h3>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950/60 text-amber-300 border border-emerald-500/30 font-bold">
+                {afroDay.greeting.split(" / ")[0]}
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div>
+                <span className="text-[10px] font-mono uppercase text-medium-400 block font-bold">
+                  Orixás & Forças Regentes:
+                </span>
+                <span className="text-white font-serif font-bold text-sm">
+                  {afroDay.orixas}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] font-mono uppercase text-medium-400 block font-bold">
+                  Linhas & Falanges:
+                </span>
+                <span className="text-medium-200 text-xs">
+                  {afroDay.linesAndEntities}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-medium-750 text-[11px]">
+                <div>
+                  <span className="text-[9px] font-mono uppercase text-medium-400 block">
+                    Velas / Cores:
+                  </span>
+                  <span className="text-amber-300 font-semibold">{afroDay.candleColors}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-mono uppercase text-medium-400 block">
+                    Ervas do Dia (Ewê):
+                  </span>
+                  <span className="text-emerald-300 font-semibold">{afroDay.recommendedHerbs}</span>
+                </div>
+              </div>
             </div>
           </div>
 

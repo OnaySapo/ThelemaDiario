@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
+import { getMediaDirectory } from "@/lib/db";
 
 const ALLOWED_MIME_TYPES = new Set([
   // Images
   "image/jpeg",
+  "image/jpg",
   "image/png",
   "image/webp",
   "image/gif",
   "image/svg+xml",
   "image/avif",
+  "image/bmp",
   // Videos
   "video/mp4",
   "video/webm",
@@ -65,24 +68,37 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const uploadsDir = path.join(process.cwd(), "public", "uploads");
-    if (!fs.existsSync(uploadsDir)) {
-      await fs.promises.mkdir(uploadsDir, { recursive: true });
+    // 1. Pasta de mídia ativa dentro do Grimório / Banco de Dados escolhido
+    const vaultMediaDir = getMediaDirectory();
+    if (!fs.existsSync(vaultMediaDir)) {
+      await fs.promises.mkdir(vaultMediaDir, { recursive: true });
+    }
+
+    // 2. Pasta public/uploads como espelho secundário de compatibilidade
+    const publicUploadsDir = path.join(process.cwd(), "public", "uploads");
+    if (!fs.existsSync(publicUploadsDir)) {
+      await fs.promises.mkdir(publicUploadsDir, { recursive: true });
     }
 
     // Sanitiza e gera nome de arquivo seguro
     const sanitizedOriginal = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const uniqueFileName = `${Date.now()}_${sanitizedOriginal}`;
-    const filePath = path.join(uploadsDir, uniqueFileName);
 
-    await fs.promises.writeFile(filePath, buffer);
+    const vaultFilePath = path.join(vaultMediaDir, uniqueFileName);
+    await fs.promises.writeFile(vaultFilePath, buffer);
 
-    const publicUrl = `/uploads/${uniqueFileName}`;
+    try {
+      const publicFilePath = path.join(publicUploadsDir, uniqueFileName);
+      await fs.promises.writeFile(publicFilePath, buffer);
+    } catch {}
+
+    // URL dinâmica servida por /api/media/ (funciona em dev, start de produção e Tauri!)
+    const dynamicMediaUrl = `/api/media/${uniqueFileName}`;
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
-      fileUrl: publicUrl,
+      url: dynamicMediaUrl,
+      fileUrl: dynamicMediaUrl,
       filename: file.name,
       size: file.size,
       mimeType: file.type,

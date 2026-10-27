@@ -1,5 +1,6 @@
 export type ThemeId =
   | "medium"
+  | "terra-brasilis"
   | "rose-pine"
   | "catppuccin"
   | "nord"
@@ -48,6 +49,26 @@ export const THEMES: ThemeDefinition[] = [
         surface: "#ffffff",
         accent: "#181818",
         text: "#222222",
+      },
+    },
+  },
+  {
+    id: "terra-brasilis",
+    name: "Terra Brasilis",
+    tagline: "Mata de Jurema, Ouro de Oxum & Pemba",
+    badge: "Brasilidade",
+    preview: {
+      dark: {
+        bg: "#0e1914",
+        surface: "#15261e",
+        accent: "#e5b842",
+        text: "#e9f2ec",
+      },
+      light: {
+        bg: "#f6f2e8",
+        surface: "#efe9d8",
+        accent: "#1e5e3a",
+        text: "#18281f",
       },
     },
   },
@@ -207,6 +228,7 @@ export function getStoredTheme(): { theme: ThemeId; mode: ThemeMode } {
     const mode = (localStorage.getItem("magick_mode") as ThemeMode) || "dark";
     const validThemes: ThemeId[] = [
       "medium",
+      "terra-brasilis",
       "rose-pine",
       "catppuccin",
       "nord",
