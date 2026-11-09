@@ -17,10 +17,17 @@ import { GrimoireCompilerModal } from "@/components/GrimoireCompilerModal";
 import { GematriaModal } from "@/components/GematriaModal";
 import { VaultSelectorModal } from "@/components/VaultSelectorModal";
 import { SigilStudioModal } from "@/components/SigilStudioModal";
+import { OnboardingModal } from "@/components/OnboardingModal";
 import { AstrologicalCoordinates } from "@/lib/astronomy";
 import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
 import { getDefaultTemplateForCategory } from "@/lib/templates";
 import { applyTheme, getStoredTheme } from "@/lib/theme";
+import {
+  ExperienceLevel,
+  loadExperienceLevel,
+  saveExperienceLevel,
+  isOnboardingCompleted,
+} from "@/lib/glossary";
 import { Network } from "lucide-react";
 
 export default function Home() {
@@ -45,6 +52,8 @@ export default function Home() {
   const [isZenMode, setIsZenMode] = useState(false);
   const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
   const [autoEditEntryId, setAutoEditEntryId] = useState<string | null>(null);
+  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>("sincretico");
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
 
   // Global keyboard shortcuts (Ctrl+\ for Zen Mode, Ctrl+K for Spotlight, Alt+S for Quick Dream, Escape for Graph Modal)
   useEffect(() => {
@@ -127,6 +136,10 @@ export default function Home() {
   useEffect(() => {
     const { theme, mode } = getStoredTheme();
     applyTheme(theme, mode);
+    setExperienceLevel(loadExperienceLevel());
+    if (!isOnboardingCompleted()) {
+      setIsOnboardingOpen(true);
+    }
     loadEntries();
     loadAstro();
   }, []);
@@ -394,6 +407,7 @@ export default function Home() {
             setIsInitialVaultOnboarding(false);
             setIsVaultModalOpen(true);
           }}
+          onOpenOnboarding={() => setIsOnboardingOpen(true)}
           activeVaultLabel={activeVaultLabel}
         />
       </div>
@@ -407,12 +421,16 @@ export default function Home() {
               setSelectedEntryId(entry.id);
               setViewMode("article");
             }}
-            onNewNote={(cat, content, title) => handleNewNote(cat, content, title)}
+            onNewNote={(cat, content, title, influences) =>
+              handleNewNote(cat, content, title, influences)
+            }
             onOpenDashboard={() => setViewMode("dashboard")}
             onOpenTree={() => setViewMode("tree")}
             onOpenTimer={() => setIsTimerModalOpen(true)}
             onOpenAltar={() => setIsAltarModalOpen(true)}
             onOpenSigilStudio={() => setIsSigilStudioOpen(true)}
+            experienceLevel={experienceLevel}
+            onOpenOnboarding={() => setIsOnboardingOpen(true)}
           />
         ) : viewMode === "dashboard" ? (
           <DashboardView
@@ -449,7 +467,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* 3. Right Sidebar (Frater Auxiliar + Mini Grafo) - ativo no modo artigo */}
+      {/* 3. Right Sidebar (Sincronicidades, Frater IA & Guia da Nota) - ativo no modo artigo */}
       {viewMode === "article" && (
         <div
           className={`transition-all duration-300 ease-in-out flex-shrink-0 h-full ${
@@ -461,6 +479,7 @@ export default function Home() {
             allEntries={entries}
             onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
             onOpenFullGraph={() => setIsGraphModalOpen(true)}
+            onOpenOnboarding={() => setIsOnboardingOpen(true)}
           />
         </div>
       )}
@@ -586,6 +605,20 @@ export default function Home() {
         }}
         onVaultSelected={async () => {
           await loadEntries();
+        }}
+      />
+
+      {/* Central de Boas-Vindas, Modos de Experiência & Glossário Vivo */}
+      <OnboardingModal
+        isOpen={isOnboardingOpen && !isVaultModalOpen}
+        onClose={() => setIsOnboardingOpen(false)}
+        experienceLevel={experienceLevel}
+        onChangeExperienceLevel={(lvl) => {
+          setExperienceLevel(lvl);
+          saveExperienceLevel(lvl);
+        }}
+        onStartGuidedNote={(card) => {
+          handleNewNote(card.category, card.customTemplate, card.defaultTitle, card.defaultInfluences);
         }}
       />
     </div>

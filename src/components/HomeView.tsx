@@ -44,16 +44,29 @@ import {
   Bell,
 } from "lucide-react";
 import { formatDateBR, formatTime24h, formatDateTimeBR } from "@/lib/dateUtils";
+import { computeDailyCompass, detectSynchronicityThreads } from "@/lib/crossAnalytics";
+import {
+  ExperienceLevel,
+  EXPERIENCE_PROFILES,
+  GUIDED_CREATION_CARDS,
+} from "@/lib/glossary";
 
 interface HomeViewProps {
   entries: MagickEntry[];
   onSelectEntry: (entry: MagickEntry) => void;
-  onNewNote: (prefilledCategory?: CategoryName, prefilledContent?: string, prefilledTitle?: string) => void;
+  onNewNote: (
+    prefilledCategory?: CategoryName,
+    prefilledContent?: string,
+    prefilledTitle?: string,
+    prefilledInfluences?: { category: string; name: string }[]
+  ) => void;
   onOpenDashboard: () => void;
   onOpenTree?: () => void;
   onOpenTimer?: () => void;
   onOpenAltar?: () => void;
   onOpenSigilStudio?: () => void;
+  experienceLevel?: ExperienceLevel;
+  onOpenOnboarding?: () => void;
 }
 
 export function HomeView({
@@ -65,6 +78,8 @@ export function HomeView({
   onOpenTimer,
   onOpenAltar,
   onOpenSigilStudio,
+  experienceLevel = "sincretico",
+  onOpenOnboarding,
 }: HomeViewProps) {
   // Live Clock & Astronomy
   const [now, setNow] = useState(new Date());
@@ -72,10 +87,22 @@ export function HomeView({
   const [reshTide, setReshTide] = useState<ReshTideInfo | null>(null);
   const [upcomingMoons, setUpcomingMoons] = useState<UpcomingMoonPhase[]>([]);
   const [showReshModal, setShowReshModal] = useState(false);
+  const [showReshExpanded, setShowReshExpanded] = useState(false);
 
   // Daily Tarot Card & Afro-Brazilian Day Ruler
   const dailyNumerology = useMemo(() => getDailyNumerologyCard(now), [now]);
   const afroDay = useMemo(() => getAfroBrazilianDayRuler(now), [now]);
+
+  // Bússola Preditiva de Hoje & Sincronicidades Recentes
+  const dailyCompass = useMemo(
+    () => computeDailyCompass(entries, astro?.moonPhaseName, astro?.moonSign, now),
+    [entries, astro?.moonPhaseName, astro?.moonSign, now.getDate()]
+  );
+
+  const topSyncThreads = useMemo(
+    () => detectSynchronicityThreads(entries).slice(0, 2),
+    [entries]
+  );
 
   // Magickal To-Do List State
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -224,15 +251,29 @@ export function HomeView({
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div>
-            <div className="flex items-center gap-2 text-white font-mono text-xs uppercase tracking-widest mb-1.5 font-bold">
-              <EstrelaDeThelema className="w-4 h-4 text-white" />
-              <span>O Método da Ciência, o Alvo da Religião</span>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <div className="flex items-center gap-1.5 text-white font-mono text-xs uppercase tracking-widest font-bold">
+                <EstrelaDeThelema className="w-4 h-4 text-amber-400" />
+                <span>Sanctum & Grimório Vivo</span>
+              </div>
+              {onOpenOnboarding && (
+                <button
+                  type="button"
+                  onClick={onOpenOnboarding}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-[11px] font-semibold text-amber-300 transition-colors"
+                  title="Alterar Modo de Interface, abrir Tour Rápido ou Glossário Vivo"
+                >
+                  <span>{EXPERIENCE_PROFILES[experienceLevel].badge.split(" ")[0]}</span>
+                  <span>{EXPERIENCE_PROFILES[experienceLevel].title.split(" (")[0]}</span>
+                  <span className="text-[10px] opacity-75">· ❓ Guia & Glossário</span>
+                </button>
+              )}
             </div>
             <h1 className="text-2xl sm:text-4xl font-serif font-bold text-white tracking-tight leading-snug">
               Faze o que tu queres há de ser tudo da Lei.
             </h1>
             <p className="text-xs sm:text-sm text-medium-400 font-sans mt-2 max-w-2xl leading-relaxed">
-              Bem-vindo ao seu Sanctum Thelêmico. Registre operações mágickas, consulte as lâminas de Thoth, correlacione as marés astrais e descubra o padrão da sua Verdadeira Vontade.
+              Registre sonhos, tiragens de Tarot, banhos de ervas (Ewê) e práticas rituais. O sistema cruza automaticamente as fases da Lua, Orixás e símbolos do seu histórico.
             </p>
           </div>
 
@@ -315,11 +356,182 @@ export function HomeView({
           </div>
         </div>
 
-        {/* Maré Solar Thelêmica Interativa (Liber Resh vel Helios) */}
-        <LiberReshWidget
-          onInsertAdoration={(md) => onNewNote("Prática", md, "Adoração de Liber Resh")}
-          className="mt-6"
-        />
+        {/* Maré Solar Thelêmica Interativa (Liber Resh vel Helios) — Divulgação Progressiva */}
+        {experienceLevel === "adepto" || showReshExpanded ? (
+          <LiberReshWidget
+            onInsertAdoration={(md) => onNewNote("Prática", md, "Adoração de Liber Resh")}
+            className="mt-6"
+          />
+        ) : (
+          <div className="mt-4 pt-3 border-t border-medium-750/60 flex items-center justify-between text-xs text-medium-400">
+            <span className="flex items-center gap-1.5">
+              <Sun className="w-3.5 h-3.5 text-amber-400" />
+              <span>Maré Solar Atual (Liber Resh): <strong className="text-white">{reshTide?.thelemicGod || "Meio-Dia (Ahathoor)"}</strong></span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowReshExpanded(true)}
+              className="text-[11px] font-semibold text-amber-300 hover:underline"
+            >
+              Expandir Saudações Solares ▾
+            </button>
+          </div>
+        )}
+      </section>
+
+      {/* ========================================================
+          NOVO: BÚSSOLA PREDITIVA DE HOJE & CRIAÇÃO RÁPIDA GUIADA
+          ======================================================== */}
+      <section className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        {/* Bússola Preditiva de Hoje (5 Colunas) */}
+        <div className="xl:col-span-5 rounded-2xl border border-emerald-500/35 bg-gradient-to-br from-emerald-950/25 via-medium-850 to-medium-850 p-5 flex flex-col justify-between shadow-sm">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-wider text-emerald-300 font-bold">
+                <Compass className="w-4 h-4 text-emerald-400" />
+                <span>Bússola Preditiva de Hoje</span>
+              </span>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[11px] font-mono font-bold text-emerald-300">
+                ⚡ {dailyCompass.synergyPercent}% Sinergia
+              </span>
+            </div>
+
+            <h3 className="text-base sm:text-lg font-serif font-bold text-white leading-snug">
+              {dailyCompass.headlinePt}
+            </h3>
+
+            <p className="text-xs text-medium-300 leading-relaxed">
+              {dailyCompass.empiricalInsightPt}
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="p-2.5 rounded-xl bg-medium-900/80 border border-medium-750">
+                <span className="text-[10px] font-mono uppercase text-medium-400 block">
+                  Força / Saudação
+                </span>
+                <span className="text-xs font-bold text-amber-300 block truncate mt-0.5">
+                  {dailyCompass.dayRuler.greeting}
+                </span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-medium-900/80 border border-medium-750">
+                <span className="text-[10px] font-mono uppercase text-medium-400 block">
+                  Ervas do Dia (Ewê)
+                </span>
+                <span className="text-xs font-bold text-emerald-300 block truncate mt-0.5" title={dailyCompass.recommendedHerbs}>
+                  {dailyCompass.recommendedHerbs}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-medium-750 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                onNewNote(
+                  dailyCompass.recommendedCategory,
+                  undefined,
+                  dailyCompass.suggestedActionTitle,
+                  dailyCompass.suggestedInfluences
+                )
+              }
+              className="flex-1 py-2 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Iniciar {dailyCompass.recommendedCategory} de Hoje</span>
+            </button>
+            <button
+              type="button"
+              onClick={onOpenDashboard}
+              className="py-2 px-3 rounded-xl bg-medium-800 hover:bg-medium-750 border border-medium-700 text-xs text-medium-200 hover:text-white transition-colors"
+              title="Ver Matriz de Cruzamento 2D Completa"
+            >
+              Matriz 2D →
+            </button>
+          </div>
+        </div>
+
+        {/* Criação Guiada & Sincronicidades (7 Colunas) */}
+        <div className="xl:col-span-7 rounded-2xl border border-medium-750 bg-medium-850 p-5 flex flex-col justify-between space-y-4 shadow-sm">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-amber-400" />
+                  <span>O que você deseja registrar agora?</span>
+                </h3>
+                <p className="text-[11px] text-medium-400">
+                  Escolha um modelo guiado abaixo para abrir uma nota já preparada com as ferramentas certas:
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {GUIDED_CREATION_CARDS.map((card) => (
+                <button
+                  key={card.id}
+                  type="button"
+                  onClick={() =>
+                    onNewNote(card.category, card.customTemplate, card.defaultTitle, card.defaultInfluences)
+                  }
+                  className="text-left p-3 rounded-xl bg-medium-900/90 hover:bg-medium-800 border border-medium-750 hover:border-amber-500/40 transition-all group flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xl">{card.icon}</span>
+                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-medium-800 text-medium-300">
+                      {card.category}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-1">
+                      {card.title}
+                    </div>
+                    <div className="text-[10px] text-medium-400 line-clamp-2 mt-0.5 leading-snug">
+                      {card.subtitle}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Fios de Sincronicidade Recentes (se houver) */}
+          {topSyncThreads.length > 0 && (
+            <div className="pt-3 border-t border-medium-750">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-purple-300 font-bold flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-purple-400" />
+                  <span>Sincronicidades Detectadas no Seu Grimório</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={onOpenDashboard}
+                  className="text-[10px] text-purple-300 hover:underline"
+                >
+                  Ver todas →
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {topSyncThreads.map((th) => (
+                  <button
+                    key={th.id}
+                    type="button"
+                    onClick={() => {
+                      if (th.entries.length > 0) onSelectEntry(th.entries[th.entries.length - 1]);
+                    }}
+                    className="text-left p-2.5 rounded-xl bg-purple-950/20 hover:bg-purple-950/35 border border-purple-500/25 flex items-start gap-2.5 transition-colors"
+                  >
+                    <span className="text-base mt-0.5">{th.icon}</span>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white truncate">{th.symbolTitle}</div>
+                      <div className="text-[10px] text-medium-300 line-clamp-1">{th.explanationPt}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* ========================================================

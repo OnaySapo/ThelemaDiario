@@ -21,8 +21,15 @@ import {
 } from "lucide-react";
 import { MagicHeatmap } from "@/components/MagicHeatmap";
 import { LiberReshWidget } from "@/components/LiberReshWidget";
-import { formatDateTimeBR, getInfluenceCategoryLabel } from "@/lib/dateUtils";
+import { formatDateTimeBR, formatDateBR, getInfluenceCategoryLabel } from "@/lib/dateUtils";
 import { analyzeDreamTotemsAcrossEntries } from "@/lib/dreamAnalytics";
+import {
+  computeCrossMatrix2D,
+  detectSynchronicityThreads,
+  CROSS_DIMENSIONS,
+  CrossDimensionId,
+  CrossMatrixCell,
+} from "@/lib/crossAnalytics";
 
 interface DashboardViewProps {
   entries: MagickEntry[];
@@ -43,6 +50,9 @@ export function DashboardView({
   const [periodMode, setPeriodMode] = useState<PeriodMode>("all");
   const [influenceCategory, setInfluenceCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [matrixRowDim, setMatrixRowDim] = useState<CrossDimensionId>("entity_orixa");
+  const [matrixColDim, setMatrixColDim] = useState<CrossDimensionId>("moon_phase");
+  const [selectedMatrixCell, setSelectedMatrixCell] = useState<CrossMatrixCell | null>(null);
 
   // Filter entries by period and category
   const filteredEntries = useMemo(() => {
@@ -298,6 +308,16 @@ export function DashboardView({
     return analyzeDreamTotemsAcrossEntries(filteredEntries);
   }, [filteredEntries]);
 
+  // Matriz de Cruzamento Bidimensional 2D (Heatmap Interativo)
+  const crossMatrix = useMemo(() => {
+    return computeCrossMatrix2D(filteredEntries, matrixRowDim, matrixColDim);
+  }, [filteredEntries, matrixRowDim, matrixColDim]);
+
+  // Detector de Fios de Sincronicidade (Oráculo ↔ Sonho ↔ Prática)
+  const syncThreads = useMemo(() => {
+    return detectSynchronicityThreads(filteredEntries);
+  }, [filteredEntries]);
+
   // Padrão de Ouro Empírico & Síntese Hermética (Cruzamento Automatizado)
   const goldenPattern = useMemo(() => {
     const sortedMoonSigns = [...moonSignStats].sort((a, b) => b.avgRating - a.avgRating);
@@ -533,6 +553,292 @@ export function DashboardView({
           </div>
         </section>
       )}
+
+      {/* ========================================================
+          NOVO: LABORATÓRIO DE CRUZAMENTO 2D (MATRIZ INTERATIVA) & FIOS DE SINCRONICIDADE
+          ======================================================== */}
+      <section className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        {/* Coluna 7/12: Matriz de Cruzamento Bidimensional 2D */}
+        <div className="xl:col-span-7 rounded-2xl border border-medium-750 bg-medium-850 p-5 sm:p-6 space-y-4 shadow-md">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-medium-750 pb-4">
+            <div>
+              <h2 className="text-base sm:text-lg font-serif font-bold text-white flex items-center gap-2">
+                <Layers className="w-5 h-5 text-amber-400" />
+                <span>Matriz de Cruzamento Multidimensional (2D)</span>
+              </h2>
+              <p className="text-xs text-medium-400 mt-0.5">
+                Escolha duas dimensões para cruzar dados de eficácia (★) e frequência. Clique em qualquer célula para ver as notas.
+              </p>
+            </div>
+          </div>
+
+          {/* Seletores de Eixo X e Eixo Y */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-medium-900/80 p-3 rounded-xl border border-medium-800">
+            <div>
+              <label className="block text-[10px] font-mono uppercase tracking-wider text-amber-300 mb-1">
+                Eixo Vertical (Linhas)
+              </label>
+              <select
+                value={matrixRowDim}
+                onChange={(e) => {
+                  setMatrixRowDim(e.target.value as CrossDimensionId);
+                  setSelectedMatrixCell(null);
+                }}
+                className="w-full px-3 py-1.5 rounded-lg bg-medium-850 border border-medium-700 text-xs text-white focus:outline-none focus:border-amber-400"
+              >
+                {CROSS_DIMENSIONS.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-mono uppercase tracking-wider text-purple-300 mb-1">
+                Eixo Horizontal (Colunas)
+              </label>
+              <select
+                value={matrixColDim}
+                onChange={(e) => {
+                  setMatrixColDim(e.target.value as CrossDimensionId);
+                  setSelectedMatrixCell(null);
+                }}
+                className="w-full px-3 py-1.5 rounded-lg bg-medium-850 border border-medium-700 text-xs text-white focus:outline-none focus:border-purple-400"
+              >
+                {CROSS_DIMENSIONS.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Top Sinergias Detectadas */}
+          {crossMatrix.topSynergies.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-mono uppercase text-emerald-400 font-semibold">
+                🔥 Maiores Sinergias:
+              </span>
+              {crossMatrix.topSynergies.slice(0, 3).map((syn, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() =>
+                    setSelectedMatrixCell({
+                      rowKey: syn.rowKey,
+                      colKey: syn.colKey,
+                      count: syn.count,
+                      ratedCount: syn.count,
+                      avgRating: syn.avgRating,
+                      entries: syn.entries,
+                    })
+                  }
+                  className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-200 transition-colors"
+                >
+                  <strong>{syn.rowKey}</strong> × <strong>{syn.colKey}</strong> ({syn.avgRating}★ · {syn.count}x)
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Tabela Heatmap 2D */}
+          {crossMatrix.rows.length === 0 || crossMatrix.cols.length === 0 ? (
+            <div className="p-6 text-center text-xs text-medium-400 bg-medium-900/50 rounded-xl border border-medium-800">
+              Registre mais notas para visualizar o cruzamento entre estas dimensões.
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-medium-750 bg-medium-900/60">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-medium-750 bg-medium-900">
+                    <th className="p-2.5 font-mono text-[10px] uppercase text-medium-400 sticky left-0 bg-medium-900 z-10 min-w-[130px]">
+                      {CROSS_DIMENSIONS.find((d) => d.id === matrixRowDim)?.shortLabel} \{" "}
+                      {CROSS_DIMENSIONS.find((d) => d.id === matrixColDim)?.shortLabel}
+                    </th>
+                    {crossMatrix.cols.map((col) => (
+                      <th
+                        key={col}
+                        className="p-2.5 font-mono text-[10px] text-center text-medium-300 font-semibold min-w-[88px]"
+                      >
+                        <span className="line-clamp-2">{col}</span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-medium-800">
+                  {crossMatrix.rows.map((row) => (
+                    <tr key={row} className="hover:bg-white/[0.02]">
+                      <td className="p-2.5 font-semibold text-white sticky left-0 bg-medium-900/95 z-10 border-r border-medium-800 max-w-[160px] truncate">
+                        {row}
+                      </td>
+                      {crossMatrix.cols.map((col) => {
+                        const cell = crossMatrix.cells[row]?.[col];
+                        const count = cell?.count || 0;
+                        const avg = cell?.avgRating || 0;
+                        const isSelected =
+                          selectedMatrixCell?.rowKey === row && selectedMatrixCell?.colKey === col;
+
+                        if (count === 0) {
+                          return (
+                            <td key={col} className="p-2 text-center text-medium-600 font-mono text-[10px]">
+                              —
+                            </td>
+                          );
+                        }
+
+                        const bgClass =
+                          avg >= 8.5
+                            ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-200"
+                            : avg >= 7
+                            ? "bg-amber-500/20 border-amber-500/40 text-amber-200"
+                            : count >= 2
+                            ? "bg-purple-500/20 border-purple-500/40 text-purple-200"
+                            : "bg-medium-800 border-medium-700 text-medium-200";
+
+                        return (
+                          <td key={col} className="p-1.5 text-center">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedMatrixCell(cell)}
+                              className={`w-full py-1.5 px-2 rounded-lg border transition-all flex flex-col items-center justify-center ${bgClass} ${
+                                isSelected ? "ring-2 ring-white scale-[1.03]" : "hover:scale-[1.02]"
+                              }`}
+                            >
+                              <span className="font-bold text-xs">{count}x</span>
+                              {avg > 0 && (
+                                <span className="text-[9px] font-mono opacity-90">{avg}★</span>
+                              )}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Gaveta de Notas da Célula Selecionada */}
+          {selectedMatrixCell && (
+            <div className="p-4 rounded-xl bg-medium-900 border border-amber-500/40 space-y-2.5 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold text-white">
+                  Cruzamento:{" "}
+                  <span className="text-amber-300">{selectedMatrixCell.rowKey}</span> ×{" "}
+                  <span className="text-purple-300">{selectedMatrixCell.colKey}</span> (
+                  {selectedMatrixCell.count} {selectedMatrixCell.count === 1 ? "nota" : "notas"})
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMatrixCell(null)}
+                  className="text-[11px] text-medium-400 hover:text-white"
+                >
+                  Fechar ✕
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                {selectedMatrixCell.entries.map((entry) => (
+                  <button
+                    key={entry.id}
+                    type="button"
+                    onClick={() => onSelectEntry(entry)}
+                    className="text-left p-2.5 rounded-lg bg-medium-850 hover:bg-medium-800 border border-medium-750 flex items-center justify-between gap-2 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-white truncate">{entry.title}</div>
+                      <div className="text-[10px] text-medium-400 font-mono">
+                        {normalizeCategory(entry.type)} · {formatDateBR(entry.date)}
+                      </div>
+                    </div>
+                    {entry.success_rating ? (
+                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
+                        {entry.success_rating}/10
+                      </span>
+                    ) : null}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Coluna 5/12: Detector de Fios de Sincronicidade (Oráculo ↔ Sonho ↔ Prática) */}
+        <div className="xl:col-span-5 rounded-2xl border border-medium-750 bg-medium-850 p-5 sm:p-6 space-y-4 shadow-md flex flex-col">
+          <div className="border-b border-medium-750 pb-4">
+            <h2 className="text-base sm:text-lg font-serif font-bold text-white flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+              <span>Fios de Sincronicidade Detectados</span>
+            </h2>
+            <p className="text-xs text-medium-400 mt-0.5">
+              Convergências automáticas onde o mesmo Arcano, Orixá, Totem de Sonho ou Erva atravessou seus Oráculos, Sonhos e Práticas.
+            </p>
+          </div>
+
+          {syncThreads.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center p-6 text-center text-xs text-medium-400 bg-medium-900/50 rounded-xl border border-medium-800">
+              Conforme você registrar Oráculos, Sonhos e Práticas, os elos simbólicos entre eles aparecerão automaticamente aqui.
+            </div>
+          ) : (
+            <div className="flex-1 space-y-3 max-h-[460px] overflow-y-auto pr-1">
+              {syncThreads.map((thread) => (
+                <div
+                  key={thread.id}
+                  className="p-3.5 rounded-xl bg-medium-900/80 border border-medium-750 hover:border-purple-500/40 transition-all space-y-2.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{thread.icon}</span>
+                      <div>
+                        <h4 className="text-xs font-bold text-white">{thread.symbolTitle}</h4>
+                        <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                          {thread.categoriesInvolved.map((cat) => (
+                            <span
+                              key={cat}
+                              className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30"
+                            >
+                              {cat}
+                            </span>
+                          ))}
+                          {thread.isCrossModal && (
+                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                              ✨ Sincronicidade Cruzada
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono text-medium-400 shrink-0">
+                      {thread.entries.length} notas
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-medium-300 leading-relaxed">{thread.explanationPt}</p>
+
+                  {/* Linha do Tempo Compacta das Notas Conectadas */}
+                  <div className="flex flex-wrap gap-1.5 pt-1 border-t border-medium-800">
+                    {thread.entries.slice(0, 4).map((e) => (
+                      <button
+                        key={e.id}
+                        type="button"
+                        onClick={() => onSelectEntry(e)}
+                        className="text-[10px] px-2 py-1 rounded-lg bg-medium-850 hover:bg-medium-800 border border-medium-700 text-medium-200 hover:text-white transition-colors flex items-center gap-1.5 max-w-full"
+                      >
+                        <span className="font-mono text-amber-300/90 shrink-0">
+                          {formatDateBR(e.date)}
+                        </span>
+                        <span className="truncate max-w-[140px]">{e.title}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* ========================================================
           DISCIPLINA MÁGICA, PENTAGRAMA ELEMENTAL & TOTENS ONÍRICOS

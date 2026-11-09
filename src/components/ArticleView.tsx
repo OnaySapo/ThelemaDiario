@@ -63,6 +63,7 @@ import { ImageInsertModal, VideoInsertModal } from "@/components/MediaInsertModa
 import { SlashCommandMenu, SlashCommandItem } from "@/components/SlashCommandMenu";
 import { WikilinkSuggestMenu } from "@/components/WikilinkSuggestMenu";
 import { GematriaModal } from "@/components/GematriaModal";
+import { NotePropertiesBar } from "@/components/editor/NotePropertiesBar";
 import { calculateGematria } from "@/lib/gematria";
 import { getReshSolarTide, getLiberReshFullText } from "@/lib/astronomy";
 import {
@@ -2862,191 +2863,32 @@ export function ArticleView({
               className="w-full bg-transparent text-3xl md:text-4xl font-sans font-bold text-white placeholder-medium-500 focus:outline-none border-b border-medium-700 pb-3"
             />
 
-            {/* Category & Date Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-[11px] font-mono text-medium-400 mb-1">
-                  CATEGORIA
-                </label>
-                <select
-                  value={editCategory}
-                  onChange={(e) => {
-                    const newCat = e.target.value as CategoryName;
-                    setEditCategory(newCat);
-                    if (!editContent.trim() || editContent.includes("Descreva aqui os detalhes da operação")) {
-                      setEditContent(getDefaultTemplateForCategory(newCat));
-                    }
-                  }}
-                  className="w-full bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-white font-sans"
-                >
-                  <option value="Diário">Diário (Mundano / Cotidiano)</option>
-                  <option value="Estudo">Estudo</option>
-                  <option value="Visão Astral">Visão Astral</option>
-                  <option value="Sonho">Sonho</option>
-                  <option value="Oráculo">Oráculo</option>
-                  <option value="Prática">Prática</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-mono text-medium-400 mb-1">
-                  DATA (DD/MM/AA) & HORA (24H)
-                </label>
-                <BrazilianDateTimeInput
-                  value={editDate}
-                  onChange={(val) => setEditDate(val)}
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-[11px] font-mono text-medium-400">
-                    SUCESSO MÁGICKO {hasRating ? `(${editRating}/10)` : "(NÃO AVALIADO)"}
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setHasRating(!hasRating)}
-                    className="text-[10px] font-mono underline hover:text-white text-medium-300 transition-colors"
-                  >
-                    {hasRating ? "Remover Avaliação" : "+ Adicionar Avaliação"}
-                  </button>
-                </div>
-                {hasRating ? (
-                  <input
-                    type="range"
-                    min={0}
-                    max={10}
-                    value={editRating}
-                    onChange={(e) => setEditRating(Number(e.target.value))}
-                    className="w-full accent-white cursor-pointer mt-2"
-                  />
-                ) : (
-                  <div className="text-[11px] font-mono text-medium-400 italic bg-medium-800/60 p-2 rounded border border-medium-750 mt-1">
-                    Nota sem pontuação (ideal para estudos, diários cotidianos e sonhos).
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Painel de Correspondências & Tags do Liber 777 (Entidades, Cores, Elementos, Instrumentos, Incensos, etc.) */}
-            <div className="p-4 rounded-xl bg-medium-850 border border-medium-700 space-y-3 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <Tag className="w-3.5 h-3.5 text-amber-400" />
-                  <label className="text-[11px] font-mono font-bold uppercase tracking-wider text-white">
-                    Tags & Correspondências do Liber 777 (Entidades, Cores, Elementos, Incensos...)
-                  </label>
-                </div>
-                <span className="text-[10px] font-mono text-medium-400">
-                  Indexa automaticamente na Árvore da Vida, Métricas e Busca Global
-                </span>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2">
-                <select
-                  value={newInfCat}
-                  onChange={(e) => setNewInfCat(e.target.value)}
-                  className="bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-mono sm:w-64"
-                >
-                  <option value="orixa">🌿 Orixá / Vodum / Nkisi (Brasilidade)</option>
-                  <option value="guia">🥁 Guia / Exu / Caboclo / Mestre da Jurema</option>
-                  <option value="ponto_forca">⛰️ Ponto de Força / Domínio da Natureza</option>
-                  <option value="banho_defumacao">💨 Banho de Ervas / Defumação (Ewê)</option>
-                  <option value="entity">Entidade / Espírito / Inteligência</option>
-                  <option value="deity">Divindade / Forma-Deus</option>
-                  <option value="color">Cor (Escalas do Liber 777 & Fios de Conta)</option>
-                  <option value="element">Elemento (Fogo, Água, Ar, Terra, Espírito)</option>
-                  <option value="planet">Planeta / Astro</option>
-                  <option value="sephirah">Sephirah / Caminho da Árvore</option>
-                  <option value="tarot">Tarot / Atu de Thoth</option>
-                  <option value="incense">Incenso / Perfume / Óleo</option>
-                  <option value="instrument">Instrumento / Arma Mágicka</option>
-                  <option value="angel">Coro Angelical / Arcanjo</option>
-                  <option value="herb">Erva / Planta / Cristal</option>
-                  <option value="feeling">Estado / Emoção / Força</option>
-                </select>
-
-                <div className="flex-1 flex gap-2">
-                  <input
-                    type="text"
-                    value={newInfVal}
-                    onChange={(e) => setNewInfVal(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddInfluence();
-                      }
-                    }}
-                    placeholder={`Digite ou escolha abaixo (${getInfluenceCategoryLabel(newInfCat)})...`}
-                    className="flex-1 bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-amber-400 font-sans"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleAddInfluence()}
-                    className="px-3.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-md text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Adicionar</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Sugestões Rápidas da Categoria Selecionada */}
-              {LIBER_777_PRESETS[newInfCat] && (
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] font-mono text-medium-400 mr-1">
-                    Sugestões ({getInfluenceCategoryLabel(newInfCat)}):
-                  </span>
-                  {LIBER_777_PRESETS[newInfCat].map((preset) => {
-                    const isSelected = editInfluences.some(
-                      (inf) => inf.category === newInfCat && inf.name.toLowerCase() === preset.toLowerCase()
-                    );
-                    return (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => handleAddInfluence(preset)}
-                        disabled={isSelected}
-                        className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-all ${
-                          isSelected
-                            ? "bg-amber-500/20 border-amber-500/50 text-amber-300 opacity-60 cursor-default"
-                            : "bg-medium-800 hover:bg-medium-750 border-medium-700 hover:border-amber-400/50 text-medium-300 hover:text-white"
-                        }`}
-                      >
-                        + {preset}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* Chips das Tags 777 Adicionadas na Nota */}
-              {editInfluences.length > 0 ? (
-                <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-medium-750">
-                  {editInfluences.map((inf, idx) => (
-                    <span
-                      key={`${inf.category}-${inf.name}-${idx}`}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-medium-800 border border-amber-500/30 text-xs font-mono text-white shadow-sm"
-                    >
-                      <strong className="text-amber-300">{getInfluenceCategoryLabel(inf.category)}:</strong>
-                      <span>{inf.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveInfluence(idx)}
-                        className="ml-0.5 text-medium-400 hover:text-red-400 transition-colors"
-                        title="Remover correspondência"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-[11px] font-mono text-medium-500 italic pt-1">
-                  Nenhuma tag 777 adicionada ainda. Escolha uma categoria acima (ex: Entidade, Cor, Elemento) para catalogar esta nota.
-                </div>
-              )}
-            </div>
+            {/* Barra de Propriedades Retrátil em Pílulas (Progressive Disclosure — Zero Poluição) */}
+            <NotePropertiesBar
+              editCategory={editCategory}
+              onChangeCategory={(newCat) => {
+                setEditCategory(newCat);
+                if (!editContent.trim() || editContent.includes("Descreva aqui os detalhes da operação")) {
+                  setEditContent(getDefaultTemplateForCategory(newCat));
+                }
+              }}
+              editDate={editDate}
+              onChangeDate={(val) => setEditDate(val)}
+              hasRating={hasRating}
+              onToggleHasRating={() => setHasRating(!hasRating)}
+              editRating={editRating}
+              onChangeRating={(val) => setEditRating(val)}
+              editInfluences={editInfluences}
+              newInfCat={newInfCat}
+              onChangeNewInfCat={(cat) => setNewInfCat(cat)}
+              newInfVal={newInfVal}
+              onChangeNewInfVal={(val) => setNewInfVal(val)}
+              onAddInfluence={(preset) => handleAddInfluence(preset)}
+              onRemoveInfluence={(idx) => handleRemoveInfluence(idx)}
+              presetsMap={LIBER_777_PRESETS}
+              hasOracleTable={hasOracleTable}
+              onToggleOracleTable={() => setHasOracleTable(!hasOracleTable)}
+            />
 
             {/* Oracle Spread & Table Cloth Editor (quando ativado pelo botão ou notas oraculares) */}
             {hasOracleTable && (
