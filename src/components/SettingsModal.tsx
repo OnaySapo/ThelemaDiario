@@ -617,129 +617,47 @@ export function SettingsModal({ isOpen, onClose, entries, onReloadEntries }: Set
         {/* Content */}
         <div className="p-6 space-y-6 text-xs text-medium-200 overflow-y-auto">
           {/* ========================================================
-              SEÇÃO: PALETAS DE CORES & TEMAS (LIGHT / DARK)
+              SEÇÃO: APARÊNCIA COESA (MODO ESCURO / MODO CLARO)
               ======================================================== */}
-          <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-medium-750 pb-2.5">
+          <div className="bg-medium-850 p-4 rounded-lg border border-medium-700 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-medium-750 pb-2">
               <div className="flex items-center gap-2 text-white font-semibold font-mono text-xs">
                 <Palette className="w-4 h-4 text-white" />
-                <span>Paleta de Cores & Aparência</span>
+                <span>Aparência (Tema Único Sanctum Minimal)</span>
               </div>
               <span className="text-[11px] font-mono text-medium-400">
-                Ativo:{" "}
-                <strong className="text-white uppercase">
-                  {THEMES.find((t) => t.id === currentTheme)?.name || currentTheme} (
-                  {currentMode === "dark" ? "Escuro" : "Claro"})
-                </strong>
+                Modo: <strong className="text-white">{currentMode === "dark" ? "Obsidiana (Escuro)" : "Papel (Claro)"}</strong>
               </span>
             </div>
 
-            {/* Seletor de Modo: Claro / Escuro */}
-            <div>
-              <label className="block text-[10px] font-mono font-bold text-medium-400 mb-2 uppercase tracking-wider">
-                1. MODO DE APARÊNCIA
-              </label>
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => handleSelectMode("dark")}
-                  className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border transition-all text-xs font-semibold ${
-                    currentMode === "dark"
-                      ? "bg-white text-black border-white shadow-sm ring-1 ring-white"
-                      : "bg-medium-900 border-medium-750 text-medium-300 hover:text-white hover:bg-medium-800"
-                  }`}
-                >
-                  <Moon className="w-4 h-4" />
-                  <span>Modo Escuro (Dark)</span>
-                  {currentMode === "dark" && <Check className="w-3.5 h-3.5 ml-1 stroke-[3]" />}
-                </button>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleSelectMode("dark")}
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border transition-all text-xs font-semibold ${
+                  currentMode === "dark"
+                    ? "bg-white text-black border-white shadow-sm"
+                    : "bg-medium-900 border-medium-750 text-medium-300 hover:text-white hover:bg-medium-800"
+                }`}
+              >
+                <Moon className="w-4 h-4" />
+                <span>Obsidiana (Escuro)</span>
+                {currentMode === "dark" && <Check className="w-3.5 h-3.5 ml-1 stroke-[3]" />}
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => handleSelectMode("light")}
-                  className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border transition-all text-xs font-semibold ${
-                    currentMode === "light"
-                      ? "bg-white text-black border-white shadow-sm ring-1 ring-white"
-                      : "bg-medium-900 border-medium-750 text-medium-300 hover:text-white hover:bg-medium-800"
-                  }`}
-                >
-                  <Sun className="w-4 h-4" />
-                  <span>Modo Claro (Light)</span>
-                  {currentMode === "light" && <Check className="w-3.5 h-3.5 ml-1 stroke-[3]" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Seletor de Família do Tema (7 Temas) */}
-            <div>
-              <label className="block text-[10px] font-mono font-bold text-medium-400 mb-2 uppercase tracking-wider">
-                2. FAMÍLIA VISUAL DO TEMA ({THEMES.length} PALETAS)
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {THEMES.map((theme) => {
-                  const isSelected = currentTheme === theme.id;
-                  const preview = theme.preview[currentMode];
-
-                  return (
-                    <button
-                      key={theme.id}
-                      type="button"
-                      onClick={() => handleSelectTheme(theme.id)}
-                      className={`text-left p-3 rounded-lg border transition-all relative overflow-hidden flex flex-col justify-between ${
-                        isSelected
-                          ? "bg-medium-800 border-white ring-1 ring-white shadow-sm"
-                          : "bg-medium-900 border-medium-750 hover:border-medium-600 hover:bg-medium-800/60"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-semibold text-xs text-white">
-                              {theme.name}
-                            </span>
-                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-medium-750 text-medium-300 border border-medium-700">
-                              {theme.badge}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-medium-400 line-clamp-1 mt-0.5">
-                            {theme.tagline}
-                          </p>
-                        </div>
-                        {isSelected && (
-                          <div className="w-4 h-4 rounded-full bg-white text-black flex items-center justify-center shrink-0 shadow-xs">
-                            <Check className="w-2.5 h-2.5 stroke-[3]" />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Amostras das 4 cores do tema no modo selecionado */}
-                      <div className="flex items-center gap-1.5 pt-2 border-t border-medium-750/70">
-                        <span className="text-[9px] font-mono text-medium-500 mr-1">Paleta:</span>
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs"
-                          style={{ backgroundColor: preview.bg }}
-                          title={`Fundo: ${preview.bg}`}
-                        />
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs"
-                          style={{ backgroundColor: preview.surface }}
-                          title={`Superfície: ${preview.surface}`}
-                        />
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs"
-                          style={{ backgroundColor: preview.accent }}
-                          title={`Destaque: ${preview.accent}`}
-                        />
-                        <span
-                          className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-xs"
-                          style={{ backgroundColor: preview.text }}
-                          title={`Texto: ${preview.text}`}
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              <button
+                type="button"
+                onClick={() => handleSelectMode("light")}
+                className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border transition-all text-xs font-semibold ${
+                  currentMode === "light"
+                    ? "bg-white text-black border-white shadow-sm"
+                    : "bg-medium-900 border-medium-750 text-medium-300 hover:text-white hover:bg-medium-800"
+                }`}
+              >
+                <Sun className="w-4 h-4" />
+                <span>Papel Editorial (Claro)</span>
+                {currentMode === "light" && <Check className="w-3.5 h-3.5 ml-1 stroke-[3]" />}
+              </button>
             </div>
           </div>
 

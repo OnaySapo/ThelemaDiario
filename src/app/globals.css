@@ -5,383 +5,60 @@
 @tailwind utilities;
 
 /* =========================================================================
-   SISTEMA DE TEMAS MULTI-PALETA (MEDIUM, ROSÉ PINE, CATPPUCCIN, NORD, GRUVBOX, DRÁCULA, TOKYO NIGHT)
-   Cada tema possui suporte completo para Modo Escuro (Dark) e Modo Claro (Light)
+   TEMA ÚNICO E COESO — SANCTUM MINIMAL (OBSIDIANA & PAPEL)
+   Foco em silêncio visual, contraste suave, bordas discretas e leitura limpa
    ========================================================================= */
 
 :root,
 [data-theme="medium"][data-mode="dark"],
 [data-mode="dark"] {
-  --color-medium-950: 10 10 10;
-  --color-medium-900: 18 18 18;
-  --color-medium-850: 24 24 24;
-  --color-medium-800: 32 32 32;
-  --color-medium-750: 38 38 38;
-  --color-medium-700: 46 46 46;
-  --color-medium-600: 61 61 61;
-  --color-medium-500: 82 82 82;
-  --color-medium-400: 115 115 115;
-  --color-medium-300: 163 163 163;
-  --color-medium-200: 212 212 212;
-  --color-medium-100: 245 245 245;
-  --color-medium-50: 250 250 250;
-  --theme-accent: 255 255 255;
-  --theme-heading-color: #ffffff;
-  --theme-body-color: #d6d6d6;
-  --theme-primary-btn-bg: #ffffff;
-  --theme-primary-btn-text: #000000;
-  --theme-border-color: #2e2e2e;
+  --color-medium-950: 10 10 12;
+  --color-medium-900: 14 14 17;
+  --color-medium-850: 20 20 24;
+  --color-medium-800: 27 27 33;
+  --color-medium-750: 35 35 42;
+  --color-medium-700: 44 44 53;
+  --color-medium-600: 63 63 74;
+  --color-medium-500: 100 100 112;
+  --color-medium-400: 142 142 154;
+  --color-medium-300: 190 190 200;
+  --color-medium-200: 228 228 234;
+  --color-medium-100: 244 244 247;
+  --color-medium-50: 252 252 253;
+  --theme-accent: 212 175 55;
+  --theme-heading-color: #f4f4f6;
+  --theme-body-color: #d8d8df;
+  --theme-primary-btn-bg: #f4f4f6;
+  --theme-primary-btn-text: #0e0e11;
+  --theme-border-color: #282830;
 }
 
-/* 1. Medium (Light) */
+/* Modo Claro (Papel Editorial) */
 [data-theme="medium"][data-mode="light"],
-[data-mode="light"]:not([data-theme]) {
-  --color-medium-950: 244 244 242;
-  --color-medium-900: 252 252 251;
+[data-mode="light"] {
+  --color-medium-950: 238 236 230;
+  --color-medium-900: 250 249 246;
   --color-medium-850: 255 255 255;
-  --color-medium-800: 242 242 239;
-  --color-medium-750: 234 234 230;
-  --color-medium-700: 226 226 222;
-  --color-medium-600: 206 206 200;
-  --color-medium-500: 158 158 152;
-  --color-medium-400: 110 110 104;
-  --color-medium-300: 74 74 68;
-  --color-medium-200: 43 43 39;
-  --color-medium-100: 20 20 18;
-  --color-medium-50: 10 10 9;
-  --theme-accent: 24 24 24;
-  --theme-heading-color: #181818;
-  --theme-body-color: #2b2b28;
-  --theme-primary-btn-bg: #181818;
+  --color-medium-800: 243 241 236;
+  --color-medium-750: 232 230 223;
+  --color-medium-700: 220 218 210;
+  --color-medium-600: 196 193 184;
+  --color-medium-500: 148 145 136;
+  --color-medium-400: 108 105 98;
+  --color-medium-300: 68 66 60;
+  --color-medium-200: 38 37 34;
+  --color-medium-100: 22 21 19;
+  --color-medium-50: 12 12 10;
+  --theme-accent: 24 24 27;
+  --theme-heading-color: #18181b;
+  --theme-body-color: #2e2d2a;
+  --theme-primary-btn-bg: #18181b;
   --theme-primary-btn-text: #ffffff;
-  --theme-border-color: #e2e2df;
-}
-
-/* 2. Rosé Pine (Dark) */
-[data-theme="rose-pine"][data-mode="dark"] {
-  --color-medium-950: 19 17 29;
-  --color-medium-900: 25 23 36;
-  --color-medium-850: 31 29 46;
-  --color-medium-800: 38 35 58;
-  --color-medium-750: 49 45 74;
-  --color-medium-700: 57 53 82;
-  --color-medium-600: 68 64 98;
-  --color-medium-500: 110 106 134;
-  --color-medium-400: 144 140 170;
-  --color-medium-300: 196 167 231;
-  --color-medium-200: 224 222 244;
-  --color-medium-100: 235 188 186;
-  --color-medium-50: 246 193 119;
-  --theme-accent: 235 188 186;
-  --theme-heading-color: #f6c177;
-  --theme-body-color: #e0def4;
-  --theme-primary-btn-bg: #ebbcba;
-  --theme-primary-btn-text: #191724;
-  --theme-border-color: #393552;
-}
-
-/* 2. Rosé Pine (Light - Dawn) */
-[data-theme="rose-pine"][data-mode="light"] {
-  --color-medium-950: 242 233 222;
-  --color-medium-900: 250 244 237;
-  --color-medium-850: 255 250 243;
-  --color-medium-800: 242 233 225;
-  --color-medium-750: 228 219 210;
-  --color-medium-700: 206 202 205;
-  --color-medium-600: 181 176 182;
-  --color-medium-500: 152 147 165;
-  --color-medium-400: 121 117 147;
-  --color-medium-300: 87 82 121;
-  --color-medium-200: 40 105 131;
-  --color-medium-100: 180 99 122;
-  --color-medium-50: 215 130 126;
-  --theme-accent: 180 99 122;
-  --theme-heading-color: #b4637a;
-  --theme-body-color: #575279;
-  --theme-primary-btn-bg: #286983;
-  --theme-primary-btn-text: #faf4ed;
-  --theme-border-color: #cecacd;
-}
-
-/* 3. Catppuccin (Dark - Mocha) */
-[data-theme="catppuccin"][data-mode="dark"] {
-  --color-medium-950: 17 17 27;
-  --color-medium-900: 30 30 46;
-  --color-medium-850: 24 24 37;
-  --color-medium-800: 49 50 68;
-  --color-medium-750: 69 71 90;
-  --color-medium-700: 88 91 112;
-  --color-medium-600: 108 112 134;
-  --color-medium-500: 127 132 156;
-  --color-medium-400: 147 153 178;
-  --color-medium-300: 166 173 200;
-  --color-medium-200: 205 214 244;
-  --color-medium-100: 203 166 247;
-  --color-medium-50: 180 190 254;
-  --theme-accent: 203 166 247;
-  --theme-heading-color: #cba6f7;
-  --theme-body-color: #cdd6f4;
-  --theme-primary-btn-bg: #cba6f7;
-  --theme-primary-btn-text: #11111b;
-  --theme-border-color: #585b70;
-}
-
-/* 3. Catppuccin (Light - Latte) */
-[data-theme="catppuccin"][data-mode="light"] {
-  --color-medium-950: 220 224 232;
-  --color-medium-900: 239 241 245;
-  --color-medium-850: 230 233 239;
-  --color-medium-800: 204 208 218;
-  --color-medium-750: 188 192 204;
-  --color-medium-700: 172 176 190;
-  --color-medium-600: 156 160 176;
-  --color-medium-500: 140 143 161;
-  --color-medium-400: 124 127 147;
-  --color-medium-300: 108 111 133;
-  --color-medium-200: 76 79 105;
-  --color-medium-100: 136 57 239;
-  --color-medium-50: 30 102 245;
-  --theme-accent: 136 57 239;
-  --theme-heading-color: #8839ef;
-  --theme-body-color: #4c4f69;
-  --theme-primary-btn-bg: #8839ef;
-  --theme-primary-btn-text: #ffffff;
-  --theme-border-color: #acb0be;
-}
-
-/* 4. Nord (Dark - Polar Night) */
-[data-theme="nord"][data-mode="dark"] {
-  --color-medium-950: 36 41 51;
-  --color-medium-900: 46 52 64;
-  --color-medium-850: 59 66 82;
-  --color-medium-800: 67 76 94;
-  --color-medium-750: 76 86 106;
-  --color-medium-700: 76 86 106;
-  --color-medium-600: 94 106 130;
-  --color-medium-500: 112 126 153;
-  --color-medium-400: 136 151 178;
-  --color-medium-300: 216 222 233;
-  --color-medium-200: 229 233 240;
-  --color-medium-100: 136 192 208;
-  --color-medium-50: 129 161 193;
-  --theme-accent: 136 192 208;
-  --theme-heading-color: #88c0d0;
-  --theme-body-color: #e5e9f0;
-  --theme-primary-btn-bg: #88c0d0;
-  --theme-primary-btn-text: #2e3440;
-  --theme-border-color: #4c566a;
-}
-
-/* 4. Nord (Light - Snow Storm) */
-[data-theme="nord"][data-mode="light"] {
-  --color-medium-950: 229 233 240;
-  --color-medium-900: 236 239 244;
-  --color-medium-850: 240 242 247;
-  --color-medium-800: 216 222 233;
-  --color-medium-750: 203 211 225;
-  --color-medium-700: 194 203 217;
-  --color-medium-600: 171 183 203;
-  --color-medium-500: 145 161 184;
-  --color-medium-400: 76 86 106;
-  --color-medium-300: 67 76 94;
-  --color-medium-200: 59 66 82;
-  --color-medium-100: 94 129 172;
-  --color-medium-50: 46 52 64;
-  --theme-accent: 94 129 172;
-  --theme-heading-color: #5e81ac;
-  --theme-body-color: #3b4252;
-  --theme-primary-btn-bg: #5e81ac;
-  --theme-primary-btn-text: #eceff4;
-  --theme-border-color: #c2cbd9;
-}
-
-/* 5. Gruvbox (Dark) */
-[data-theme="gruvbox"][data-mode="dark"] {
-  --color-medium-950: 29 32 33;
-  --color-medium-900: 40 40 40;
-  --color-medium-850: 50 48 47;
-  --color-medium-800: 60 56 54;
-  --color-medium-750: 80 73 69;
-  --color-medium-700: 102 92 84;
-  --color-medium-600: 124 111 100;
-  --color-medium-500: 146 131 116;
-  --color-medium-400: 168 153 132;
-  --color-medium-300: 189 174 147;
-  --color-medium-200: 235 219 178;
-  --color-medium-100: 250 189 47;
-  --color-medium-50: 254 128 25;
-  --theme-accent: 250 189 47;
-  --theme-heading-color: #fabd2f;
-  --theme-body-color: #ebdbb2;
-  --theme-primary-btn-bg: #fabd2f;
-  --theme-primary-btn-text: #282828;
-  --theme-border-color: #665c54;
-}
-
-/* 5. Gruvbox (Light) */
-[data-theme="gruvbox"][data-mode="light"] {
-  --color-medium-950: 242 229 188;
-  --color-medium-900: 251 241 199;
-  --color-medium-850: 249 245 215;
-  --color-medium-800: 235 219 178;
-  --color-medium-750: 213 196 161;
-  --color-medium-700: 189 174 147;
-  --color-medium-600: 168 153 132;
-  --color-medium-500: 146 131 116;
-  --color-medium-400: 124 111 100;
-  --color-medium-300: 80 73 69;
-  --color-medium-200: 60 56 54;
-  --color-medium-100: 181 118 20;
-  --color-medium-50: 175 58 3;
-  --theme-accent: 181 118 20;
-  --theme-heading-color: #b57614;
-  --theme-body-color: #3c3836;
-  --theme-primary-btn-bg: #b57614;
-  --theme-primary-btn-text: #fbf1c7;
-  --theme-border-color: #bdae93;
-}
-
-/* 6. Dracula (Dark) */
-[data-theme="dracula"][data-mode="dark"] {
-  --color-medium-950: 30 31 41;
-  --color-medium-900: 40 42 54;
-  --color-medium-850: 33 34 44;
-  --color-medium-800: 68 71 90;
-  --color-medium-750: 84 88 111;
-  --color-medium-700: 98 114 164;
-  --color-medium-600: 115 131 181;
-  --color-medium-500: 132 148 198;
-  --color-medium-400: 161 174 215;
-  --color-medium-300: 189 147 249;
-  --color-medium-200: 248 248 242;
-  --color-medium-100: 255 121 198;
-  --color-medium-50: 139 233 253;
-  --theme-accent: 189 147 249;
-  --theme-heading-color: #ff79c6;
-  --theme-body-color: #f8f8f2;
-  --theme-primary-btn-bg: #bd93f9;
-  --theme-primary-btn-text: #282a36;
-  --theme-border-color: #6272a4;
-}
-
-/* 6. Dracula (Light - Alucard) */
-[data-theme="dracula"][data-mode="light"] {
-  --color-medium-950: 236 236 228;
-  --color-medium-900: 248 248 242;
-  --color-medium-850: 255 255 255;
-  --color-medium-800: 235 235 230;
-  --color-medium-750: 222 222 216;
-  --color-medium-700: 208 208 200;
-  --color-medium-600: 184 184 174;
-  --color-medium-500: 150 150 140;
-  --color-medium-400: 98 114 164;
-  --color-medium-300: 76 86 106;
-  --color-medium-200: 40 42 54;
-  --color-medium-100: 125 86 194;
-  --color-medium-50: 179 50 118;
-  --theme-accent: 125 86 194;
-  --theme-heading-color: #7d56c2;
-  --theme-body-color: #282a36;
-  --theme-primary-btn-bg: #7d56c2;
-  --theme-primary-btn-text: #ffffff;
-  --theme-border-color: #d0d0c8;
-}
-
-/* 7. Tokyo Night (Dark) */
-[data-theme="tokyo-night"][data-mode="dark"] {
-  --color-medium-950: 22 22 30;
-  --color-medium-900: 26 27 38;
-  --color-medium-850: 31 35 53;
-  --color-medium-800: 41 46 66;
-  --color-medium-750: 52 59 88;
-  --color-medium-700: 59 66 97;
-  --color-medium-600: 65 72 104;
-  --color-medium-500: 86 95 137;
-  --color-medium-400: 122 162 247;
-  --color-medium-300: 154 165 206;
-  --color-medium-200: 192 202 245;
-  --color-medium-100: 125 207 255;
-  --color-medium-50: 187 154 247;
-  --theme-accent: 122 162 247;
-  --theme-heading-color: #7dcfff;
-  --theme-body-color: #c0caf5;
-  --theme-primary-btn-bg: #7aa2f7;
-  --theme-primary-btn-text: #1a1b26;
-  --theme-border-color: #3b4261;
-}
-
-/* 7. Tokyo Night (Light - Day) */
-[data-theme="tokyo-night"][data-mode="light"] {
-  --color-medium-950: 213 214 219;
-  --color-medium-900: 225 226 231;
-  --color-medium-850: 235 237 243;
-  --color-medium-800: 196 200 218;
-  --color-medium-750: 180 184 203;
-  --color-medium-700: 168 174 196;
-  --color-medium-600: 150 156 180;
-  --color-medium-500: 132 140 181;
-  --color-medium-400: 98 105 137;
-  --color-medium-300: 72 82 119;
-  --color-medium-200: 52 59 88;
-  --color-medium-100: 46 125 233;
-  --color-medium-50: 152 84 241;
-  --theme-accent: 46 125 233;
-  --theme-heading-color: #2e7de9;
-  --theme-body-color: #343b58;
-  --theme-primary-btn-bg: #2e7de9;
-  --theme-primary-btn-text: #ffffff;
-  --theme-border-color: #a8aec4;
-}
-
-/* 8. Terra Brasilis (Dark - Mata de Jurema & Ouro de Oxum) */
-[data-theme="terra-brasilis"][data-mode="dark"] {
-  --color-medium-950: 10 19 15;
-  --color-medium-900: 14 25 20;
-  --color-medium-850: 21 38 30;
-  --color-medium-800: 28 50 40;
-  --color-medium-750: 38 66 53;
-  --color-medium-700: 50 84 68;
-  --color-medium-600: 74 114 94;
-  --color-medium-500: 105 148 126;
-  --color-medium-400: 148 186 165;
-  --color-medium-300: 194 222 206;
-  --color-medium-200: 233 242 236;
-  --color-medium-100: 229 184 66;
-  --color-medium-50: 245 215 110;
-  --theme-accent: 229 184 66;
-  --theme-heading-color: #e5b842;
-  --theme-body-color: #e9f2ec;
-  --theme-primary-btn-bg: #e5b842;
-  --theme-primary-btn-text: #0e1914;
-  --theme-border-color: #325444;
-}
-
-/* 8. Terra Brasilis (Light - Pemba & Barro Sagrado) */
-[data-theme="terra-brasilis"][data-mode="light"] {
-  --color-medium-950: 230 223 206;
-  --color-medium-900: 246 242 232;
-  --color-medium-850: 239 233 216;
-  --color-medium-800: 224 215 193;
-  --color-medium-750: 206 196 170;
-  --color-medium-700: 185 173 145;
-  --color-medium-600: 150 138 112;
-  --color-medium-500: 118 107 84;
-  --color-medium-400: 74 96 82;
-  --color-medium-300: 44 74 56;
-  --color-medium-200: 24 40 31;
-  --color-medium-100: 30 94 58;
-  --color-medium-50: 180 83 9;
-  --theme-accent: 30 94 58;
-  --theme-heading-color: #1e5e3a;
-  --theme-body-color: #18281f;
-  --theme-primary-btn-bg: #1e5e3a;
-  --theme-primary-btn-text: #f6f2e8;
-  --theme-border-color: #b9ad91;
+  --theme-border-color: #dcdad2;
 }
 
 /* =========================================================================
    ADAPTAÇÕES DINÂMICAS PARA MODO CLARO (LIGHT)
-   Garante contraste adequado no modo claro, sem vazar para containers isolados
    ========================================================================= */
 
 [data-mode="light"] :not(.theme-isolated):not(.theme-isolated *) > .text-white,
@@ -418,13 +95,12 @@
 }
 
 /* =========================================================================
-   BLINDAGEM TOTAL DO MODO ALTAR (INDEPENDENTE DO TEMA GERAL)
+   MODO ALTAR
    ========================================================================= */
 .altar-mode-container {
   color-scheme: light dark;
 }
 
-/* Altar Modo Escuro */
 .altar-mode-container[data-altar-theme="dark"],
 .altar-mode-container[data-altar-theme="dark"] * {
   --altar-bg: #07090E;
@@ -442,33 +118,6 @@
   color: #F8FAFC !important;
 }
 
-.altar-mode-container[data-altar-theme="dark"] .altar-title {
-  color: #FDE68A !important;
-}
-
-.altar-mode-container[data-altar-theme="dark"] .altar-btn {
-  background-color: rgba(23, 23, 23, 0.9) !important;
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  color: #F8FAFC !important;
-}
-
-.altar-mode-container[data-altar-theme="dark"] .altar-btn:hover {
-  background-color: rgba(38, 38, 38, 0.95) !important;
-  border-color: rgba(245, 158, 11, 0.5) !important;
-  color: #FFFFFF !important;
-}
-
-.altar-mode-container[data-altar-theme="dark"] .altar-kpi-card {
-  background-color: #0D1017 !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  color: #F8FAFC !important;
-}
-
-.altar-mode-container[data-altar-theme="dark"] .altar-kpi-card h3 {
-  color: #F8FAFC !important;
-}
-
-/* Altar Modo Claro */
 .altar-mode-container[data-altar-theme="light"],
 .altar-mode-container[data-altar-theme="light"] * {
   --altar-bg: #FAF8F5;
@@ -481,37 +130,6 @@
   --altar-btn-text: #451A03;
 }
 
-.altar-mode-container[data-altar-theme="light"] {
-  background: linear-gradient(180deg, #FAF8F5 0%, #F5F2EA 50%, #ECE7DC 100%) !important;
-  color: #0C0A09 !important;
-}
-
-.altar-mode-container[data-altar-theme="light"] .altar-title {
-  color: #451A03 !important;
-}
-
-.altar-mode-container[data-altar-theme="light"] .altar-btn {
-  background-color: #FFFDF9 !important;
-  border-color: rgba(180, 83, 9, 0.35) !important;
-  color: #451A03 !important;
-}
-
-.altar-mode-container[data-altar-theme="light"] .altar-btn:hover {
-  background-color: #FEF3C7 !important;
-  border-color: rgba(180, 83, 9, 0.6) !important;
-  color: #290E02 !important;
-}
-
-.altar-mode-container[data-altar-theme="light"] .altar-kpi-card {
-  background-color: rgba(255, 253, 249, 0.95) !important;
-  border-color: rgba(217, 119, 6, 0.3) !important;
-  color: #0C0A09 !important;
-}
-
-.altar-mode-container[data-altar-theme="light"] .altar-kpi-card h3 {
-  color: #0C0A09 !important;
-}
-
 body {
   background-color: rgb(var(--color-medium-900));
   color: rgb(var(--color-medium-200));
@@ -521,54 +139,54 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Medium Reading Typography */
+/* Tipografia Editorial Minimalista */
 .medium-article-content {
   font-family: 'Newsreader', 'Georgia', serif;
-  font-size: 1.15rem;
+  font-size: 1.125rem;
   line-height: 1.85;
   color: var(--theme-body-color);
   letter-spacing: -0.003em;
 }
 
 .medium-article-content p {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.4rem;
 }
 
 .medium-article-content h1 {
   font-family: 'Inter', sans-serif;
-  font-size: 2.25rem;
+  font-size: 2rem;
   font-weight: 700;
   color: var(--theme-heading-color);
   letter-spacing: -0.02em;
   margin-top: 2rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
 }
 
 .medium-article-content h2 {
   font-family: 'Inter', sans-serif;
-  font-size: 1.6rem;
+  font-size: 1.45rem;
   font-weight: 600;
   color: var(--theme-heading-color);
   letter-spacing: -0.015em;
-  margin-top: 1.75rem;
-  margin-bottom: 0.75rem;
+  margin-top: 1.65rem;
+  margin-bottom: 0.65rem;
 }
 
 .medium-article-content h3 {
   font-family: 'Inter', sans-serif;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 600;
   color: var(--theme-heading-color);
-  margin-top: 1.5rem;
-  margin-bottom: 0.5rem;
+  margin-top: 1.4rem;
+  margin-bottom: 0.45rem;
 }
 
 .medium-article-content blockquote {
-  border-left: 3px solid rgb(var(--theme-accent));
-  padding-left: 1.25rem;
+  border-left: 2px solid rgb(var(--color-medium-500));
+  padding-left: 1.15rem;
   font-style: italic;
   color: rgb(var(--color-medium-300));
-  margin: 1.5rem 0;
+  margin: 1.4rem 0;
 }
 
 .medium-article-content u {
@@ -583,19 +201,18 @@ body {
 
 .medium-article-content img {
   border-radius: 8px;
-  margin: 1.75rem 0;
+  margin: 1.5rem 0;
   max-width: 100%;
-  border: 1px solid rgb(var(--color-medium-700));
+  border: 1px solid rgb(var(--color-medium-750));
 }
 
-/* Clean Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgb(var(--color-medium-900));
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {

@@ -55,88 +55,80 @@ export function NotePropertiesBar({
 
   return (
     <div className="space-y-2.5">
-      {/* Faixa Horizontal de Pílulas de Propriedades (Estilo Linear / Notion — Despoluído) */}
-      <div className="flex flex-wrap items-center gap-2 py-1.5">
-        {/* 1. Pílula Seletora de Categoria */}
-        <div className="inline-flex items-center rounded-lg bg-medium-850 border border-medium-700 px-2.5 py-1 text-xs text-white">
+      {/* Faixa Horizontal Minimalista de Propriedades */}
+      <div className="flex flex-wrap items-center gap-2 py-1">
+        {/* 1. Categoria */}
+        <div className="inline-flex items-center rounded-lg bg-medium-850 border border-medium-750 px-2.5 py-1 text-xs text-white">
           <span className="text-[10px] font-mono uppercase text-medium-400 mr-1.5">Tipo:</span>
           <select
             value={editCategory}
             onChange={(e) => onChangeCategory(e.target.value as CategoryName)}
-            className="bg-transparent text-xs font-semibold text-amber-300 focus:outline-none cursor-pointer"
+            className="bg-transparent text-xs font-medium text-white focus:outline-none cursor-pointer"
           >
             <option value="Diário" className="bg-medium-900 text-white">
-              📓 Diário (Cotidiano)
+              Diário
             </option>
             <option value="Sonho" className="bg-medium-900 text-white">
-              🌙 Sonho
+              Sonho
             </option>
             <option value="Oráculo" className="bg-medium-900 text-white">
-              🃏 Oráculo / Tarot
+              Oráculo / Tarot
             </option>
             <option value="Prática" className="bg-medium-900 text-white">
-              🔥 Prática / Ritual / Banho
+              Prática / Ritual
             </option>
             <option value="Visão Astral" className="bg-medium-900 text-white">
-              👁️ Visão Astral
+              Visão Astral
             </option>
             <option value="Estudo" className="bg-medium-900 text-white">
-              📜 Estudo & Fundamento
+              Estudo
             </option>
           </select>
         </div>
 
-        {/* 2. Pílula de Data e Hora (DD/MM/AA 24h) */}
+        {/* 2. Data e Hora */}
         <button
           type="button"
           onClick={() => toggleDrawer("date")}
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-all ${
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-colors ${
             activeDrawer === "date"
-              ? "bg-amber-500/20 border-amber-400 text-amber-200"
-              : "bg-medium-850 hover:bg-medium-800 border-medium-700 text-medium-200 hover:text-white"
+              ? "bg-medium-800 border-medium-500 text-white"
+              : "bg-medium-850 hover:bg-medium-800 border-medium-750 text-medium-300 hover:text-white"
           }`}
-          title="Clique para ajustar a Data (DD/MM/AA) e Hora (24h)"
         >
-          <Calendar className="w-3.5 h-3.5 text-amber-400" />
+          <Calendar className="w-3.5 h-3.5 text-medium-400" />
           <span>{formatDateTimeBR(editDate)}</span>
           {activeDrawer === "date" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </button>
 
-        {/* 3. Pílula de Avaliação de Sucesso / Eficácia */}
+        {/* 3. Avaliação */}
         <button
           type="button"
           onClick={() => toggleDrawer("rating")}
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-all ${
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-colors ${
             activeDrawer === "rating"
-              ? "bg-amber-500/20 border-amber-400 text-amber-200"
-              : hasRating
-              ? "bg-medium-850 hover:bg-medium-800 border-amber-500/30 text-amber-300"
-              : "bg-medium-850 hover:bg-medium-800 border-medium-700 text-medium-400 hover:text-white"
+              ? "bg-medium-800 border-medium-500 text-white"
+              : "bg-medium-850 hover:bg-medium-800 border-medium-750 text-medium-300 hover:text-white"
           }`}
-          title="Avaliar eficácia ou intensidade da experiência (0 a 10)"
         >
-          <Star className={`w-3.5 h-3.5 ${hasRating ? "fill-amber-400 text-amber-400" : "text-medium-400"}`} />
-          <span>{hasRating ? `Eficácia: ${editRating}/10` : "Avaliar (Opcional)"}</span>
+          <Star className={`w-3.5 h-3.5 ${hasRating ? "fill-white text-white" : "text-medium-400"}`} />
+          <span>{hasRating ? `${editRating}/10` : "Avaliar"}</span>
           {activeDrawer === "rating" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </button>
 
-        {/* 4. Pílula de Correspondências (Liber 777 & Brasilidade) */}
+        {/* 4. Correspondências */}
         <button
           type="button"
           onClick={() => toggleDrawer("influences")}
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-all ${
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-colors ${
             activeDrawer === "influences"
-              ? "bg-emerald-500/20 border-emerald-400 text-emerald-200"
-              : editInfluences.length > 0
-              ? "bg-emerald-950/30 hover:bg-emerald-900/40 border-emerald-500/40 text-emerald-300"
-              : "bg-medium-850 hover:bg-medium-800 border-medium-700 text-medium-200 hover:text-white"
+              ? "bg-medium-800 border-medium-500 text-white"
+              : "bg-medium-850 hover:bg-medium-800 border-medium-750 text-medium-300 hover:text-white"
           }`}
-          title="Adicionar Orixás, Guias, Banhos de Ervas, Entidades, Cores, Planetas ou Sephiroth"
         >
-          <Tag className="w-3.5 h-3.5 text-emerald-400" />
+          <Tag className="w-3.5 h-3.5 text-medium-400" />
           <span>
-            Correspondências 777 & Brasilis
-            {editInfluences.length > 0 ? ` (${editInfluences.length})` : " +"}
+            Correspondências{editInfluences.length > 0 ? ` (${editInfluences.length})` : ""}
           </span>
           {activeDrawer === "influences" ? (
             <ChevronUp className="w-3 h-3" />
@@ -145,36 +137,35 @@ export function NotePropertiesBar({
           )}
         </button>
 
-        {/* 5. Pílula da Mesa Oracular */}
+        {/* 5. Mesa Oracular */}
         <button
           type="button"
           onClick={onToggleOracleTable}
-          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-all ${
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-mono transition-colors ${
             hasOracleTable
-              ? "bg-purple-500/20 border-purple-400 text-purple-200"
-              : "bg-medium-850 hover:bg-medium-800 border-medium-700 text-medium-300 hover:text-white"
+              ? "bg-medium-800 border-medium-500 text-white"
+              : "bg-medium-850 hover:bg-medium-800 border-medium-750 text-medium-300 hover:text-white"
           }`}
-          title="Abrir ou recolher a Mesa de Tarot / Oráculo nesta nota"
         >
-          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+          <Sparkles className="w-3.5 h-3.5 text-medium-400" />
           <span>{hasOracleTable ? "Mesa Oracular Ativa" : "+ Mesa Oracular"}</span>
         </button>
       </div>
 
-      {/* Chips Resumidos das Correspondências já adicionadas (sempre visíveis de forma limpa quando a gaveta está fechada) */}
+      {/* Chips Resumidos */}
       {activeDrawer !== "influences" && editInfluences.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 pb-1">
           {editInfluences.map((inf, idx) => (
             <span
               key={`${inf.category}-${inf.name}-${idx}`}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-medium-850 border border-amber-500/25 text-[11px] font-mono text-amber-200"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-medium-850 border border-medium-750 text-[11px] font-mono text-medium-200"
             >
               <span className="text-medium-400">{getInfluenceCategoryLabel(inf.category)}:</span>
               <span>{inf.name}</span>
               <button
                 type="button"
                 onClick={() => onRemoveInfluence(idx)}
-                className="ml-0.5 text-medium-400 hover:text-red-400"
+                className="ml-0.5 text-medium-400 hover:text-white"
                 title="Remover"
               >
                 <X className="w-3 h-3" />
@@ -186,9 +177,9 @@ export function NotePropertiesBar({
 
       {/* GAVETA 1: DATA E HORA */}
       {activeDrawer === "date" && (
-        <div className="p-3.5 rounded-xl bg-medium-850 border border-medium-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in">
+        <div className="p-3.5 rounded-xl bg-medium-850 border border-medium-750 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <span className="text-xs font-bold text-white block">Data (DD/MM/AA) & Horário (24h)</span>
+            <span className="text-xs font-semibold text-white block">Data (DD/MM/AA) & Horário (24h)</span>
             <span className="text-[11px] text-medium-400">
               Padrão brasileiro. O cálculo lunar e planetário acompanha esta data.
             </span>
@@ -199,17 +190,17 @@ export function NotePropertiesBar({
         </div>
       )}
 
-      {/* GAVETA 2: AVALIAÇÃO DE SUCESSO / EFICÁCIA */}
+      {/* GAVETA 2: AVALIAÇÃO */}
       {activeDrawer === "rating" && (
-        <div className="p-3.5 rounded-xl bg-medium-850 border border-medium-700 space-y-2 animate-fade-in">
+        <div className="p-3.5 rounded-xl bg-medium-850 border border-medium-750 space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-white">
+            <span className="text-xs font-semibold text-white">
               Grau de Eficácia / Lucidez {hasRating ? `(${editRating}/10)` : "(Desativado)"}
             </span>
             <button
               type="button"
               onClick={onToggleHasRating}
-              className="text-xs font-mono text-amber-300 hover:underline"
+              className="text-xs font-mono text-medium-300 hover:text-white underline"
             >
               {hasRating ? "Deixar sem nota" : "Ativar avaliação (0 a 10)"}
             </button>
@@ -223,9 +214,9 @@ export function NotePropertiesBar({
                 max={10}
                 value={editRating}
                 onChange={(e) => onChangeRating(Number(e.target.value))}
-                className="flex-1 accent-amber-400 cursor-pointer"
+                className="flex-1 accent-white cursor-pointer"
               />
-              <span className="text-xs font-mono font-bold text-amber-300 w-8 text-right">
+              <span className="text-xs font-mono font-bold text-white w-8 text-right">
                 {editRating}/10
               </span>
             </div>
@@ -233,20 +224,20 @@ export function NotePropertiesBar({
         </div>
       )}
 
-      {/* GAVETA 3: SELETOR COMPLETO DE CORRESPONDÊNCIAS (LIBER 777 & BRASILIS) */}
+      {/* GAVETA 3: CORRESPONDÊNCIAS */}
       {activeDrawer === "influences" && (
-        <div className="p-4 rounded-xl bg-medium-850 border border-emerald-500/30 space-y-3 shadow-md animate-fade-in">
+        <div className="p-4 rounded-xl bg-medium-850 border border-medium-750 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-white flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Catalogar Forças, Orixás, Banhos de Ervas e Correspondências 777</span>
+            <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5 text-medium-400" />
+              <span>Correspondências (Liber 777 & Brasilis)</span>
             </span>
             <button
               type="button"
               onClick={() => setActiveDrawer("none")}
               className="text-[11px] font-mono text-medium-400 hover:text-white"
             >
-              Concluir ✕
+              Fechar ✕
             </button>
           </div>
 
@@ -254,12 +245,12 @@ export function NotePropertiesBar({
             <select
               value={newInfCat}
               onChange={(e) => onChangeNewInfCat(e.target.value)}
-              className="bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-400 font-mono sm:w-64"
+              className="bg-medium-900 border border-medium-750 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-medium-500 font-mono sm:w-64"
             >
-              <option value="orixa">🌿 Orixá / Vodum / Nkisi (Brasilidade)</option>
-              <option value="guia">🥁 Guia / Exu / Caboclo / Mestre da Jurema</option>
-              <option value="ponto_forca">⛰️ Ponto de Força / Domínio da Natureza</option>
-              <option value="banho_defumacao">💨 Banho de Ervas / Defumação (Ewê)</option>
+              <option value="orixa">Orixá / Vodum / Nkisi</option>
+              <option value="guia">Guia / Exu / Caboclo / Mestre da Jurema</option>
+              <option value="ponto_forca">Ponto de Força / Natureza</option>
+              <option value="banho_defumacao">Banho de Ervas / Defumação (Ewê)</option>
               <option value="entity">Entidade / Espírito / Inteligência</option>
               <option value="deity">Divindade / Forma-Deus</option>
               <option value="color">Cor (Escalas 777 & Velas)</option>
@@ -285,13 +276,13 @@ export function NotePropertiesBar({
                     onAddInfluence();
                   }
                 }}
-                placeholder={`Digite ou clique numa sugestão abaixo (${getInfluenceCategoryLabel(newInfCat)})...`}
-                className="flex-1 bg-medium-800 border border-medium-700 rounded-md px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-emerald-400 font-sans"
+                placeholder={`Adicionar ${getInfluenceCategoryLabel(newInfCat)}...`}
+                className="flex-1 bg-medium-900 border border-medium-750 rounded-md px-3 py-2 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-medium-500 font-sans"
               />
               <button
                 type="button"
                 onClick={() => onAddInfluence()}
-                className="px-3.5 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-md text-xs font-mono font-semibold flex items-center gap-1.5 transition-colors shrink-0"
+                className="px-3.5 py-2 bg-white hover:bg-medium-200 text-black rounded-md text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Adicionar</span>
@@ -301,9 +292,7 @@ export function NotePropertiesBar({
 
           {presetsMap[newInfCat] && (
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-[10px] font-mono text-medium-400 mr-1">
-                Sugestões Rápidas ({getInfluenceCategoryLabel(newInfCat)}):
-              </span>
+              <span className="text-[10px] font-mono text-medium-400 mr-1">Sugestões:</span>
               {presetsMap[newInfCat].map((preset) => {
                 const isSelected = editInfluences.some(
                   (inf) => inf.category === newInfCat && inf.name.toLowerCase() === preset.toLowerCase()
@@ -316,8 +305,8 @@ export function NotePropertiesBar({
                     disabled={isSelected}
                     className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-all ${
                       isSelected
-                        ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300 opacity-60 cursor-default"
-                        : "bg-medium-800 hover:bg-medium-750 border-medium-700 hover:border-emerald-400/50 text-medium-300 hover:text-white"
+                        ? "bg-medium-800 border-medium-600 text-medium-500 cursor-default"
+                        : "bg-medium-900 hover:bg-medium-800 border-medium-750 text-medium-300 hover:text-white"
                     }`}
                   >
                     + {preset}
@@ -328,19 +317,18 @@ export function NotePropertiesBar({
           )}
 
           {editInfluences.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-medium-750">
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-medium-800">
               {editInfluences.map((inf, idx) => (
                 <span
                   key={`${inf.category}-${inf.name}-${idx}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-medium-800 border border-emerald-500/30 text-xs font-mono text-white shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-medium-900 border border-medium-750 text-xs font-mono text-white"
                 >
-                  <strong className="text-emerald-300">{getInfluenceCategoryLabel(inf.category)}:</strong>
+                  <span className="text-medium-400">{getInfluenceCategoryLabel(inf.category)}:</span>
                   <span>{inf.name}</span>
                   <button
                     type="button"
                     onClick={() => onRemoveInfluence(idx)}
-                    className="ml-0.5 text-medium-400 hover:text-red-400 transition-colors"
-                    title="Remover correspondência"
+                    className="ml-0.5 text-medium-400 hover:text-white"
                   >
                     <X className="w-3 h-3" />
                   </button>

@@ -16,6 +16,7 @@ import {
   Compass,
   ArrowUpRight,
   HelpCircle,
+  X,
 } from "lucide-react";
 
 interface RightSidebarProps {
@@ -24,6 +25,7 @@ interface RightSidebarProps {
   onSelectEntry: (entry: MagickEntry) => void;
   onOpenFullGraph?: () => void;
   onOpenOnboarding?: () => void;
+  onClose?: () => void;
 }
 
 export function RightSidebar({
@@ -32,6 +34,7 @@ export function RightSidebar({
   onSelectEntry,
   onOpenFullGraph,
   onOpenOnboarding,
+  onClose,
 }: RightSidebarProps) {
   const [activeTab, setActiveTab] = useState<"sync" | "chat" | "guide">("sync");
 
@@ -41,7 +44,7 @@ export function RightSidebar({
       id: "welcome",
       role: "assistant",
       content:
-        "**Faze o que tu queres há de ser tudo da Lei.**\n\nSou o seu Frater Auxiliar. Posso cruzar todas as suas notas, interpretar símbolos oníricos, tiragens de Tarot ou sugerir correspondências do Liber 777 e Brasilis.",
+        "**Faze o que tu queres há de ser tudo da Lei.**\n\nSou o seu Frater Auxiliar. Posso cruzar suas notas, interpretar símbolos oníricos, tiragens de Tarot ou sugerir correspondências.",
       timestamp: formatTime24h(new Date()),
     },
   ]);
@@ -155,7 +158,7 @@ export function RightSidebar({
         {
           id: `error-${Date.now()}`,
           role: "assistant",
-          content: `Falha na transmissão mágica: ${err.message}`,
+          content: `Falha na transmissão: ${err.message}`,
           timestamp: formatTime24h(new Date()),
         },
       ]);
@@ -199,13 +202,13 @@ export function RightSidebar({
         entryObj: currentEntry,
         x: cx,
         y: cy,
-        radius: 11,
+        radius: 10,
       });
 
       const directList = directConnectedEntries.map((d) => d.entry);
       directList.forEach((target, idx) => {
         const angle = (idx / Math.max(1, directList.length)) * Math.PI * 2;
-        const dist = 60;
+        const dist = 56;
         miniNodes.push({
           id: target.id,
           label: target.title,
@@ -213,19 +216,18 @@ export function RightSidebar({
           entryObj: target,
           x: cx + Math.cos(angle) * dist,
           y: cy + Math.sin(angle) * dist,
-          radius: 7.5,
+          radius: 7,
         });
         miniEdges.push({ from: currentEntry.id, to: target.id, dashed: false });
       });
 
-      // Plota também até 4 sincronicidades automáticas como órbita pontilhada
       const extraResonances = resonances
         .filter((r) => !directList.some((d) => d.id === r.entry.id))
         .slice(0, 4);
 
       extraResonances.forEach((resItem, idx) => {
         const angle = (idx / Math.max(1, extraResonances.length)) * Math.PI * 2 + Math.PI / 4;
-        const dist = 54;
+        const dist = 52;
         miniNodes.push({
           id: resItem.entry.id,
           label: resItem.entry.title,
@@ -234,7 +236,7 @@ export function RightSidebar({
           entryObj: resItem.entry,
           x: cx + Math.cos(angle) * dist,
           y: cy + Math.sin(angle) * dist,
-          radius: 6,
+          radius: 5.5,
         });
         miniEdges.push({ from: currentEntry.id, to: resItem.entry.id, dashed: true });
       });
@@ -242,15 +244,15 @@ export function RightSidebar({
 
     ctx.clearRect(0, 0, width, height);
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(cx, cy, 36, 0, Math.PI * 2);
-    ctx.arc(cx, cy, 62, 0, Math.PI * 2);
-    ctx.stroke();
-
     const isLight =
       typeof document !== "undefined" && document.documentElement.getAttribute("data-mode") === "light";
+
+    ctx.strokeStyle = isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.05)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 34, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 56, 0, Math.PI * 2);
+    ctx.stroke();
 
     const nodeMap = new Map(miniNodes.map((n) => [n.id, n]));
     for (const edge of miniEdges) {
@@ -260,11 +262,11 @@ export function RightSidebar({
         ctx.save();
         if (edge.dashed) {
           ctx.setLineDash([3, 3]);
-          ctx.strokeStyle = isLight ? "rgba(168, 85, 247, 0.45)" : "rgba(192, 132, 252, 0.45)";
+          ctx.strokeStyle = isLight ? "rgba(0, 0, 0, 0.2)" : "rgba(255, 255, 255, 0.2)";
         } else {
-          ctx.strokeStyle = isLight ? "rgba(0, 0, 0, 0.3)" : "rgba(255, 255, 255, 0.3)";
+          ctx.strokeStyle = isLight ? "rgba(0, 0, 0, 0.35)" : "rgba(255, 255, 255, 0.35)";
         }
-        ctx.lineWidth = 1.2;
+        ctx.lineWidth = 1.1;
         ctx.beginPath();
         ctx.moveTo(s.x, s.y);
         ctx.lineTo(t.x, t.y);
@@ -278,26 +280,28 @@ export function RightSidebar({
       ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
       ctx.fillStyle = node.isMain
         ? isLight
-          ? "#111111"
-          : "#fbbf24"
+          ? "#18181b"
+          : "#f4f4f5"
         : node.isResonance
-        ? "#c084fc"
+        ? isLight
+          ? "#a1a1aa"
+          : "#71717a"
         : isLight
-        ? "#444444"
-        : "#e5e5e5";
+        ? "#52525b"
+        : "#a1a1aa";
       ctx.fill();
-      ctx.strokeStyle = isLight ? "#ffffff" : "#121212";
+      ctx.strokeStyle = isLight ? "#faf9f6" : "#0e0e11";
       ctx.lineWidth = 2;
       ctx.stroke();
 
       if (node.isMain || node.entryObj) {
         ctx.fillStyle = node.isMain
           ? isLight
-            ? "#111111"
-            : "#ffffff"
+            ? "#18181b"
+            : "#f4f4f5"
           : isLight
-          ? "#444444"
-          : "#a3a3a3";
+          ? "#52525b"
+          : "#a1a1aa";
         ctx.font = "9px Inter, sans-serif";
         ctx.textAlign = "center";
         const short = node.label.length > 14 ? `${node.label.slice(0, 12)}...` : node.label;
@@ -329,126 +333,130 @@ export function RightSidebar({
   }, [currentEntry, directConnectedEntries, resonances, activeTab, onSelectEntry]);
 
   return (
-    <aside className="w-full h-full bg-medium-900 border-l border-medium-700 flex flex-col select-none">
+    <aside className="w-full h-full bg-medium-900 border-l border-medium-800 flex flex-col select-none">
       {/* Top 3-Tab Switcher */}
-      <div className="p-2 border-b border-medium-700 bg-medium-850 grid grid-cols-3 gap-1">
-        <button
-          onClick={() => setActiveTab("sync")}
-          className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] font-semibold transition-all ${
-            activeTab === "sync"
-              ? "bg-medium-750 text-white border border-medium-600 shadow-sm"
-              : "text-medium-400 hover:text-white hover:bg-medium-800/60"
-          }`}
-          title="Sincronicidades, Ecos Simbólicos e Grafo desta Nota"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-          <span className="truncate">Ecos</span>
-          {(directConnectedEntries.length + resonances.length) > 0 && (
-            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 font-mono">
-              {directConnectedEntries.length + resonances.length}
-            </span>
-          )}
-        </button>
+      <div className="p-2 border-b border-medium-800 flex items-center gap-1">
+        <div className="grid grid-cols-3 gap-1 flex-1">
+          <button
+            onClick={() => setActiveTab("sync")}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-[11px] font-medium transition-colors ${
+              activeTab === "sync"
+                ? "bg-medium-800 text-white"
+                : "text-medium-400 hover:text-white"
+            }`}
+            title="Sincronicidades, Ecos Simbólicos e Grafo desta Nota"
+          >
+            <Sparkles className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">Ecos</span>
+            {directConnectedEntries.length + resonances.length > 0 && (
+              <span className="text-[9px] px-1 rounded bg-medium-850 text-medium-300 font-mono">
+                {directConnectedEntries.length + resonances.length}
+              </span>
+            )}
+          </button>
 
-        <button
-          onClick={() => setActiveTab("chat")}
-          className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] font-semibold transition-all ${
-            activeTab === "chat"
-              ? "bg-medium-750 text-white border border-medium-600 shadow-sm"
-              : "text-medium-400 hover:text-white hover:bg-medium-800/60"
-          }`}
-          title="Conversar com o Frater IA sobre suas notas"
-        >
-          <Bot className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
-          <span className="truncate">Frater IA</span>
-        </button>
+          <button
+            onClick={() => setActiveTab("chat")}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-[11px] font-medium transition-colors ${
+              activeTab === "chat"
+                ? "bg-medium-800 text-white"
+                : "text-medium-400 hover:text-white"
+            }`}
+            title="Conversar com o Frater IA sobre suas notas"
+          >
+            <Bot className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">Frater IA</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("guide")}
-          className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] font-semibold transition-all ${
-            activeTab === "guide"
-              ? "bg-medium-750 text-white border border-medium-600 shadow-sm"
-              : "text-medium-400 hover:text-white hover:bg-medium-800/60"
-          }`}
-          title="Glossário e explicações simples sobre os símbolos desta nota"
-        >
-          <Compass className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-          <span className="truncate">Guia</span>
-        </button>
+          <button
+            onClick={() => setActiveTab("guide")}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-[11px] font-medium transition-colors ${
+              activeTab === "guide"
+                ? "bg-medium-800 text-white"
+                : "text-medium-400 hover:text-white"
+            }`}
+            title="Glossário e explicações simples sobre os símbolos desta nota"
+          >
+            <Compass className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">Guia</span>
+          </button>
+        </div>
+
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-1.5 text-medium-400 hover:text-white rounded-md hover:bg-medium-850 transition-colors"
+            title="Recolher Painel Lateral"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* =================================================================
           ABA 1: SINCRONICIDADES, ECOS SIMBÓLICOS & MINI-GRAFO
          ================================================================= */}
       {activeTab === "sync" && (
-        <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 space-y-5">
           {/* Mini Grafo Orbital */}
-          <div className="rounded-xl border border-medium-750 bg-medium-950/60 p-2.5">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-medium-300 mb-1.5">
-              <span className="flex items-center gap-1.5 text-white">
-                <Network className="w-3.5 h-3.5 text-amber-400" />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-[11px] font-medium text-medium-400">
+              <span className="flex items-center gap-1.5">
+                <Network className="w-3 h-3" />
                 <span>Constelação da Nota</span>
               </span>
               {onOpenFullGraph && (
                 <button
                   type="button"
                   onClick={onOpenFullGraph}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-medium-800 hover:bg-medium-750 text-medium-200 hover:text-white border border-medium-700 text-[10px] transition-colors"
+                  className="flex items-center gap-1 text-[10px] text-medium-400 hover:text-white transition-colors"
                 >
                   <Maximize2 className="w-2.5 h-2.5" />
-                  <span>Mapa Geral</span>
+                  <span>Expandir</span>
                 </button>
               )}
             </div>
             <div
               onClick={() => onOpenFullGraph && onOpenFullGraph()}
-              className="rounded-lg border border-medium-800 bg-black/30 overflow-hidden relative cursor-pointer group h-36"
+              className="rounded-lg border border-medium-800 bg-medium-850/60 overflow-hidden relative cursor-pointer h-32"
             >
-              <canvas ref={canvasRef} width={290} height={144} className="w-full h-full" />
-              <div className="absolute bottom-1 right-1.5 text-[9px] font-mono text-medium-400 bg-black/70 px-1.5 py-0.5 rounded pointer-events-none">
-                ● Direto &nbsp; ◌ Sincronicidade
-              </div>
+              <canvas ref={canvasRef} width={270} height={128} className="w-full h-full" />
             </div>
           </div>
 
           {/* Sincronicidades & Ressonâncias Automáticas */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-[11px] font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                <span>Ecos & Sincronicidades ({resonances.length})</span>
-              </h4>
-            </div>
+          <div className="space-y-2">
+            <h4 className="text-[11px] font-medium text-medium-400 flex items-center justify-between">
+              <span>Ecos Simbólicos</span>
+              <span className="font-mono text-[10px]">{resonances.length}</span>
+            </h4>
 
             {resonances.length === 0 ? (
-              <div className="p-3 rounded-xl bg-medium-850/60 border border-medium-800 text-[11px] text-medium-400 leading-relaxed">
-                Conforme você registra sonhos, tiragens de Tarot, Orixás ou banhos de ervas, o sistema mostra
-                automaticamente aqui outras notas que vibram na mesma sintonia.
-              </div>
+              <p className="text-[11px] text-medium-500 leading-relaxed">
+                Conforme você registra notas, o sistema identifica automaticamente outras anotações que compartilham os mesmos símbolos.
+              </p>
             ) : (
-              <div className="space-y-2">
+              <div className="divide-y divide-medium-800 border-t border-b border-medium-800">
                 {resonances.map((resItem) => (
                   <button
                     key={resItem.entry.id}
                     onClick={() => onSelectEntry(resItem.entry)}
-                    className="w-full text-left p-2.5 rounded-xl bg-medium-850/70 hover:bg-medium-800 border border-medium-750 hover:border-purple-500/40 transition-all group"
+                    className="w-full text-left py-2.5 hover:bg-medium-850/50 transition-colors group"
                   >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <span className="text-xs font-semibold text-white group-hover:text-purple-300 transition-colors line-clamp-1">
+                    <div className="flex items-start justify-between gap-2 mb-0.5">
+                      <span className="text-xs font-medium text-white line-clamp-1">
                         {resItem.entry.title}
                       </span>
-                      <ArrowUpRight className="w-3.5 h-3.5 text-medium-400 group-hover:text-purple-300 flex-shrink-0" />
+                      <ArrowUpRight className="w-3 h-3 text-medium-500 group-hover:text-white flex-shrink-0" />
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-medium-400 mb-1.5 font-mono">
-                      <span>{normalizeCategory(resItem.entry.type)}</span>
-                      <span>•</span>
-                      <span>{formatDateBR(resItem.entry.date)}</span>
+                    <div className="text-[10px] text-medium-400 mb-1.5 font-mono">
+                      {normalizeCategory(resItem.entry.type)} · {formatDateBR(resItem.entry.date)}
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {resItem.sharedBadges.map((b, i) => (
                         <span
                           key={i}
-                          className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-200 border border-purple-500/30"
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-medium-850 text-medium-300 border border-medium-800"
                         >
                           {b}
                         </span>
@@ -461,23 +469,22 @@ export function RightSidebar({
           </div>
 
           {/* Conexões Diretas / Wikilinks */}
-          <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-medium-300 flex items-center gap-1.5 mb-2">
-              <Link2 className="w-3.5 h-3.5 text-amber-400" />
-              <span>Conexões Diretas ({directConnectedEntries.length})</span>
+          <div className="space-y-2">
+            <h4 className="text-[11px] font-medium text-medium-400 flex items-center justify-between">
+              <span>Conexões Diretas</span>
+              <span className="font-mono text-[10px]">{directConnectedEntries.length}</span>
             </h4>
             {directConnectedEntries.length === 0 ? (
-              <p className="text-[11px] text-medium-500 italic">
-                Nenhuma nota vinculada manualmente. Use <code className="text-medium-300">[[Título]]</code> no
-                texto ou a pílula &ldquo;Conexões&rdquo; no topo da nota.
+              <p className="text-[11px] text-medium-500">
+                Use <code className="text-medium-300">[[Título]]</code> no texto para vincular notas.
               </p>
             ) : (
-              <div className="space-y-1.5">
+              <div className="divide-y divide-medium-800 border-t border-b border-medium-800">
                 {directConnectedEntries.map(({ entry: target, relation }) => (
                   <button
                     key={target.id}
                     onClick={() => onSelectEntry(target)}
-                    className="w-full text-left p-2 rounded-lg bg-medium-850 hover:bg-medium-800 border border-medium-750 flex items-center justify-between gap-2 transition-colors"
+                    className="w-full text-left py-2 hover:bg-medium-850/50 flex items-center justify-between gap-2 transition-colors"
                   >
                     <div className="min-w-0">
                       <div className="text-xs font-medium text-white truncate">{target.title}</div>
@@ -485,7 +492,7 @@ export function RightSidebar({
                         {relation} · {formatDateBR(target.date)}
                       </div>
                     </div>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-medium-400 flex-shrink-0" />
+                    <ArrowUpRight className="w-3 h-3 text-medium-500 flex-shrink-0" />
                   </button>
                 ))}
               </div>
@@ -495,13 +502,13 @@ export function RightSidebar({
       )}
 
       {/* =================================================================
-          ABA 2: FRATER AUXILIAR (ASSISTENTE IA EM COLUNA INTEIRA)
+          ABA 2: FRATER AUXILIAR (ASSISTENTE IA)
          ================================================================= */}
       {activeTab === "chat" && (
         <div className="flex-1 flex flex-col min-h-0">
           {/* Quick Actions Bar */}
-          <div className="p-2 border-b border-medium-800 bg-medium-950/60 flex items-center justify-between gap-1.5">
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <div className="p-2 border-b border-medium-800 flex items-center justify-between gap-1.5">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
               {currentEntry && (
                 <button
                   onClick={() =>
@@ -510,13 +517,12 @@ export function RightSidebar({
                         currentEntry.type
                       )}, Lua: ${currentEntry.moon_phase || "N/A"} em ${
                         currentEntry.moon_sign || "N/A"
-                      }) e aponte correspondências 777/Brasilis e possíveis sincronicidades com meu histórico.`
+                      }) e aponte correspondências e possíveis sincronicidades.`
                     )
                   }
-                  className="flex-shrink-0 px-2 py-1 rounded bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-[10px] text-purple-200 font-semibold flex items-center gap-1 transition-colors"
+                  className="flex-shrink-0 px-2 py-1 rounded bg-medium-850 hover:bg-medium-800 border border-medium-800 text-[10px] text-white font-medium transition-colors"
                 >
-                  <Sparkles className="w-3 h-3 text-purple-300" />
-                  <span>Analisar Esta Nota</span>
+                  Analisar Nota
                 </button>
               )}
 
@@ -526,20 +532,9 @@ export function RightSidebar({
                     "Quais processos mágickos eu tive mais sucessos e quais influências eles tinham em comum?"
                   )
                 }
-                className="flex-shrink-0 px-2 py-1 rounded bg-medium-850 hover:bg-medium-800 border border-medium-700 text-[10px] text-medium-300 hover:text-white transition-colors"
+                className="flex-shrink-0 px-2 py-1 rounded bg-medium-850 hover:bg-medium-800 border border-medium-800 text-[10px] text-medium-300 hover:text-white transition-colors"
               >
-                <span>⚡ Padrões de Sucesso</span>
-              </button>
-
-              <button
-                onClick={() =>
-                  handleSend(
-                    "Como as minhas consultas oraculares se conectaram com meus sonhos e práticas recentes?"
-                  )
-                }
-                className="flex-shrink-0 px-2 py-1 rounded bg-medium-850 hover:bg-medium-800 border border-medium-700 text-[10px] text-medium-300 hover:text-white transition-colors"
-              >
-                <span>🃏 Oráculos ↔ Sonhos</span>
+                Padrões
               </button>
             </div>
 
@@ -554,7 +549,7 @@ export function RightSidebar({
                   },
                 ])
               }
-              className="p-1 text-medium-400 hover:text-white rounded hover:bg-medium-800 flex-shrink-0"
+              className="p-1 text-medium-400 hover:text-white rounded hover:bg-medium-850 flex-shrink-0"
               title="Limpar Conversa"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -569,13 +564,13 @@ export function RightSidebar({
                 className={`flex gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[92%] rounded-xl p-2.5 text-xs leading-relaxed ${
+                  className={`max-w-[92%] rounded-lg p-2.5 text-xs leading-relaxed ${
                     m.role === "user"
                       ? "bg-white text-black font-medium"
-                      : "bg-medium-800 text-medium-200 border border-medium-750"
+                      : "bg-medium-850 text-medium-200 border border-medium-800"
                   }`}
                 >
-                  <div className="whitespace-pre-line prose prose-invert prose-xs">{m.content}</div>
+                  <div className="whitespace-pre-line">{m.content}</div>
                   <div
                     className={`text-[9px] mt-1 font-mono text-right ${
                       m.role === "user" ? "text-black/60" : "text-medium-400"
@@ -588,9 +583,8 @@ export function RightSidebar({
             ))}
 
             {loading && (
-              <div className="text-[11px] text-medium-400 font-mono italic flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping"></span>
-                Consultando registros do grimório...
+              <div className="text-[11px] text-medium-400 font-mono italic">
+                Consultando registros...
               </div>
             )}
 
@@ -598,7 +592,7 @@ export function RightSidebar({
           </div>
 
           {/* Input */}
-          <div className="p-2.5 border-t border-medium-700 bg-medium-850">
+          <div className="p-2.5 border-t border-medium-800">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -612,12 +606,12 @@ export function RightSidebar({
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Perguntar ao Frater IA..."
                 disabled={loading}
-                className="flex-1 bg-medium-800 border border-medium-700 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-medium-400 focus:outline-none focus:border-white font-sans"
+                className="flex-1 bg-medium-850 border border-medium-800 rounded-md px-2.5 py-1.5 text-xs text-white placeholder-medium-400 focus:outline-none focus:border-medium-600 font-sans"
               />
               <button
                 type="submit"
                 disabled={loading || !input.trim()}
-                className="p-1.5 bg-white hover:bg-medium-200 disabled:opacity-40 text-black rounded-lg transition-colors"
+                className="p-1.5 bg-white hover:opacity-90 disabled:opacity-40 text-black rounded-md transition-opacity"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>
@@ -627,51 +621,39 @@ export function RightSidebar({
       )}
 
       {/* =================================================================
-          ABA 3: GUIA CONTEXTUAL DA NOTA (GLOSSÁRIO VIVO PARA INICIANTES)
+          ABA 3: GUIA CONTEXTUAL DA NOTA (GLOSSÁRIO VIVO)
          ================================================================= */}
       {activeTab === "guide" && (
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-                <Compass className="w-3.5 h-3.5" />
-                <span>Guia Contextual da Nota</span>
-              </span>
-              {onOpenOnboarding && (
-                <button
-                  onClick={onOpenOnboarding}
-                  className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 font-semibold transition-colors"
-                >
-                  Abrir Guia Completo
-                </button>
-              )}
-            </div>
-            <p className="text-[11px] text-medium-300 leading-relaxed">
-              Conceitos e fundamentos detectados nesta nota explicados de forma direta:
-            </p>
+          <div className="flex items-center justify-between pb-2 border-b border-medium-800">
+            <span className="text-[11px] font-medium text-medium-400">
+              Conceitos desta Nota
+            </span>
+            {onOpenOnboarding && (
+              <button
+                onClick={onOpenOnboarding}
+                className="text-[11px] text-white hover:underline"
+              >
+                Glossário Completo
+              </button>
+            )}
           </div>
 
-          <div className="space-y-2.5">
+          <div className="divide-y divide-medium-800">
             {contextualGlossary.map((item) => (
-              <div
-                key={item.id}
-                className="p-3 rounded-xl bg-medium-850/80 border border-medium-750 space-y-1.5"
-              >
-                <div className="flex items-center justify-between gap-1">
-                  <h5 className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <HelpCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-                    <span>{item.term}</span>
-                  </h5>
-                </div>
-                <p className="text-[11px] text-amber-200/90 leading-relaxed">{item.shortPlainMeaning}</p>
+              <div key={item.id} className="py-2.5 space-y-1">
+                <h5 className="text-xs font-medium text-white flex items-center gap-1.5">
+                  <HelpCircle className="w-3 h-3 text-medium-400 flex-shrink-0" />
+                  <span>{item.term}</span>
+                </h5>
+                <p className="text-[11px] text-medium-300 leading-relaxed">
+                  {item.shortPlainMeaning}
+                </p>
                 {item.brazilianBridge && (
-                  <p className="text-[10px] text-emerald-300/90 leading-relaxed pt-1 border-t border-medium-800">
-                    <strong>🌿 Ponte Brasileira:</strong> {item.brazilianBridge}
+                  <p className="text-[10px] text-medium-400 leading-relaxed">
+                    <strong>Ponte Brasileira:</strong> {item.brazilianBridge}
                   </p>
                 )}
-                <p className="text-[10px] text-sky-300/90 leading-relaxed">
-                  <strong>💡 Como usar:</strong> {item.howToUseInApp}
-                </p>
               </div>
             ))}
           </div>

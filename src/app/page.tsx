@@ -54,6 +54,7 @@ export default function Home() {
   const [autoEditEntryId, setAutoEditEntryId] = useState<string | null>(null);
   const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel>("sincretico");
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(false);
 
   // Global keyboard shortcuts (Ctrl+\ for Zen Mode, Ctrl+K for Spotlight, Alt+S for Quick Dream, Escape for Graph Modal)
   useEffect(() => {
@@ -137,9 +138,6 @@ export default function Home() {
     const { theme, mode } = getStoredTheme();
     applyTheme(theme, mode);
     setExperienceLevel(loadExperienceLevel());
-    if (!isOnboardingCompleted()) {
-      setIsOnboardingOpen(true);
-    }
     loadEntries();
     loadAstro();
   }, []);
@@ -374,10 +372,10 @@ export default function Home() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-medium-900 text-medium-100 antialiased font-sans">
-      {/* 1. Left Sidebar (Obsidian Tree Navigator) */}
+      {/* 1. Left Sidebar (Minimalist Navigator) */}
       <div
         className={`transition-all duration-300 ease-in-out flex-shrink-0 h-full ${
-          isZenMode ? "-ml-80 opacity-0 pointer-events-none w-0 overflow-hidden" : "w-80"
+          isZenMode ? "-ml-64 opacity-0 pointer-events-none w-0 overflow-hidden" : "w-64"
         }`}
       >
         <Sidebar
@@ -460,6 +458,8 @@ export default function Home() {
             onNewNote={() => handleNewNote()}
             isZenMode={isZenMode}
             onToggleZenMode={() => setIsZenMode((prev) => !prev)}
+            isRightSidebarOpen={isRightSidebarOpen}
+            onToggleRightSidebar={() => setIsRightSidebarOpen((prev) => !prev)}
             onBackToHome={() => setViewMode("home")}
             autoEdit={autoEditEntryId === selectedEntry?.id}
             onClearAutoEdit={() => setAutoEditEntryId(null)}
@@ -467,19 +467,16 @@ export default function Home() {
         )}
       </main>
 
-      {/* 3. Right Sidebar (Sincronicidades, Frater IA & Guia da Nota) - ativo no modo artigo */}
-      {viewMode === "article" && (
-        <div
-          className={`transition-all duration-300 ease-in-out flex-shrink-0 h-full ${
-            isZenMode ? "-mr-80 opacity-0 pointer-events-none w-0 overflow-hidden" : "w-80"
-          }`}
-        >
+      {/* 3. Right Sidebar (Sincronicidades, Frater IA & Guia da Nota) - recolhido por padrão para foco minimalista */}
+      {viewMode === "article" && isRightSidebarOpen && !isZenMode && (
+        <div className="transition-all duration-300 ease-in-out flex-shrink-0 h-full w-72">
           <RightSidebar
             currentEntry={selectedEntry}
             allEntries={entries}
             onSelectEntry={(entry) => setSelectedEntryId(entry.id)}
             onOpenFullGraph={() => setIsGraphModalOpen(true)}
             onOpenOnboarding={() => setIsOnboardingOpen(true)}
+            onClose={() => setIsRightSidebarOpen(false)}
           />
         </div>
       )}

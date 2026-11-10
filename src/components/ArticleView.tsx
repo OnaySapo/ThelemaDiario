@@ -92,6 +92,8 @@ interface ArticleViewProps {
   onNewNote: () => void;
   isZenMode?: boolean;
   onToggleZenMode?: () => void;
+  isRightSidebarOpen?: boolean;
+  onToggleRightSidebar?: () => void;
   onBackToHome?: () => void;
   autoEdit?: boolean;
   onClearAutoEdit?: () => void;
@@ -106,6 +108,8 @@ export function ArticleView({
   onNewNote,
   isZenMode = false,
   onToggleZenMode,
+  isRightSidebarOpen = false,
+  onToggleRightSidebar,
   onBackToHome,
   autoEdit = false,
   onClearAutoEdit,
@@ -2518,7 +2522,23 @@ export function ArticleView({
               title={isZenMode ? "Sair do Modo Foco (Ctrl+\\)" : "Ativar Modo Foco / Zen (Ctrl+\\)"}
             >
               {isZenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{isZenMode ? "Modo Normal" : "Modo Foco"}</span>
+              <span className="hidden sm:inline">{isZenMode ? "Modo Normal" : "Foco"}</span>
+            </button>
+          )}
+
+          {/* Botão Painel Lateral Direito (Ecos & IA) */}
+          {onToggleRightSidebar && (
+            <button
+              onClick={onToggleRightSidebar}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-mono border transition-colors ${
+                isRightSidebarOpen
+                  ? "bg-white text-black border-white font-semibold"
+                  : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border-medium-700"
+              }`}
+              title="Abrir / Recolher Painel de Ecos Simbólicos e Frater IA"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Ecos & IA</span>
             </button>
           )}
 
@@ -2531,7 +2551,7 @@ export function ArticleView({
                 title="Exportar esta nota para arquivo Markdown (.md)"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Exportar (.md)</span>
+                <span className="hidden sm:inline">Exportar</span>
               </button>
 
               <button
@@ -2539,7 +2559,7 @@ export function ArticleView({
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-medium-800 hover:bg-medium-750 text-white rounded-md text-xs font-medium border border-medium-700 transition-colors"
               >
                 <Edit3 className="w-3.5 h-3.5" />
-                <span>Editar Artigo</span>
+                <span>Editar</span>
               </button>
               <button
                 onClick={() => {
@@ -2557,7 +2577,7 @@ export function ArticleView({
             <>
               {draftSavedTime && (
                 <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-mono text-medium-400 bg-medium-800/80 px-2 py-1 rounded border border-medium-700/60">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-medium-300" />
                   <span>Salvo {draftSavedTime}</span>
                 </span>
               )}
@@ -2572,7 +2592,7 @@ export function ArticleView({
                 className="flex items-center gap-1.5 px-4 py-1.5 bg-white hover:bg-medium-200 text-black rounded-md text-xs font-semibold shadow-sm transition-colors"
               >
                 <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Salvar Alterações</span>
+                <span>Salvar</span>
               </button>
             </>
           )}
@@ -2588,51 +2608,49 @@ export function ArticleView({
       >
         {!isEditing ? (
           /* ========================================================
-             MEDIUM READING VIEW
+             SANCTUM MINIMAL READING VIEW
              ======================================================== */
           <article className="space-y-6">
-            {/* Title (Big Medium Editorial Heading) */}
-            <h1 className="text-3xl md:text-5xl font-sans font-bold text-white tracking-tight leading-[1.15]">
+            {/* Title */}
+            <h1 className="text-3xl md:text-4xl font-serif font-semibold text-white tracking-tight leading-tight">
               {entry.title}
             </h1>
 
-            {/* Astrological / Thelemic Header Ribbon */}
-            <div className="p-3.5 rounded-lg bg-medium-850 border border-medium-700 text-xs font-mono text-medium-300 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Compass className="w-4 h-4 text-white shrink-0" />
+            {/* Minimalist 1-Line Astrological / Temporal Header */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs font-mono text-medium-400 pb-2">
+              <span className="text-medium-300">
                 <ThelemicDateDisplay thelemicDate={entry.thelemic_date} />
-              </div>
-
-              <div className="flex items-center gap-3">
-                <span className="text-medium-400">
-                  {formatDateTimeBR(entry.date, " às ")}
-                </span>
-                {entry.moon_phase && (
+              </span>
+              <span>·</span>
+              <span>{formatDateTimeBR(entry.date, " às ")}</span>
+              {entry.moon_phase && (
+                <>
+                  <span>·</span>
                   <span>
-                    · {entry.moon_phase} ({entry.moon_illumination || 0}%)
+                    {entry.moon_phase} ({entry.moon_illumination || 0}%)
                   </span>
-                )}
-                {entry.success_rating !== undefined && entry.success_rating !== null && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-medium-800 border border-medium-700 text-white font-semibold">
-                    <Star className="w-3 h-3 fill-white text-white" />
-                    {entry.success_rating}/10
-                  </span>
-                )}
-              </div>
+                </>
+              )}
+              {entry.success_rating !== undefined && entry.success_rating !== null && (
+                <>
+                  <span>·</span>
+                  <span className="text-white font-medium">{entry.success_rating}★</span>
+                </>
+              )}
             </div>
 
             {/* Influences Chips (Liber 777 & Brasilis Tags — Clicáveis para abrir Dossiê Vivo) */}
             {entry.influences && entry.influences.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 py-1">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {entry.influences.map((inf, i) => (
                   <button
                     key={i}
                     type="button"
                     onClick={() => setDossierEntity({ name: inf.name, category: inf.category })}
                     title="Clique para abrir o Dossiê Vivo desta força no seu Diário"
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-medium-800 hover:bg-medium-750 border border-medium-700 hover:border-amber-400/60 text-xs text-medium-300 font-mono transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-medium-850 hover:bg-medium-800 border border-medium-800 text-xs text-medium-300 font-mono transition-colors cursor-pointer"
                   >
-                    <strong className="text-amber-300">{getInfluenceCategoryLabel(inf.category)}:</strong>
+                    <span className="text-medium-400">{getInfluenceCategoryLabel(inf.category)}:</span>
                     <span className="text-white">{inf.name}</span>
                   </button>
                 ))}

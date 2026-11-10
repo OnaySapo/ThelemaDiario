@@ -1,23 +1,17 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
-import { getCategoryThelemicIcon, ZodiacIcon, IconeSolThelema, IconeLuaThelema, EstrelaDeThelema } from "@/components/ThelemicIcons";
+import { MagickEntry, normalizeCategory } from "@/lib/types";
+import { ZodiacIcon } from "@/components/ThelemicIcons";
 import {
-  BarChart2,
-  TrendingUp,
   Star,
   Award,
-  Filter,
   ArrowUpDown,
-  Calendar,
   Sparkles,
   ArrowLeft,
   Search,
   Layers,
   Flame,
-  CheckCircle,
-  Zap,
 } from "lucide-react";
 import { MagicHeatmap } from "@/components/MagicHeatmap";
 import { LiberReshWidget } from "@/components/LiberReshWidget";
@@ -39,12 +33,14 @@ interface DashboardViewProps {
 
 type SortMode = "recurrent" | "success";
 type PeriodMode = "all" | "30" | "90";
+type DashboardTab = "matrix" | "sync" | "metrics";
 
 export function DashboardView({
   entries,
   onSelectEntry,
   onBackToHome,
 }: DashboardViewProps) {
+  const [activeTab, setActiveTab] = useState<DashboardTab>("matrix");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortMode, setSortMode] = useState<SortMode>("recurrent");
   const [periodMode, setPeriodMode] = useState<PeriodMode>("all");
@@ -58,7 +54,6 @@ export function DashboardView({
   const filteredEntries = useMemo(() => {
     let result = [...entries];
 
-    // Period filter
     if (periodMode !== "all") {
       const days = periodMode === "30" ? 30 : 90;
       const cutoff = new Date();
@@ -66,7 +61,6 @@ export function DashboardView({
       result = result.filter((e) => new Date(e.date) >= cutoff);
     }
 
-    // Category filter
     if (selectedCategory !== "all") {
       result = result.filter((e) => normalizeCategory(e.type) === selectedCategory);
     }
@@ -74,7 +68,7 @@ export function DashboardView({
     return result;
   }, [entries, selectedCategory, periodMode]);
 
-  // Aggregate Liber 777 Influences
+  // Aggregate Influences
   const influencesAnalysis = useMemo(() => {
     const map = new Map<
       string,
@@ -114,7 +108,6 @@ export function DashboardView({
       avgRating: Number((item.totalRating / item.count).toFixed(1)),
     }));
 
-    // Filter by influence category
     if (influenceCategory !== "all") {
       list = list.filter((i) => {
         const cat = i.category.toLowerCase();
@@ -128,7 +121,6 @@ export function DashboardView({
       });
     }
 
-    // Filter by text search
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       list = list.filter(
@@ -139,7 +131,6 @@ export function DashboardView({
       );
     }
 
-    // Sort: Recurrent vs Success
     if (sortMode === "recurrent") {
       list.sort((a, b) => b.count - a.count || b.avgRating - a.avgRating);
     } else {
@@ -247,7 +238,7 @@ export function DashboardView({
       .slice(0, 5);
   }, [filteredEntries]);
 
-  // Pentagrama de Equilíbrio Elemental (Espírito, Ar, Fogo, Água, Terra)
+  // Pentagrama de Equilíbrio Elemental
   const elementalRadar = useMemo(() => {
     const counts = {
       Espirito: 1,
@@ -303,774 +294,135 @@ export function DashboardView({
     };
   }, [filteredEntries]);
 
-  // Análise Onironáutica (Totens de Lucidez)
+  // Análise Onironáutica
   const dreamAnalysis = useMemo(() => {
     return analyzeDreamTotemsAcrossEntries(filteredEntries);
   }, [filteredEntries]);
 
-  // Matriz de Cruzamento Bidimensional 2D (Heatmap Interativo)
+  // Matriz de Cruzamento Bidimensional 2D
   const crossMatrix = useMemo(() => {
     return computeCrossMatrix2D(filteredEntries, matrixRowDim, matrixColDim);
   }, [filteredEntries, matrixRowDim, matrixColDim]);
 
-  // Detector de Fios de Sincronicidade (Oráculo ↔ Sonho ↔ Prática)
+  // Detector de Fios de Sincronicidade
   const syncThreads = useMemo(() => {
     return detectSynchronicityThreads(filteredEntries);
   }, [filteredEntries]);
 
-  // Padrão de Ouro Empírico & Síntese Hermética (Cruzamento Automatizado)
+  // Padrão de Ouro Empírico
   const goldenPattern = useMemo(() => {
     const sortedMoonSigns = [...moonSignStats].sort((a, b) => b.avgRating - a.avgRating);
     const sortedMoonPhases = [...moonPhaseStats].sort((a, b) => b.avgRating - a.avgRating);
     const sortedPlanetaryDays = [...planetaryDayStats].sort((a, b) => b.avgRating - a.avgRating);
-
-    const sortedEntities = influencesAnalysis
-      .filter((i) => i.category.toLowerCase() === "entity")
-      .sort((a, b) => b.avgRating - a.avgRating);
-
-    const sortedIncenses = influencesAnalysis
-      .filter((i) => i.category.toLowerCase() === "incense")
-      .sort((a, b) => b.avgRating - a.avgRating);
-
-    const bestSign = sortedMoonSigns[0] || null;
-    const bestPhase = sortedMoonPhases[0] || null;
-    const bestDay = sortedPlanetaryDays[0] || null;
-    const bestEntity = sortedEntities[0] || null;
-    const bestIncense = sortedIncenses[0] || null;
     const bestOverallInf = [...influencesAnalysis].sort((a, b) => b.avgRating - a.avgRating)[0] || null;
 
-    const baseAvg = Number(kpis.avgScore) || 5;
-    const peakRating = Math.max(
-      bestSign?.avgRating || 0,
-      bestPhase?.avgRating || 0,
-      bestDay?.avgRating || 0,
-      bestOverallInf?.avgRating || 0
-    );
-
-    const upliftPercent =
-      baseAvg > 0 && peakRating > baseAvg
-        ? Math.round(((peakRating - baseAvg) / baseAvg) * 100)
-        : null;
-
     return {
-      bestSign,
-      bestPhase,
-      bestDay,
-      bestEntity,
-      bestIncense,
+      bestSign: sortedMoonSigns[0] || null,
+      bestPhase: sortedMoonPhases[0] || null,
+      bestDay: sortedPlanetaryDays[0] || null,
       bestOverallInf,
-      peakRating,
-      upliftPercent,
     };
-  }, [moonSignStats, moonPhaseStats, planetaryDayStats, influencesAnalysis, kpis.avgScore]);
+  }, [moonSignStats, moonPhaseStats, planetaryDayStats, influencesAnalysis]);
 
   return (
-    <div className="flex-1 h-full bg-medium-900 overflow-y-auto p-4 sm:p-8 space-y-8 select-text">
-      {/* ========================================================
-          1. HEADER & CONTROLES SUPERIORES
-          ======================================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-medium-750 pb-5">
-        <div>
-          <button
-            type="button"
-            onClick={onBackToHome}
-            className="flex items-center gap-1.5 text-xs font-mono text-medium-400 hover:text-white transition-colors mb-2"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Voltar ao Início (Home)</span>
-          </button>
-          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-white tracking-tight">
-            Matriz Analítica & Dashboard Hermético
-          </h1>
-          <p className="text-xs text-medium-400 font-sans mt-1">
-            Ciência mágica empírica: investigue quais deidades, incensos, instrumentos e trânsitos lunares maximizam seu êxito.
-          </p>
-        </div>
-
-        {/* Global KPI Badge */}
-        <div className="bg-medium-850 px-4 py-2.5 rounded-xl border border-medium-700 flex items-center gap-3 shrink-0 shadow-sm">
-          <Award className="w-5 h-5 text-white" />
+    <div className="flex-1 h-full bg-medium-900 overflow-y-auto select-text">
+      <div className="max-w-4xl mx-auto px-6 py-10 space-y-8">
+        {/* ========================================================
+            1. HEADER MINIMALISTA
+            ======================================================== */}
+        <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-medium-800 pb-6">
           <div>
-            <span className="text-[10px] font-mono text-medium-400 block uppercase">
-              Média Geral de Sucesso
-            </span>
-            <span className="text-lg font-mono font-bold text-white flex items-baseline gap-1">
-              <span>{kpis.avgScore}</span>
-              <span className="text-xs text-medium-400 font-normal">/ 10</span>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================
-          Padrão de Ouro Empírico & Síntese Hermética
-          ======================================================== */}
-      {filteredEntries.length > 0 && (
-        <section className="rounded-2xl border border-amber-500/40 bg-gradient-to-br from-amber-950/30 via-medium-850 to-medium-850 p-6 sm:p-7 shadow-lg relative overflow-hidden space-y-5">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
-
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-amber-500/20 pb-4 relative z-10">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-300 shrink-0 shadow-sm">
-                <EstrelaDeThelema className="w-5 h-5 text-amber-300" />
-              </div>
-              <div>
-                <h2 className="text-base sm:text-lg font-serif font-bold text-white tracking-tight flex items-center gap-2">
-                  <span>Padrão de Ouro Empírico & Síntese Hermética</span>
-                  {goldenPattern.upliftPercent !== null && goldenPattern.upliftPercent > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 font-semibold">
-                      +{goldenPattern.upliftPercent}% Eficácia
-                    </span>
-                  )}
-                </h2>
-                <p className="text-xs text-medium-400 font-sans mt-0.5">
-                  Cruzamento estatístico automatizado dos fatores astrais e materiais de maior confirmação na sua Obra.
-                </p>
-              </div>
-            </div>
-
-            {goldenPattern.peakRating > 0 && (
-              <div className="bg-medium-900/90 border border-amber-500/30 px-3.5 py-1.5 rounded-xl flex items-center gap-2 shrink-0 self-start sm:self-auto font-mono">
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                <span className="text-xs text-medium-400">Pico Comprovado:</span>
-                <strong className="text-amber-300 font-bold text-sm">{goldenPattern.peakRating} / 10</strong>
-              </div>
-            )}
-          </div>
-
-          {/* Cards dos 4 Pilares da Fórmula */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 relative z-10">
-            {/* 1. Signo Lunar Ideal */}
-            <div className="p-3.5 rounded-xl bg-medium-900/80 border border-medium-750 space-y-1.5">
-              <span className="text-[10px] font-mono text-medium-400 uppercase tracking-wider flex items-center gap-1.5">
-                <IconeLuaThelema className="w-3.5 h-3.5 text-amber-300" size={14} />
-                <span>Signo Lunar Ideal</span>
-              </span>
-              <div className="flex items-center gap-2">
-                {goldenPattern.bestSign?.sign && (
-                  <ZodiacIcon sign={goldenPattern.bestSign.sign} className="w-4 h-4 text-white" size={16} />
-                )}
-                <span className="text-sm font-sans font-bold text-white truncate">
-                  {goldenPattern.bestSign?.sign || "Dados insuficientes"}
-                </span>
-              </div>
-              {goldenPattern.bestSign && (
-                <div className="text-[10px] font-mono text-medium-400 flex items-center justify-between pt-1 border-t border-medium-800">
-                  <span>Média: <strong className="text-amber-300">{goldenPattern.bestSign.avgRating}/10</strong></span>
-                  <span>{goldenPattern.bestSign.count} {goldenPattern.bestSign.count === 1 ? "prática" : "práticas"}</span>
-                </div>
-              )}
-            </div>
-
-            {/* 2. Fase Lunar Ótima */}
-            <div className="p-3.5 rounded-xl bg-medium-900/80 border border-medium-750 space-y-1.5">
-              <span className="text-[10px] font-mono text-medium-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Fase Lunar Mais Fluida</span>
-              </span>
-              <span className="text-sm font-sans font-bold text-white block truncate">
-                {goldenPattern.bestPhase?.phase || "Dados insuficientes"}
-              </span>
-              {goldenPattern.bestPhase && (
-                <div className="text-[10px] font-mono text-medium-400 flex items-center justify-between pt-1 border-t border-medium-800">
-                  <span>Média: <strong className="text-amber-300">{goldenPattern.bestPhase.avgRating}/10</strong></span>
-                  <span>{goldenPattern.bestPhase.count} {goldenPattern.bestPhase.count === 1 ? "registro" : "registros"}</span>
-                </div>
-              )}
-            </div>
-
-            {/* 3. Dia Planetário Consagrado */}
-            <div className="p-3.5 rounded-xl bg-medium-900/80 border border-medium-750 space-y-1.5">
-              <span className="text-[10px] font-mono text-medium-400 uppercase tracking-wider flex items-center gap-1.5">
-                <IconeSolThelema className="w-3.5 h-3.5 text-amber-300" size={14} />
-                <span>Dia Planetário Consagrado</span>
-              </span>
-              <span className="text-sm font-sans font-bold text-white block truncate">
-                {goldenPattern.bestDay?.day || "Dados insuficientes"}
-              </span>
-              {goldenPattern.bestDay && (
-                <div className="text-[10px] font-mono text-medium-400 flex items-center justify-between pt-1 border-t border-medium-800">
-                  <span>Média: <strong className="text-amber-300">{goldenPattern.bestDay.avgRating}/10</strong></span>
-                  <span>{goldenPattern.bestDay.count} {goldenPattern.bestDay.count === 1 ? "operação" : "operações"}</span>
-                </div>
-              )}
-            </div>
-
-            {/* 4. Correspondência Chave (777) */}
-            <div className="p-3.5 rounded-xl bg-medium-900/80 border border-medium-750 space-y-1.5">
-              <span className="text-[10px] font-mono text-medium-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Flame className="w-3.5 h-3.5 text-amber-300" />
-                <span>Catalisador Chave (777)</span>
-              </span>
-              <span className="text-sm font-sans font-bold text-white block truncate">
-                {goldenPattern.bestIncense?.name || goldenPattern.bestEntity?.name || goldenPattern.bestOverallInf?.name || "Dados insuficientes"}
-              </span>
-              {(goldenPattern.bestIncense || goldenPattern.bestEntity || goldenPattern.bestOverallInf) && (
-                <div className="text-[10px] font-mono text-medium-400 flex items-center justify-between pt-1 border-t border-medium-800">
-                  <span className="capitalize">{goldenPattern.bestIncense ? "Incenso" : goldenPattern.bestEntity ? "Entidade" : "Elemento"}</span>
-                  <strong className="text-amber-300">
-                    {(goldenPattern.bestIncense || goldenPattern.bestEntity || goldenPattern.bestOverallInf)?.avgRating}/10
-                  </strong>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Síntese Descritiva em Linguagem Natural */}
-          <div className="p-4 rounded-xl bg-medium-900/90 border border-amber-500/20 text-xs text-medium-300 leading-relaxed font-sans relative z-10">
-            <p>
-              <strong className="text-amber-300 font-mono font-semibold">🔬 Síntese Científico-Mágicka: </strong>
-              {goldenPattern.bestSign && goldenPattern.bestPhase ? (
-                <>
-                  Seus registros indicam que o ápice de validação fenomênica ocorre sob a{" "}
-                  <strong className="text-white">{goldenPattern.bestPhase.phase}</strong> com a Lua em{" "}
-                  <strong className="text-white">{goldenPattern.bestSign.sign}</strong>
-                  {goldenPattern.bestDay ? (
-                    <>
-                      , preferencialmente no <strong className="text-white">{goldenPattern.bestDay.day}</strong>
-                    </>
-                  ) : null}
-                  {goldenPattern.bestIncense ? (
-                    <>
-                      {" "}e consagração com <strong className="text-white">{goldenPattern.bestIncense.name}</strong>
-                    </>
-                  ) : goldenPattern.bestEntity ? (
-                    <>
-                      {" "}em alinhamento com <strong className="text-white">{goldenPattern.bestEntity.name}</strong>
-                    </>
-                  ) : null}
-                  . Sob esta configuração empírica, sua taxa média de sucesso atinge{" "}
-                  <strong className="text-amber-300 font-mono font-bold">{goldenPattern.peakRating}/10</strong>
-                  {goldenPattern.upliftPercent ? (
-                    <span className="text-emerald-400 font-mono"> (+{goldenPattern.upliftPercent}% acima da sua média basal)</span>
-                  ) : null}
-                  . O Método da Ciência, o Alvo da Religião.
-                </>
-              ) : (
-                "Continue registrando suas práticas, rituais e incensos para que a matriz hermética sintetize seu padrão fenomênico individual."
-              )}
-            </p>
-          </div>
-        </section>
-      )}
-
-      {/* ========================================================
-          NOVO: LABORATÓRIO DE CRUZAMENTO 2D (MATRIZ INTERATIVA) & FIOS DE SINCRONICIDADE
-          ======================================================== */}
-      <section className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        {/* Coluna 7/12: Matriz de Cruzamento Bidimensional 2D */}
-        <div className="xl:col-span-7 rounded-2xl border border-medium-750 bg-medium-850 p-5 sm:p-6 space-y-4 shadow-md">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-medium-750 pb-4">
-            <div>
-              <h2 className="text-base sm:text-lg font-serif font-bold text-white flex items-center gap-2">
-                <Layers className="w-5 h-5 text-amber-400" />
-                <span>Matriz de Cruzamento Multidimensional (2D)</span>
-              </h2>
-              <p className="text-xs text-medium-400 mt-0.5">
-                Escolha duas dimensões para cruzar dados de eficácia (★) e frequência. Clique em qualquer célula para ver as notas.
-              </p>
-            </div>
-          </div>
-
-          {/* Seletores de Eixo X e Eixo Y */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-medium-900/80 p-3 rounded-xl border border-medium-800">
-            <div>
-              <label className="block text-[10px] font-mono uppercase tracking-wider text-amber-300 mb-1">
-                Eixo Vertical (Linhas)
-              </label>
-              <select
-                value={matrixRowDim}
-                onChange={(e) => {
-                  setMatrixRowDim(e.target.value as CrossDimensionId);
-                  setSelectedMatrixCell(null);
-                }}
-                className="w-full px-3 py-1.5 rounded-lg bg-medium-850 border border-medium-700 text-xs text-white focus:outline-none focus:border-amber-400"
-              >
-                {CROSS_DIMENSIONS.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-mono uppercase tracking-wider text-purple-300 mb-1">
-                Eixo Horizontal (Colunas)
-              </label>
-              <select
-                value={matrixColDim}
-                onChange={(e) => {
-                  setMatrixColDim(e.target.value as CrossDimensionId);
-                  setSelectedMatrixCell(null);
-                }}
-                className="w-full px-3 py-1.5 rounded-lg bg-medium-850 border border-medium-700 text-xs text-white focus:outline-none focus:border-purple-400"
-              >
-                {CROSS_DIMENSIONS.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Top Sinergias Detectadas */}
-          {crossMatrix.topSynergies.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-mono uppercase text-emerald-400 font-semibold">
-                🔥 Maiores Sinergias:
-              </span>
-              {crossMatrix.topSynergies.slice(0, 3).map((syn, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() =>
-                    setSelectedMatrixCell({
-                      rowKey: syn.rowKey,
-                      colKey: syn.colKey,
-                      count: syn.count,
-                      ratedCount: syn.count,
-                      avgRating: syn.avgRating,
-                      entries: syn.entries,
-                    })
-                  }
-                  className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-200 transition-colors"
-                >
-                  <strong>{syn.rowKey}</strong> × <strong>{syn.colKey}</strong> ({syn.avgRating}★ · {syn.count}x)
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Tabela Heatmap 2D */}
-          {crossMatrix.rows.length === 0 || crossMatrix.cols.length === 0 ? (
-            <div className="p-6 text-center text-xs text-medium-400 bg-medium-900/50 rounded-xl border border-medium-800">
-              Registre mais notas para visualizar o cruzamento entre estas dimensões.
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-xl border border-medium-750 bg-medium-900/60">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="border-b border-medium-750 bg-medium-900">
-                    <th className="p-2.5 font-mono text-[10px] uppercase text-medium-400 sticky left-0 bg-medium-900 z-10 min-w-[130px]">
-                      {CROSS_DIMENSIONS.find((d) => d.id === matrixRowDim)?.shortLabel} \{" "}
-                      {CROSS_DIMENSIONS.find((d) => d.id === matrixColDim)?.shortLabel}
-                    </th>
-                    {crossMatrix.cols.map((col) => (
-                      <th
-                        key={col}
-                        className="p-2.5 font-mono text-[10px] text-center text-medium-300 font-semibold min-w-[88px]"
-                      >
-                        <span className="line-clamp-2">{col}</span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-medium-800">
-                  {crossMatrix.rows.map((row) => (
-                    <tr key={row} className="hover:bg-white/[0.02]">
-                      <td className="p-2.5 font-semibold text-white sticky left-0 bg-medium-900/95 z-10 border-r border-medium-800 max-w-[160px] truncate">
-                        {row}
-                      </td>
-                      {crossMatrix.cols.map((col) => {
-                        const cell = crossMatrix.cells[row]?.[col];
-                        const count = cell?.count || 0;
-                        const avg = cell?.avgRating || 0;
-                        const isSelected =
-                          selectedMatrixCell?.rowKey === row && selectedMatrixCell?.colKey === col;
-
-                        if (count === 0) {
-                          return (
-                            <td key={col} className="p-2 text-center text-medium-600 font-mono text-[10px]">
-                              —
-                            </td>
-                          );
-                        }
-
-                        const bgClass =
-                          avg >= 8.5
-                            ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-200"
-                            : avg >= 7
-                            ? "bg-amber-500/20 border-amber-500/40 text-amber-200"
-                            : count >= 2
-                            ? "bg-purple-500/20 border-purple-500/40 text-purple-200"
-                            : "bg-medium-800 border-medium-700 text-medium-200";
-
-                        return (
-                          <td key={col} className="p-1.5 text-center">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedMatrixCell(cell)}
-                              className={`w-full py-1.5 px-2 rounded-lg border transition-all flex flex-col items-center justify-center ${bgClass} ${
-                                isSelected ? "ring-2 ring-white scale-[1.03]" : "hover:scale-[1.02]"
-                              }`}
-                            >
-                              <span className="font-bold text-xs">{count}x</span>
-                              {avg > 0 && (
-                                <span className="text-[9px] font-mono opacity-90">{avg}★</span>
-                              )}
-                            </button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Gaveta de Notas da Célula Selecionada */}
-          {selectedMatrixCell && (
-            <div className="p-4 rounded-xl bg-medium-900 border border-amber-500/40 space-y-2.5 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-bold text-white">
-                  Cruzamento:{" "}
-                  <span className="text-amber-300">{selectedMatrixCell.rowKey}</span> ×{" "}
-                  <span className="text-purple-300">{selectedMatrixCell.colKey}</span> (
-                  {selectedMatrixCell.count} {selectedMatrixCell.count === 1 ? "nota" : "notas"})
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedMatrixCell(null)}
-                  className="text-[11px] text-medium-400 hover:text-white"
-                >
-                  Fechar ✕
-                </button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                {selectedMatrixCell.entries.map((entry) => (
-                  <button
-                    key={entry.id}
-                    type="button"
-                    onClick={() => onSelectEntry(entry)}
-                    className="text-left p-2.5 rounded-lg bg-medium-850 hover:bg-medium-800 border border-medium-750 flex items-center justify-between gap-2 transition-colors"
-                  >
-                    <div className="min-w-0">
-                      <div className="text-xs font-semibold text-white truncate">{entry.title}</div>
-                      <div className="text-[10px] text-medium-400 font-mono">
-                        {normalizeCategory(entry.type)} · {formatDateBR(entry.date)}
-                      </div>
-                    </div>
-                    {entry.success_rating ? (
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
-                        {entry.success_rating}/10
-                      </span>
-                    ) : null}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Coluna 5/12: Detector de Fios de Sincronicidade (Oráculo ↔ Sonho ↔ Prática) */}
-        <div className="xl:col-span-5 rounded-2xl border border-medium-750 bg-medium-850 p-5 sm:p-6 space-y-4 shadow-md flex flex-col">
-          <div className="border-b border-medium-750 pb-4">
-            <h2 className="text-base sm:text-lg font-serif font-bold text-white flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-purple-400" />
-              <span>Fios de Sincronicidade Detectados</span>
-            </h2>
-            <p className="text-xs text-medium-400 mt-0.5">
-              Convergências automáticas onde o mesmo Arcano, Orixá, Totem de Sonho ou Erva atravessou seus Oráculos, Sonhos e Práticas.
-            </p>
-          </div>
-
-          {syncThreads.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center p-6 text-center text-xs text-medium-400 bg-medium-900/50 rounded-xl border border-medium-800">
-              Conforme você registrar Oráculos, Sonhos e Práticas, os elos simbólicos entre eles aparecerão automaticamente aqui.
-            </div>
-          ) : (
-            <div className="flex-1 space-y-3 max-h-[460px] overflow-y-auto pr-1">
-              {syncThreads.map((thread) => (
-                <div
-                  key={thread.id}
-                  className="p-3.5 rounded-xl bg-medium-900/80 border border-medium-750 hover:border-purple-500/40 transition-all space-y-2.5"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{thread.icon}</span>
-                      <div>
-                        <h4 className="text-xs font-bold text-white">{thread.symbolTitle}</h4>
-                        <div className="flex flex-wrap items-center gap-1 mt-0.5">
-                          {thread.categoriesInvolved.map((cat) => (
-                            <span
-                              key={cat}
-                              className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-300 border border-purple-500/30"
-                            >
-                              {cat}
-                            </span>
-                          ))}
-                          {thread.isCrossModal && (
-                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                              ✨ Sincronicidade Cruzada
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-mono text-medium-400 shrink-0">
-                      {thread.entries.length} notas
-                    </span>
-                  </div>
-
-                  <p className="text-[11px] text-medium-300 leading-relaxed">{thread.explanationPt}</p>
-
-                  {/* Linha do Tempo Compacta das Notas Conectadas */}
-                  <div className="flex flex-wrap gap-1.5 pt-1 border-t border-medium-800">
-                    {thread.entries.slice(0, 4).map((e) => (
-                      <button
-                        key={e.id}
-                        type="button"
-                        onClick={() => onSelectEntry(e)}
-                        className="text-[10px] px-2 py-1 rounded-lg bg-medium-850 hover:bg-medium-800 border border-medium-700 text-medium-200 hover:text-white transition-colors flex items-center gap-1.5 max-w-full"
-                      >
-                        <span className="font-mono text-amber-300/90 shrink-0">
-                          {formatDateBR(e.date)}
-                        </span>
-                        <span className="truncate max-w-[140px]">{e.title}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* ========================================================
-          DISCIPLINA MÁGICA, PENTAGRAMA ELEMENTAL & TOTENS ONÍRICOS
-          ======================================================== */}
-      <div className="space-y-4">
-        <LiberReshWidget />
-        <MagicHeatmap
-          entries={entries}
-          onSelectDate={(dateStr) => {
-            setSearchQuery(dateStr);
-          }}
-        />
-
-        {/* Grid: Pentagrama de Equilíbrio Elemental + Totens Oníricos (Yesod) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Card 1: Pentagrama de Equilíbrio Elemental */}
-          <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 flex flex-col justify-between space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-medium-750 pb-3">
-              <div className="flex items-center gap-2">
-                <Flame className="w-4 h-4 text-amber-400" />
-                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                  Pentagrama de Equilíbrio Elemental & Forças
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-amber-300">
-                5 Pontas do Templo
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              {/* SVG Radar Pentagram */}
-              <svg viewBox="0 0 220 220" className="w-44 h-44 shrink-0">
-                {/* Grade concêntrica */}
-                {[0.33, 0.66, 1].map((scale, sIdx) => {
-                  const pts = elementalRadar.axes
-                    .map((ax) => {
-                      const rad = (ax.angle * Math.PI) / 180;
-                      const r = 78 * scale;
-                      return `${110 + Math.cos(rad) * r},${110 + Math.sin(rad) * r}`;
-                    })
-                    .join(" ");
-                  return (
-                    <polygon
-                      key={sIdx}
-                      points={pts}
-                      fill="none"
-                      stroke="rgba(255,255,255,0.12)"
-                      strokeWidth="1"
-                    />
-                  );
-                })}
-
-                {/* Eixos */}
-                {elementalRadar.axes.map((ax) => {
-                  const rad = (ax.angle * Math.PI) / 180;
-                  return (
-                    <line
-                      key={ax.key}
-                      x1={110}
-                      y1={110}
-                      x2={110 + Math.cos(rad) * 78}
-                      y2={110 + Math.sin(rad) * 78}
-                      stroke="rgba(255,255,255,0.12)"
-                      strokeWidth="1"
-                    />
-                  );
-                })}
-
-                {/* Polígono preenchido do praticante */}
-                <polygon
-                  points={elementalRadar.axes
-                    .map((ax) => {
-                      const rad = (ax.angle * Math.PI) / 180;
-                      const ratio = Math.max(0.18, ax.value / elementalRadar.maxVal);
-                      const r = 78 * ratio;
-                      return `${110 + Math.cos(rad) * r},${110 + Math.sin(rad) * r}`;
-                    })
-                    .join(" ")}
-                  fill="rgba(234, 179, 8, 0.25)"
-                  stroke="#EAB308"
-                  strokeWidth="2"
-                />
-
-                {/* Rótulos das 5 Pontas */}
-                {elementalRadar.axes.map((ax) => {
-                  const rad = (ax.angle * Math.PI) / 180;
-                  const lx = 110 + Math.cos(rad) * 95;
-                  const ly = 110 + Math.sin(rad) * 95;
-                  return (
-                    <text
-                      key={`lbl-${ax.key}`}
-                      x={lx}
-                      y={ly}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fill="#F8FAFC"
-                      className="text-[8px] font-mono font-bold"
-                    >
-                      {ax.key.toUpperCase()}
-                    </text>
-                  );
-                })}
-              </svg>
-
-              {/* Barras e Diagnóstico */}
-              <div className="flex-1 w-full space-y-2 text-xs font-mono">
-                {elementalRadar.axes.map((ax) => (
-                  <div key={ax.key} className="space-y-0.5">
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-medium-200">{ax.label}</span>
-                      <strong className="text-amber-300">{ax.value} pts</strong>
-                    </div>
-                    <div className="w-full h-1.5 bg-medium-900 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-amber-400 rounded-full"
-                        style={{ width: `${Math.round((ax.value / elementalRadar.maxVal) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-
-                <p className="text-[11px] font-sans text-medium-300 pt-2 border-t border-medium-750 leading-relaxed">
-                  <strong>Diagnóstico do Templo:</strong> Força dominante em{" "}
-                  <span className="text-amber-300 font-semibold">{elementalRadar.dominant.label}</span>. Para equilíbrio hermético, trabalhe mais{" "}
-                  <span className="text-emerald-300 font-semibold">{elementalRadar.deficient.label}</span>.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Mapa de Totens Oníricos & Viagem Astral (Dream Signs) */}
-          <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 flex flex-col justify-between space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-medium-750 pb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-400" />
-                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                  Totens de Lucidez & Onironáutica (Yesod)
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-indigo-300">
-                {dreamAnalysis.dreamNotesCount} sonhos · {dreamAnalysis.astralNotesCount} viagens astrais
-              </span>
-            </div>
-
-            {dreamAnalysis.totems.length === 0 ? (
-              <p className="text-xs text-medium-400 italic py-6 text-center">
-                Registre sonhos ou visões astrais para que o motor de Yesod detecte automaticamente seus Totens de Lucidez (Águas, Mata, Encruzilhada, Serpente, Voo, Terreiro...).
-              </p>
-            ) : (
-              <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                {dreamAnalysis.totems.map((totem) => (
-                  <div
-                    key={totem.id}
-                    className="p-3 rounded-lg bg-medium-900 border border-medium-750 flex items-center justify-between gap-3"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-base">{totem.icon}</span>
-                        <strong className="text-xs text-white font-serif">{totem.name}</strong>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">
-                          {totem.brasilisRuler}
-                        </span>
-                      </div>
-                      <p className="text-[10px] font-mono text-medium-400 mt-1">
-                        {totem.meaning777}
-                      </p>
-                    </div>
-                    <span className="text-xs font-mono font-bold text-indigo-300 bg-indigo-950/60 px-2.5 py-1 rounded border border-indigo-500/30 shrink-0">
-                      {totem.count}x
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================
-          2. FILTROS INTERATIVOS (RECORRENTES vs MAIOR SUCESSO)
-          ======================================================== */}
-      <div className="bg-medium-850 p-4 rounded-xl border border-medium-700 space-y-4 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-medium-750 pb-3">
-          {/* Ordenação Principal: Mais Recorrentes vs Maior Sucesso */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-mono text-medium-400 uppercase font-semibold mr-1">
-              Classificar por:
-            </span>
             <button
               type="button"
-              onClick={() => setSortMode("recurrent")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
-                sortMode === "recurrent"
-                  ? "bg-white text-black shadow-sm"
-                  : "bg-medium-900 text-medium-300 hover:text-white border border-medium-750"
+              onClick={onBackToHome}
+              className="flex items-center gap-1.5 text-xs font-mono text-medium-400 hover:text-white transition-colors mb-3"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Voltar ao Início</span>
+            </button>
+            <h1 className="text-2xl sm:text-3xl font-serif font-semibold text-white tracking-tight">
+              Cruzamento de Dados & Métricas
+            </h1>
+            <p className="text-xs text-medium-400 mt-1">
+              Investigue padrões de eficácia, sincronicidades e recorrências no seu diário.
+            </p>
+          </div>
+
+          {/* KPI Compacto */}
+          <div className="flex items-center gap-4 text-xs font-mono text-medium-400">
+            <div>
+              <span className="block text-[10px] uppercase">Registros</span>
+              <strong className="text-base text-white">{kpis.total}</strong>
+            </div>
+            <div className="h-6 w-px bg-medium-800" />
+            <div>
+              <span className="block text-[10px] uppercase">Média Geral</span>
+              <strong className="text-base text-white">{kpis.avgScore}/10</strong>
+            </div>
+          </div>
+        </header>
+
+        {/* ========================================================
+            2. BARRA DE ABAS MINIMALISTA (3 VISÕES LIMPAS)
+            ======================================================== */}
+        <div className="flex items-center justify-between border-b border-medium-800">
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              onClick={() => setActiveTab("matrix")}
+              className={`pb-3 text-xs font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5 ${
+                activeTab === "matrix"
+                  ? "border-white text-white"
+                  : "border-transparent text-medium-400 hover:text-medium-200"
               }`}
             >
-              <ArrowUpDown className="w-3.5 h-3.5" />
-              <span>Mais Recorrentes (Frequência)</span>
+              <Layers className="w-3.5 h-3.5" />
+              <span>Cruzamento 2D</span>
             </button>
 
             <button
               type="button"
-              onClick={() => setSortMode("success")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-1.5 ${
-                sortMode === "success"
-                  ? "bg-white text-black shadow-sm"
-                  : "bg-medium-900 text-medium-300 hover:text-white border border-medium-750"
+              onClick={() => setActiveTab("sync")}
+              className={`pb-3 text-xs font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5 ${
+                activeTab === "sync"
+                  ? "border-white text-white"
+                  : "border-transparent text-medium-400 hover:text-medium-200"
               }`}
             >
-              <Star className="w-3.5 h-3.5 fill-current" />
-              <span>Maior Taxa de Sucesso em Média</span>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Sincronicidades & Sonhos</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("metrics")}
+              className={`pb-3 text-xs font-medium transition-colors border-b-2 -mb-px flex items-center gap-1.5 ${
+                activeTab === "metrics"
+                  ? "border-white text-white"
+                  : "border-transparent text-medium-400 hover:text-medium-200"
+              }`}
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Frequência & Eficácia</span>
             </button>
           </div>
 
-          {/* Filtro de Período Temporal */}
-          <div className="flex items-center gap-1.5 text-xs font-mono">
-            <span className="text-medium-400">Período:</span>
+          {/* Seletor de Período */}
+          <div className="hidden sm:flex items-center gap-1 pb-2 text-xs font-mono">
             {(
               [
                 { id: "all", label: "Tudo" },
-                { id: "90", label: "90 Dias" },
-                { id: "30", label: "30 Dias" },
+                { id: "90", label: "90d" },
+                { id: "30", label: "30d" },
               ] as const
             ).map((p) => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => setPeriodMode(p.id)}
-                className={`px-2 py-1 rounded text-xs transition-colors ${
+                className={`px-2 py-0.5 rounded transition-colors ${
                   periodMode === p.id
-                    ? "bg-medium-800 text-white border border-medium-600 font-semibold"
+                    ? "bg-medium-800 text-white font-medium"
                     : "text-medium-400 hover:text-white"
                 }`}
               >
@@ -1080,355 +432,435 @@ export function DashboardView({
           </div>
         </div>
 
-        {/* Linha 2: Categorias de Notas & Busca de Influências */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-          {/* Categoria da Nota */}
-          <div className="md:col-span-5 flex items-center gap-1 overflow-x-auto pb-1">
-            <span className="text-[10px] font-mono text-medium-400 uppercase mr-1 shrink-0">
-              Categoria:
-            </span>
-            {(
-              [
-                "all",
-                "Prática",
-                "Estudo",
-                "Visão Astral",
-                "Sonho",
-                "Oráculo",
-                "Diário",
-              ] as const
-            ).map((cat) => (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-2 py-1 rounded text-xs font-sans whitespace-nowrap transition-colors ${
-                  selectedCategory === cat
-                    ? "bg-white text-black font-semibold shadow-xs"
-                    : "bg-medium-900 text-medium-300 hover:text-white border border-medium-750"
-                }`}
-              >
-                {cat === "all" ? "Todas" : cat}
-              </button>
-            ))}
-          </div>
-
-          {/* Tipo de Influência Liber 777 */}
-          <div className="md:col-span-4">
-            <select
-              value={influenceCategory}
-              onChange={(e) => setInfluenceCategory(e.target.value)}
-              className="w-full bg-medium-900 border border-medium-750 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-white font-mono"
-            >
-              <option value="all">Todas as Influências (Liber 777 & Brasilis)</option>
-              <option value="orixa">🌿 Orixás, Guias, Jurema & Pontos de Força</option>
-              <option value="entity">Entidades, Divindades & Anjos</option>
-              <option value="color">Cores & Escalas do 777</option>
-              <option value="element">Elementos (Fogo, Água, Ar, Terra, Espírito)</option>
-              <option value="planet">Planetas & Astros</option>
-              <option value="sephirah">Sephiroth & Caminhos</option>
-              <option value="tarot">Tarot & Atus de Thoth</option>
-              <option value="incense">Incensos & Perfumes</option>
-              <option value="instrument">Armas & Instrumentos Mágickos</option>
-              <option value="herb">Ervas, Plantas & Cristais</option>
-            </select>
-          </div>
-
-          {/* Busca textual */}
-          <div className="md:col-span-3 relative">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-medium-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar influência..."
-              className="w-full bg-medium-900 border border-medium-750 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-white font-sans"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ========================================================
-          3. TABELA / GRID ANALÍTICA DE INFLUÊNCIAS (LIBER 777)
-          ======================================================== */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-white" />
-            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
-              Influências Herméticas (Liber 777): Recorrência vs Eficácia
-            </h2>
-          </div>
-          <span className="text-xs font-mono text-medium-400">
-            {influencesAnalysis.length} influências encontradas
-          </span>
-        </div>
-
-        {influencesAnalysis.length === 0 ? (
-          <div className="p-8 rounded-xl bg-medium-850 border border-medium-700 text-center text-xs text-medium-400 font-mono">
-            Nenhuma influência encontrada com os filtros selecionados.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {influencesAnalysis.map((item, idx) => (
-              <div
-                key={idx}
-                className="bg-medium-850 p-4 rounded-xl border border-medium-700 hover:border-medium-500 transition-all space-y-3 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-medium-800 text-amber-300 border border-medium-700">
-                      {getInfluenceCategoryLabel(item.category)}
-                    </span>
-
-                    <span className="flex items-center gap-1 font-mono text-xs font-bold text-white bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
-                      <Star className="w-3 h-3 fill-white text-white" />
-                      <span>{item.avgRating}/10</span>
-                    </span>
-                  </div>
-
-                  <h3 className="text-sm font-serif font-bold text-white leading-snug">
-                    {item.name}
-                  </h3>
+        {/* ========================================================
+            ABA 1: CRUZAMENTO MULTIDIMENSIONAL 2D & SÍNTESE
+            ======================================================== */}
+        {activeTab === "matrix" && (
+          <div className="space-y-6">
+            {/* Síntese em 1 Card Sereno */}
+            {filteredEntries.length > 0 && (
+              <div className="p-5 rounded-xl bg-medium-850 border border-medium-800 space-y-4">
+                <div className="text-xs font-mono uppercase tracking-wider text-medium-400">
+                  Síntese Empírica Pessoal
                 </div>
-
-                <div className="pt-2 border-t border-medium-750/70 space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-mono text-medium-400">
-                    <span>Recorrência:</span>
-                    <strong className="text-white">
-                      {item.count} {item.count === 1 ? "registro" : "registros"}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div>
+                    <span className="text-[11px] text-medium-400 block">Signo Lunar Ideal</span>
+                    <strong className="text-sm text-white font-medium">
+                      {goldenPattern.bestSign ? `${goldenPattern.bestSign.sign} (${goldenPattern.bestSign.avgRating}★)` : "—"}
                     </strong>
                   </div>
-
-                  {/* Visual Progress Bar for Rating */}
-                  <div className="w-full bg-medium-900 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="bg-white h-full rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (item.avgRating / 10) * 100)}%` }}
-                    />
+                  <div>
+                    <span className="text-[11px] text-medium-400 block">Fase Lunar</span>
+                    <strong className="text-sm text-white font-medium">
+                      {goldenPattern.bestPhase ? `${goldenPattern.bestPhase.phase} (${goldenPattern.bestPhase.avgRating}★)` : "—"}
+                    </strong>
                   </div>
+                  <div>
+                    <span className="text-[11px] text-medium-400 block">Dia Planetário</span>
+                    <strong className="text-sm text-white font-medium">
+                      {goldenPattern.bestDay ? `${goldenPattern.bestDay.day} (${goldenPattern.bestDay.avgRating}★)` : "—"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-medium-400 block">Força Principal</span>
+                    <strong className="text-sm text-white font-medium truncate block">
+                      {goldenPattern.bestOverallInf
+                        ? `${goldenPattern.bestOverallInf.name} (${goldenPattern.bestOverallInf.avgRating}★)`
+                        : "—"}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            )}
 
-                  {/* Click to inspect first note */}
-                  {item.entries.length > 0 && (
+            {/* Matriz de Cruzamento 2D */}
+            <div className="p-5 rounded-xl bg-medium-850 border border-medium-800 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-medium text-white">
+                    Matriz de Cruzamento Bidimensional (2D)
+                  </h2>
+                  <p className="text-xs text-medium-400 mt-0.5">
+                    Cruze duas dimensões e clique em qualquer célula para inspecionar as notas correspondentes.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase tracking-wider text-medium-400 mb-1">
+                    Eixo Vertical (Linhas)
+                  </label>
+                  <select
+                    value={matrixRowDim}
+                    onChange={(e) => {
+                      setMatrixRowDim(e.target.value as CrossDimensionId);
+                      setSelectedMatrixCell(null);
+                    }}
+                    className="w-full px-3 py-1.5 rounded-lg bg-medium-900 border border-medium-800 text-xs text-white focus:outline-none focus:border-medium-600"
+                  >
+                    {CROSS_DIMENSIONS.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-mono uppercase tracking-wider text-medium-400 mb-1">
+                    Eixo Horizontal (Colunas)
+                  </label>
+                  <select
+                    value={matrixColDim}
+                    onChange={(e) => {
+                      setMatrixColDim(e.target.value as CrossDimensionId);
+                      setSelectedMatrixCell(null);
+                    }}
+                    className="w-full px-3 py-1.5 rounded-lg bg-medium-900 border border-medium-800 text-xs text-white focus:outline-none focus:border-medium-600"
+                  >
+                    {CROSS_DIMENSIONS.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {crossMatrix.rows.length === 0 || crossMatrix.cols.length === 0 ? (
+                <div className="p-6 text-center text-xs text-medium-400 bg-medium-900/50 rounded-lg border border-medium-800">
+                  Registre mais notas para visualizar o cruzamento entre estas dimensões.
+                </div>
+              ) : (
+                <div className="overflow-x-auto rounded-lg border border-medium-800 bg-medium-900">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-medium-800">
+                        <th className="p-2.5 font-mono text-[10px] uppercase text-medium-400 sticky left-0 bg-medium-900 z-10 min-w-[130px]">
+                          {CROSS_DIMENSIONS.find((d) => d.id === matrixRowDim)?.shortLabel} \{" "}
+                          {CROSS_DIMENSIONS.find((d) => d.id === matrixColDim)?.shortLabel}
+                        </th>
+                        {crossMatrix.cols.map((col) => (
+                          <th
+                            key={col}
+                            className="p-2.5 font-mono text-[10px] text-center text-medium-300 font-medium min-w-[84px]"
+                          >
+                            <span className="line-clamp-2">{col}</span>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-medium-800">
+                      {crossMatrix.rows.map((row) => (
+                        <tr key={row}>
+                          <td className="p-2.5 font-medium text-white sticky left-0 bg-medium-900 z-10 border-r border-medium-800 max-w-[160px] truncate">
+                            {row}
+                          </td>
+                          {crossMatrix.cols.map((col) => {
+                            const cell = crossMatrix.cells[row]?.[col];
+                            const count = cell?.count || 0;
+                            const avg = cell?.avgRating || 0;
+                            const isSelected =
+                              selectedMatrixCell?.rowKey === row && selectedMatrixCell?.colKey === col;
+
+                            if (count === 0) {
+                              return (
+                                <td key={col} className="p-2 text-center text-medium-500 font-mono text-[10px]">
+                                  —
+                                </td>
+                              );
+                            }
+
+                            return (
+                              <td key={col} className="p-1.5 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedMatrixCell(cell)}
+                                  className={`w-full py-1.5 px-2 rounded-md border transition-all flex flex-col items-center justify-center ${
+                                    isSelected
+                                      ? "bg-white text-black border-white font-semibold"
+                                      : "bg-medium-850 hover:bg-medium-800 border-medium-800 text-white"
+                                  }`}
+                                >
+                                  <span className="font-semibold text-xs">{count}x</span>
+                                  {avg > 0 && (
+                                    <span className="text-[9px] font-mono opacity-75">{avg}★</span>
+                                  )}
+                                </button>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {selectedMatrixCell && (
+                <div className="p-4 rounded-lg bg-medium-900 border border-medium-800 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-medium text-white">
+                      {selectedMatrixCell.rowKey} × {selectedMatrixCell.colKey} ({selectedMatrixCell.count}{" "}
+                      {selectedMatrixCell.count === 1 ? "nota" : "notas"})
+                    </div>
                     <button
                       type="button"
-                      onClick={() => onSelectEntry(item.entries[0])}
-                      className="text-[10px] font-mono text-medium-400 hover:text-white flex items-center gap-1 pt-1"
+                      onClick={() => setSelectedMatrixCell(null)}
+                      className="text-[11px] text-medium-400 hover:text-white"
                     >
-                      <span>Ver nota associada: "{item.entries[0].title.slice(0, 20)}..."</span>
+                      Fechar ✕
                     </button>
-                  )}
+                  </div>
+                  <div className="divide-y divide-medium-800">
+                    {selectedMatrixCell.entries.map((entry) => (
+                      <button
+                        key={entry.id}
+                        type="button"
+                        onClick={() => onSelectEntry(entry)}
+                        className="w-full text-left py-2 flex items-center justify-between gap-2 hover:opacity-80 transition-opacity"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium text-white truncate">{entry.title}</div>
+                          <div className="text-[10px] text-medium-400 font-mono">
+                            {normalizeCategory(entry.type)} · {formatDateBR(entry.date)}
+                          </div>
+                        </div>
+                        {entry.success_rating ? (
+                          <span className="text-[10px] font-mono text-medium-300 shrink-0">
+                            {entry.success_rating}/10
+                          </span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
         )}
-      </section>
 
-      {/* ========================================================
-          4. CORRELAÇÕES ASTRAIS & LUNARES DE SUCESSO (LIBER 777)
-          ======================================================== */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <h2 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-              Correlações Astrais de Sucesso (Liber 777 & Eficácia Empírica)
-            </h2>
-          </div>
-          <span className="text-[10px] font-mono text-medium-400">
-            {sortMode === "recurrent" ? "Ordenado por Recorrência" : "Ordenado por Maior Nota de Sucesso"}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* 1. Signos Lunares de Maior Sucesso */}
-          <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-medium-750 pb-3">
-              <div className="flex items-center gap-2">
-                <IconeLuaThelema className="w-4 h-4 text-white" size={16} />
-                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                  Signo Lunar (☽)
-                </h3>
+        {/* ========================================================
+            ABA 2: SINCRONICIDADES, SONHOS & EQUILÍBRIO ELEMENTAL
+            ======================================================== */}
+        {activeTab === "sync" && (
+          <div className="space-y-6">
+            {/* Fios de Sincronicidade */}
+            <div className="p-5 rounded-xl bg-medium-850 border border-medium-800 space-y-4">
+              <div>
+                <h2 className="text-sm font-medium text-white">
+                  Fios de Sincronicidade (Oráculo ↔ Sonho ↔ Prática)
+                </h2>
+                <p className="text-xs text-medium-400 mt-0.5">
+                  Convergências automáticas onde o mesmo símbolo atravessou diferentes categorias de notas.
+                </p>
               </div>
-              <span className="text-[10px] font-mono text-medium-400">
-                {moonSignStats.length} signos
-              </span>
-            </div>
 
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {moonSignStats.length === 0 ? (
-                <p className="text-xs text-medium-500 italic py-2">
-                  Sem registros com signo lunar anotado.
+              {syncThreads.length === 0 ? (
+                <p className="text-xs text-medium-400 py-4">
+                  Conforme você registrar Oráculos, Sonhos e Práticas, os elos simbólicos aparecerão aqui.
                 </p>
               ) : (
-                moonSignStats.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2.5 rounded-lg bg-medium-900 border border-medium-750 flex items-center justify-between gap-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <ZodiacIcon sign={item.sign} className="w-4 h-4 text-white" size={16} />
-                      <span className="text-xs font-sans font-semibold text-white">
-                        {item.sign}
-                      </span>
+                <div className="divide-y divide-medium-800">
+                  {syncThreads.map((thread) => (
+                    <div key={thread.id} className="py-3.5 first:pt-0 last:pb-0 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span>{thread.icon}</span>
+                          <span className="text-xs font-medium text-white">{thread.symbolTitle}</span>
+                          <span className="text-[10px] font-mono text-medium-400">
+                            ({thread.categoriesInvolved.join(" · ")})
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-medium-400">
+                          {thread.entries.length} notas
+                        </span>
+                      </div>
+                      <p className="text-xs text-medium-300 leading-relaxed">{thread.explanationPt}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {thread.entries.slice(0, 4).map((e) => (
+                          <button
+                            key={e.id}
+                            type="button"
+                            onClick={() => onSelectEntry(e)}
+                            className="text-[10px] px-2 py-1 rounded bg-medium-900 hover:bg-medium-800 border border-medium-800 text-medium-300 hover:text-white transition-colors font-mono"
+                          >
+                            {formatDateBR(e.date)} · {e.title.slice(0, 24)}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-
-                    <div className="flex items-center gap-3 font-mono text-xs">
-                      <span className="text-medium-400 text-[11px]">
-                        {item.count} {item.count === 1 ? "nota" : "notas"}
-                      </span>
-                      <span className="flex items-center gap-1 text-white font-bold bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
-                        <Star className="w-3 h-3 fill-white text-white" />
-                        {item.avgRating}/10
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* 2. Fases da Lua de Maior Sucesso */}
-          <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-medium-750 pb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-white" />
-                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                  Fase Lunar (Fase)
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-medium-400">
-                {moonPhaseStats.length} fases
-              </span>
-            </div>
-
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {moonPhaseStats.length === 0 ? (
-                <p className="text-xs text-medium-500 italic py-2">
-                  Sem registros com fase lunar anotada.
-                </p>
-              ) : (
-                moonPhaseStats.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2.5 rounded-lg bg-medium-900 border border-medium-750 flex items-center justify-between gap-3"
-                  >
-                    <span className="text-xs font-sans font-semibold text-white">
-                      {item.phase}
-                    </span>
-
-                    <div className="flex items-center gap-3 font-mono text-xs">
-                      <span className="text-medium-400 text-[11px]">
-                        {item.count} {item.count === 1 ? "nota" : "notas"}
-                      </span>
-                      <span className="flex items-center gap-1 text-white font-bold bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
-                        <Star className="w-3 h-3 fill-white text-white" />
-                        {item.avgRating}/10
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* 3. Dias Planetários de Maior Sucesso */}
-          <div className="bg-medium-850 rounded-xl border border-medium-700 p-5 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-medium-750 pb-3">
-              <div className="flex items-center gap-2">
-                <IconeSolThelema className="w-4 h-4 text-white" size={16} />
-                <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-                  Dia Planetário
-                </h3>
-              </div>
-              <span className="text-[10px] font-mono text-medium-400">
-                {planetaryDayStats.length} dias
-              </span>
-            </div>
-
-            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-              {planetaryDayStats.length === 0 ? (
-                <p className="text-xs text-medium-500 italic py-2">
-                  Sem registros com dia planetário anotado.
-                </p>
-              ) : (
-                planetaryDayStats.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2.5 rounded-lg bg-medium-900 border border-medium-750 flex items-center justify-between gap-3"
-                  >
-                    <span className="text-xs font-sans font-semibold text-white">
-                      {item.day}
-                    </span>
-
-                    <div className="flex items-center gap-3 font-mono text-xs">
-                      <span className="text-medium-400 text-[11px]">
-                        {item.count} {item.count === 1 ? "nota" : "notas"}
-                      </span>
-                      <span className="flex items-center gap-1 text-white font-bold bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
-                        <Star className="w-3 h-3 fill-white text-white" />
-                        {item.avgRating}/10
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================
-          5. TOP REGISTROS DE MAIOR SUCESSO
-          ======================================================== */}
-      <section className="bg-medium-850 rounded-xl border border-medium-700 p-5 space-y-4 shadow-sm">
-        <div className="flex items-center justify-between border-b border-medium-750 pb-3">
-          <div className="flex items-center gap-2">
-            <Award className="w-4 h-4 text-white" />
-            <h3 className="text-xs font-mono font-bold text-white uppercase tracking-wider">
-              Operações de Maior Eficácia Empírica
-            </h3>
-          </div>
-          <span className="text-[10px] font-mono text-medium-400">
-            Registros com maior validação fenomênica
-          </span>
-        </div>
-
-        <div className="space-y-2.5">
-          {topEntries.map((e) => (
-            <div
-              key={e.id}
-              onClick={() => onSelectEntry(e)}
-              className="p-3 rounded-lg bg-medium-900 border border-medium-750 hover:border-medium-600 hover:bg-medium-800 transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono uppercase font-semibold text-medium-300 px-1.5 py-0.2 rounded bg-medium-800 border border-medium-700">
-                    {normalizeCategory(e.type)}
-                  </span>
-                  <h4 className="text-xs font-serif font-bold text-white group-hover:underline">
-                    {e.title}
-                  </h4>
+                  ))}
                 </div>
-                <p className="text-[11px] text-medium-400 font-sans line-clamp-1">
-                  {e.content.replace(/[#*`_>]/g, "")}
-                </p>
+              )}
+            </div>
+
+            {/* Grid: Equilíbrio Elemental & Totens Oníricos */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-5 rounded-xl bg-medium-850 border border-medium-800 space-y-4">
+                <h3 className="text-xs font-mono uppercase tracking-wider text-medium-400">
+                  Equilíbrio Elemental (5 Pontas)
+                </h3>
+                <div className="space-y-2.5 text-xs font-mono">
+                  {elementalRadar.axes.map((ax) => (
+                    <div key={ax.key} className="space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-medium-200">{ax.label}</span>
+                        <span className="text-white">{ax.value} pts</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-medium-900 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-white rounded-full"
+                          style={{ width: `${Math.round((ax.value / elementalRadar.maxVal) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
-                <span className="text-medium-400 text-[10px]">
-                  {formatDateTimeBR(e.date)}
-                </span>
-                <span className="flex items-center gap-1 text-white font-bold bg-medium-800 px-2 py-0.5 rounded border border-medium-700">
-                  <Star className="w-3 h-3 fill-white text-white" />
-                  {e.success_rating}/10
-                </span>
+              <div className="p-5 rounded-xl bg-medium-850 border border-medium-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-mono uppercase tracking-wider text-medium-400">
+                    Totens de Sonhos (Yesod)
+                  </h3>
+                  <span className="text-[10px] font-mono text-medium-400">
+                    {dreamAnalysis.dreamNotesCount} sonhos
+                  </span>
+                </div>
+                {dreamAnalysis.totems.length === 0 ? (
+                  <p className="text-xs text-medium-400 py-4">
+                    Registre sonhos para mapear automaticamente seus símbolos recorrentes.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-medium-800">
+                    {dreamAnalysis.totems.slice(0, 5).map((totem) => (
+                      <div key={totem.id} className="py-2 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-xs font-medium text-white">
+                            {totem.icon} {totem.name}
+                          </div>
+                          <div className="text-[10px] text-medium-400">{totem.meaning777}</div>
+                        </div>
+                        <span className="text-xs font-mono text-white">{totem.count}x</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        )}
+
+        {/* ========================================================
+            ABA 3: FREQUÊNCIA, INFLUÊNCIAS & CORRELAÇÕES ASTRAIS
+            ======================================================== */}
+        {activeTab === "metrics" && (
+          <div className="space-y-6">
+            <LiberReshWidget />
+            <MagicHeatmap
+              entries={entries}
+              onSelectDate={(dateStr) => {
+                setSearchQuery(dateStr);
+              }}
+            />
+
+            {/* Filtros de Influências */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSortMode("recurrent")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    sortMode === "recurrent"
+                      ? "bg-white text-black"
+                      : "bg-medium-850 text-medium-300 hover:text-white border border-medium-800"
+                  }`}
+                >
+                  Mais Frequentes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSortMode("success")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    sortMode === "success"
+                      ? "bg-white text-black"
+                      : "bg-medium-850 text-medium-300 hover:text-white border border-medium-800"
+                  }`}
+                >
+                  Maior Sucesso
+                </button>
+              </div>
+
+              <div className="relative w-56">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-medium-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filtrar influência..."
+                  className="w-full bg-medium-850 border border-medium-800 rounded-lg pl-8 pr-3 py-1 text-xs text-white placeholder-medium-400 focus:outline-none focus:border-medium-600"
+                />
+              </div>
+            </div>
+
+            {/* Lista de Influências */}
+            {influencesAnalysis.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {influencesAnalysis.slice(0, 12).map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => item.entries[0] && onSelectEntry(item.entries[0])}
+                    className="text-left bg-medium-850 p-3.5 rounded-xl border border-medium-800 hover:border-medium-600 transition-colors space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-mono text-medium-400">
+                        {getInfluenceCategoryLabel(item.category)}
+                      </span>
+                      <span className="text-xs font-mono text-white font-medium">
+                        {item.avgRating}★ · {item.count}x
+                      </span>
+                    </div>
+                    <div className="text-sm font-medium text-white truncate">{item.name}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Top Notas */}
+            {topEntries.length > 0 && (
+              <div className="p-5 rounded-xl bg-medium-850 border border-medium-800 space-y-3">
+                <h3 className="text-xs font-mono uppercase tracking-wider text-medium-400">
+                  Operações de Maior Eficácia
+                </h3>
+                <div className="divide-y divide-medium-800">
+                  {topEntries.map((e) => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => onSelectEntry(e)}
+                      className="w-full text-left py-2.5 flex items-center justify-between gap-3 hover:opacity-80 transition-opacity"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium text-white truncate">{e.title}</div>
+                        <div className="text-[10px] font-mono text-medium-400">
+                          {normalizeCategory(e.type)} · {formatDateTimeBR(e.date)}
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono text-white shrink-0">
+                        {e.success_rating}/10
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

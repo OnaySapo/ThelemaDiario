@@ -1,18 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { MagickEntry, normalizeCategory, CategoryName } from "@/lib/types";
+import { MagickEntry, normalizeCategory } from "@/lib/types";
 import {
   Search,
   Plus,
-  BookOpen,
   Sparkles,
-  Moon,
-  Eye,
-  Sword,
-  SlidersHorizontal,
   Settings,
-  Calendar,
   Star,
   Home,
   BarChart2,
@@ -25,9 +19,10 @@ import {
   ChevronUp,
   Database,
   HelpCircle,
+  Compass,
 } from "lucide-react";
-import { EstrelaDeThelema, getCategoryThelemicIcon, ZodiacIcon, IconeSolThelema } from "@/components/ThelemicIcons";
-import { formatDateTimeBR, getInfluenceCategoryLabel } from "@/lib/dateUtils";
+import { EstrelaDeThelema } from "@/components/ThelemicIcons";
+import { formatDateBR, getInfluenceCategoryLabel } from "@/lib/dateUtils";
 
 interface SidebarProps {
   entries: MagickEntry[];
@@ -78,14 +73,14 @@ export function Sidebar({
   onOpenOnboarding,
   activeVaultLabel,
 }: SidebarProps) {
-  const categories: { name: string; label: string; icon: React.ReactNode }[] = [
-    { name: "all", label: "Todas", icon: <SlidersHorizontal className="w-3.5 h-3.5" /> },
-    { name: "Diário", label: "Diário", icon: getCategoryThelemicIcon("Diário", "w-3.5 h-3.5") },
-    { name: "Estudo", label: "Estudo", icon: getCategoryThelemicIcon("Estudo", "w-3.5 h-3.5") },
-    { name: "Visão Astral", label: "Visão Astral", icon: getCategoryThelemicIcon("Visão Astral", "w-3.5 h-3.5") },
-    { name: "Sonho", label: "Sonho", icon: getCategoryThelemicIcon("Sonho", "w-3.5 h-3.5") },
-    { name: "Oráculo", label: "Oráculo", icon: getCategoryThelemicIcon("Oráculo", "w-3.5 h-3.5") },
-    { name: "Prática", label: "Prática", icon: getCategoryThelemicIcon("Prática", "w-3.5 h-3.5") },
+  const categories = [
+    { name: "all", label: "Todas as Categorias" },
+    { name: "Diário", label: "Diário" },
+    { name: "Sonho", label: "Sonho" },
+    { name: "Oráculo", label: "Oráculo / Tarot" },
+    { name: "Prática", label: "Prática & Rituais" },
+    { name: "Visão Astral", label: "Visão Astral" },
+    { name: "Estudo", label: "Estudo" },
   ];
 
   const filteredEntries = entries.filter((e) => {
@@ -107,226 +102,202 @@ export function Sidebar({
     return true;
   });
 
-  const [isTempleMenuOpen, setIsTempleMenuOpen] = useState(false);
-  const [visibleLimit, setVisibleLimit] = useState(40);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const [visibleLimit, setVisibleLimit] = useState(50);
   const visibleEntries = filteredEntries.slice(0, visibleLimit);
 
   return (
-    <aside className="w-full h-full bg-medium-900 border-r border-medium-700 flex flex-col select-none">
-      {/* Brand Header */}
-      <div className="p-3.5 border-b border-medium-700 space-y-2">
+    <aside className="w-full h-full bg-medium-900 border-r border-medium-800 flex flex-col select-none">
+      {/* 1. Header Minimalista */}
+      <div className="px-4 pt-4 pb-3 border-b border-medium-800 space-y-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-md bg-medium-850 border border-medium-700 flex items-center justify-center text-white">
-              <EstrelaDeThelema className="w-4 h-4 text-amber-400" />
-            </div>
-            <div>
-              <h1 className="text-sm font-sans font-bold tracking-tight text-white uppercase flex items-center gap-1.5">
-                <span>Diário Mágicko</span>
-              </h1>
-              <span className="text-[10px] text-medium-400 font-mono tracking-wider block">
-                SANCTUM & BRASILIS v4.0
-              </span>
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={onOpenHome}
+            className="flex items-center gap-2 text-left group"
+          >
+            <EstrelaDeThelema className="w-4 h-4 text-medium-200 group-hover:text-white transition-colors" />
+            <span className="text-xs font-semibold tracking-wide text-white uppercase">
+              Diário Mágicko
+            </span>
+          </button>
 
           <div className="flex items-center gap-1">
             {onOpenOnboarding && (
               <button
                 onClick={onOpenOnboarding}
-                className="flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-amber-300 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 rounded-md transition-colors"
-                title="Abrir Guia Rápido, Glossário Vivo e Modo de Interface"
+                className="p-1.5 text-medium-400 hover:text-white rounded-md hover:bg-medium-850 transition-colors"
+                title="Guia Rápido & Glossário"
               >
                 <HelpCircle className="w-3.5 h-3.5" />
-                <span>Guia</span>
               </button>
             )}
             <button
               onClick={onOpenSettings}
-              className="p-1.5 text-medium-400 hover:text-white rounded-md hover:bg-medium-800 transition-colors"
-              title="Configurações, Temas e Backup"
+              className="p-1.5 text-medium-400 hover:text-white rounded-md hover:bg-medium-850 transition-colors"
+              title="Configurações"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
-        {/* Botão de Seleção / Troca Rápida de Grimório (Banco de Dados .db) */}
+        {/* Seletor discreto de banco de dados (.db) */}
         {onOpenVaultSelector && (
           <button
             type="button"
             onClick={onOpenVaultSelector}
-            className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-medium-850 hover:bg-medium-800 border border-medium-750 hover:border-amber-400/50 text-left transition-all group"
-            title="Clique para escolher a pasta das notas ou carregar um banco de dados (.db) existente"
+            className="w-full flex items-center justify-between px-2 py-1 rounded bg-medium-850/70 hover:bg-medium-800 border border-medium-800 text-[10px] font-mono text-medium-400 hover:text-white transition-colors"
+            title="Trocar ou carregar outro banco de dados (.db)"
           >
-            <span className="flex items-center gap-2 truncate text-[11px] font-mono text-medium-200 group-hover:text-amber-300">
-              <Database className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="flex items-center gap-1.5 truncate">
+              <Database className="w-3 h-3 shrink-0" />
               <span className="truncate">{activeVaultLabel || "magick_diary.db"}</span>
             </span>
-            <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-medium-800 group-hover:bg-amber-400/20 text-amber-300 border border-medium-700 group-hover:border-amber-400/40 shrink-0">
-              Trocar Banco
-            </span>
+            <span className="text-medium-500">Trocar</span>
           </button>
         )}
       </div>
 
-      {/* Navigation Quick Bar Simplificada & Consolidada */}
-      <div className="p-2 border-b border-medium-700 bg-medium-850/60 space-y-1.5">
-        {/* Pilares Centrais: Início · Dashboard · Árvore */}
-        <div className="grid grid-cols-3 gap-1">
+      {/* 2. Navegação Essencial & Ferramentas */}
+      <div className="p-3 border-b border-medium-800 space-y-2">
+        <button
+          onClick={onNewEntry}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-white hover:bg-medium-200 text-black text-xs font-semibold rounded-lg transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+          <span>Nova Nota</span>
+        </button>
+
+        <nav className="grid grid-cols-3 gap-1 pt-0.5">
           <button
             onClick={onOpenHome}
-            className={`flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-md text-xs font-medium transition-all ${
+            className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-md text-[11px] font-medium transition-colors ${
               currentView === "home"
-                ? "bg-white text-black font-semibold shadow-sm"
-                : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
+                ? "bg-medium-800 text-white"
+                : "text-medium-400 hover:text-white hover:bg-medium-850"
             }`}
-            title="Tela Inicial Thelêmica (Portal de Entrada)"
           >
-            <Home className="w-3.5 h-3.5" />
-            <span className="truncate">Início</span>
+            <Home className="w-3 h-3" />
+            <span>Início</span>
           </button>
 
           <button
             onClick={onOpenDashboard}
-            className={`flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-md text-xs font-medium transition-all ${
+            className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-md text-[11px] font-medium transition-colors ${
               currentView === "dashboard"
-                ? "bg-white text-black font-semibold shadow-sm"
-                : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
+                ? "bg-medium-800 text-white"
+                : "text-medium-400 hover:text-white hover:bg-medium-850"
             }`}
-            title="Dashboard Analítico de Frequência e Sucesso"
           >
-            <BarChart2 className="w-3.5 h-3.5" />
-            <span className="truncate">Métricas</span>
+            <BarChart2 className="w-3 h-3" />
+            <span>Dados</span>
           </button>
 
           {onOpenTree && (
             <button
               onClick={onOpenTree}
-              className={`flex items-center justify-center gap-1 py-1.5 px-1.5 rounded-md text-xs font-medium transition-all ${
+              className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-md text-[11px] font-medium transition-colors ${
                 currentView === "tree"
-                  ? "bg-purple-600 text-white font-semibold shadow-sm"
-                  : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/60"
+                  ? "bg-medium-800 text-white"
+                  : "text-medium-400 hover:text-white hover:bg-medium-850"
               }`}
-              title="Árvore da Vida Cabalística (Otz Chiim / 10 Sephiroth)"
             >
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-              <span className="truncate">Árvore</span>
+              <Sparkles className="w-3 h-3" />
+              <span>Árvore</span>
             </button>
           )}
-        </div>
+        </nav>
 
-        {/* Menu Retrátil Elegante: Templo, Rituais & Ferramentas */}
-        <div className="relative">
+        {/* Gaveta Discreta de Ferramentas */}
+        <div>
           <button
             type="button"
-            onClick={() => setIsTempleMenuOpen(!isTempleMenuOpen)}
-            className={`w-full flex items-center justify-between py-1 px-2 rounded text-[11px] font-mono transition-all border ${
-              isTempleMenuOpen
-                ? "bg-amber-500/15 text-amber-200 border-amber-500/30"
-                : "bg-medium-800/80 hover:bg-medium-800 text-medium-300 hover:text-white border-medium-750"
-            }`}
+            onClick={() => setIsToolsOpen(!isToolsOpen)}
+            className="w-full flex items-center justify-between py-1 px-2 rounded-md text-[11px] text-medium-400 hover:text-white hover:bg-medium-850 transition-colors"
           >
-            <span className="flex items-center gap-1.5">
-              <Flame className="w-3 h-3 text-amber-400" />
-              <span>Templo & Rituais</span>
-            </span>
-            {isTempleMenuOpen ? (
-              <ChevronUp className="w-3 h-3 text-medium-400" />
-            ) : (
-              <ChevronDown className="w-3 h-3 text-medium-400" />
-            )}
+            <span>Ferramentas do Templo</span>
+            {isToolsOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
 
-          {isTempleMenuOpen && (
-            <div className="mt-1 p-1 rounded-lg bg-medium-900 border border-medium-750 grid grid-cols-2 gap-1 animate-in fade-in duration-150">
+          {isToolsOpen && (
+            <div className="mt-1 p-1 rounded-lg bg-medium-850 border border-medium-800 grid grid-cols-2 gap-1">
               {onOpenQuickDream && (
                 <button
                   type="button"
                   onClick={() => {
                     onOpenQuickDream();
-                    setIsTempleMenuOpen(false);
+                    setIsToolsOpen(false);
                   }}
-                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-200 border border-indigo-500/30 transition-all text-left truncate"
-                  title="Captura Rápida de Sonhos (Alt + S)"
+                  className="flex items-center gap-1.5 py-1.5 px-2 rounded text-[11px] text-medium-300 hover:text-white hover:bg-medium-800 text-left truncate"
                 >
-                  <CloudMoon className="w-3 h-3 text-indigo-400 shrink-0" />
-                  <span className="truncate">Sonho (Alt+S)</span>
+                  <CloudMoon className="w-3 h-3 shrink-0" />
+                  <span className="truncate">Sonho (Voz)</span>
                 </button>
               )}
-
-              {onOpenTimer && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenTimer();
-                    setIsTempleMenuOpen(false);
-                  }}
-                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-medium-800 hover:bg-medium-750 text-blue-200 border border-medium-700 transition-all text-left truncate"
-                  title="Cronômetro Dharana (Liber E)"
-                >
-                  <Clock className="w-3 h-3 text-blue-400 shrink-0" />
-                  <span className="truncate">Dharana</span>
-                </button>
-              )}
-
-              {onOpenAltar && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenAltar();
-                    setIsTempleMenuOpen(false);
-                  }}
-                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-amber-950/30 hover:bg-amber-900/50 text-amber-200 border border-amber-500/30 transition-all text-left truncate"
-                  title="Modo Altar em Tela Cheia"
-                >
-                  <Flame className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span className="truncate">Altar Ritual</span>
-                </button>
-              )}
-
-              {onOpenGrimoireCompiler && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenGrimoireCompiler();
-                    setIsTempleMenuOpen(false);
-                  }}
-                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-medium-800 hover:bg-medium-750 text-medium-200 border border-medium-700 transition-all text-left truncate"
-                  title="Compilar Grimório em PDF"
-                >
-                  <BookMarked className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span className="truncate">Grimório PDF</span>
-                </button>
-              )}
-
-              {onOpenGematria && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onOpenGematria();
-                    setIsTempleMenuOpen(false);
-                  }}
-                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-medium-800 hover:bg-medium-750 text-amber-200 border border-medium-700 transition-all text-left truncate"
-                  title="Calculadora de Gematria Thelêmica"
-                >
-                  <Calculator className="w-3 h-3 text-amber-400 shrink-0" />
-                  <span className="truncate">Gematria (777)</span>
-                </button>
-              )}
-
               {onOpenSigilStudio && (
                 <button
                   type="button"
                   onClick={() => {
                     onOpenSigilStudio();
-                    setIsTempleMenuOpen(false);
+                    setIsToolsOpen(false);
                   }}
-                  className="flex items-center gap-1.5 py-1 px-1.5 rounded text-[10px] font-mono bg-emerald-950/30 hover:bg-emerald-900/50 text-emerald-200 border border-emerald-500/30 transition-all text-left truncate"
-                  title="Tábua de Ponto Riscado (Pemba Digital) & Oficina de Sigilos"
+                  className="flex items-center gap-1.5 py-1.5 px-2 rounded text-[11px] text-medium-300 hover:text-white hover:bg-medium-800 text-left truncate"
                 >
-                  <span className="text-xs leading-none shrink-0">🥁</span>
-                  <span className="truncate">Ponto Riscado</span>
+                  <Compass className="w-3 h-3 shrink-0" />
+                  <span className="truncate">Sigilos & Pemba</span>
+                </button>
+              )}
+              {onOpenTimer && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenTimer();
+                    setIsToolsOpen(false);
+                  }}
+                  className="flex items-center gap-1.5 py-1.5 px-2 rounded text-[11px] text-medium-300 hover:text-white hover:bg-medium-800 text-left truncate"
+                >
+                  <Clock className="w-3 h-3 shrink-0" />
+                  <span className="truncate">Dharana</span>
+                </button>
+              )}
+              {onOpenAltar && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenAltar();
+                    setIsToolsOpen(false);
+                  }}
+                  className="flex items-center gap-1.5 py-1.5 px-2 rounded text-[11px] text-medium-300 hover:text-white hover:bg-medium-800 text-left truncate"
+                >
+                  <Flame className="w-3 h-3 shrink-0" />
+                  <span className="truncate">Modo Altar</span>
+                </button>
+              )}
+              {onOpenGematria && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenGematria();
+                    setIsToolsOpen(false);
+                  }}
+                  className="flex items-center gap-1.5 py-1.5 px-2 rounded text-[11px] text-medium-300 hover:text-white hover:bg-medium-800 text-left truncate"
+                >
+                  <Calculator className="w-3 h-3 shrink-0" />
+                  <span className="truncate">Gematria</span>
+                </button>
+              )}
+              {onOpenGrimoireCompiler && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOpenGrimoireCompiler();
+                    setIsToolsOpen(false);
+                  }}
+                  className="flex items-center gap-1.5 py-1.5 px-2 rounded text-[11px] text-medium-300 hover:text-white hover:bg-medium-800 text-left truncate"
+                >
+                  <BookMarked className="w-3 h-3 shrink-0" />
+                  <span className="truncate">Exportar PDF</span>
                 </button>
               )}
             </div>
@@ -334,144 +305,79 @@ export function Sidebar({
         </div>
       </div>
 
-      {/* New Note Button & Search */}
-      <div className="p-3 space-y-2 border-b border-medium-700 bg-medium-850">
-        <button
-          onClick={onNewEntry}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-white hover:bg-medium-200 text-black text-xs font-semibold rounded-md transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>Nova Nota</span>
-        </button>
-
+      {/* 3. Busca & Filtro Compacto de Categoria */}
+      <div className="p-2.5 border-b border-medium-800 space-y-2">
         <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-medium-400" />
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-medium-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Buscar nas notas ou tags 777..."
-            className="w-full bg-medium-800 border border-medium-700 rounded-md pl-8 pr-3 py-1.5 text-xs text-white placeholder-medium-400 focus:outline-none focus:border-medium-500 font-sans"
+            placeholder="Buscar notas..."
+            className="w-full bg-medium-850 border border-medium-800 rounded-md pl-8 pr-2.5 py-1 text-xs text-white placeholder-medium-500 focus:outline-none focus:border-medium-600"
           />
         </div>
+
+        <select
+          value={selectedCategory}
+          onChange={(e) => onSelectCategory(e.target.value)}
+          className="w-full bg-medium-850 border border-medium-800 rounded-md px-2.5 py-1 text-[11px] text-medium-300 focus:outline-none focus:border-medium-600 cursor-pointer"
+        >
+          {categories.map((c) => {
+            const count =
+              c.name === "all"
+                ? entries.length
+                : entries.filter((e) => normalizeCategory(e.type) === c.name).length;
+            return (
+              <option key={c.name} value={c.name} className="bg-medium-900 text-white">
+                {c.label} ({count})
+              </option>
+            );
+          })}
+        </select>
       </div>
 
-      {/* Category Pills Bar - Todas as categorias visíveis e clicáveis em wrap */}
-      <div className="p-2.5 border-b border-medium-700 bg-medium-850/60 flex flex-wrap items-center gap-1.5">
-        {categories.map((c) => {
-          const count =
-            c.name === "all"
-              ? entries.length
-              : entries.filter((e) => normalizeCategory(e.type) === c.name).length;
-          const isActive = selectedCategory === c.name;
-
-          return (
-            <button
-              key={c.name}
-              onClick={() => onSelectCategory(c.name)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
-                isActive
-                  ? "bg-white text-black font-semibold shadow-sm"
-                  : "bg-medium-800 hover:bg-medium-750 text-medium-300 hover:text-white border border-medium-700/70"
-              }`}
-            >
-              <span>{c.label}</span>
-              <span
-                className={`text-[9px] px-1 py-0.2 rounded-full font-mono ${
-                  isActive ? "bg-black/15 text-black font-bold" : "bg-medium-700/60 text-medium-300"
-                }`}
-              >
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Note List (Obsidian-Style — Despoluído e Rápido) */}
-      <div className="flex-1 overflow-y-auto divide-y divide-medium-800/80 p-2 space-y-1">
+      {/* 4. Lista de Notas Minimalista (2 Linhas Limpas por Nota) */}
+      <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5">
         {visibleEntries.length === 0 ? (
-          <div className="p-8 text-center text-xs text-medium-400 font-mono italic">
+          <div className="p-6 text-center text-xs text-medium-500">
             Nenhuma nota encontrada.
           </div>
         ) : (
           <>
             {visibleEntries.map((entry) => {
-              const isSelected = selectedEntryId === entry.id;
+              const isSelected = selectedEntryId === entry.id && currentView === "article";
               const category = normalizeCategory(entry.type);
-              const dateStr = formatDateTimeBR(entry.date);
-              const cleanPreview = (entry.content || "")
-                .replace(/!\[.*?\]\(.*?\)/g, " [Imagem] ")
-                .replace(/[#*`_>]/g, "")
-                .trim();
 
               return (
                 <div
                   key={entry.id}
                   onClick={() => onSelectEntry(entry)}
-                  className={`p-2.5 rounded-lg cursor-pointer transition-all ${
+                  className={`px-2.5 py-2 rounded-lg cursor-pointer transition-colors ${
                     isSelected
-                      ? "bg-medium-800 text-white border border-medium-600 shadow-sm"
-                      : "hover:bg-medium-850/80 text-medium-200 border border-transparent"
+                      ? "bg-medium-800 text-white"
+                      : "hover:bg-medium-850/70 text-medium-300"
                   }`}
                 >
-                  {/* Layer 1: Category, Date & Rating */}
-                  <div className="flex items-center justify-between text-[10px] font-mono mb-1 text-medium-400">
-                    <span className="uppercase tracking-wider font-semibold text-medium-300 flex items-center gap-1">
-                      {getCategoryThelemicIcon(category, "w-3 h-3 text-medium-300")}
-                      <span>{category}</span>
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span>{dateStr}</span>
-                      {entry.success_rating !== undefined &&
-                        entry.success_rating !== null &&
-                        entry.success_rating > 0 && (
-                          <span className="flex items-center gap-0.5 text-amber-300 font-semibold">
-                            <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                            {entry.success_rating}
-                          </span>
-                        )}
-                    </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <h3
+                      className={`text-xs font-medium truncate ${
+                        isSelected ? "text-white font-semibold" : "text-medium-200"
+                      }`}
+                    >
+                      {entry.title}
+                    </h3>
+                    {entry.success_rating ? (
+                      <span className="text-[10px] font-mono text-medium-400 flex items-center gap-0.5 shrink-0">
+                        <Star className="w-2.5 h-2.5" />
+                        {entry.success_rating}
+                      </span>
+                    ) : null}
                   </div>
 
-                  {/* Layer 2: Title & 1-Line Clean Preview */}
-                  <h3
-                    className={`text-xs font-sans font-semibold line-clamp-1 leading-snug ${
-                      isSelected ? "text-white" : "text-medium-100"
-                    }`}
-                  >
-                    {entry.title}
-                  </h3>
-                  {cleanPreview && (
-                    <p className="text-[11px] text-medium-400 line-clamp-1 mt-0.5 leading-relaxed">
-                      {cleanPreview}
-                    </p>
-                  )}
-
-                  {/* Layer 3: Compact Pills (Influences or Lunar Phase) */}
-                  <div className="flex items-center justify-between gap-1 mt-1.5">
-                    {entry.influences && entry.influences.length > 0 ? (
-                      <div className="flex flex-wrap items-center gap-1 min-w-0">
-                        {entry.influences.slice(0, 2).map((inf, idx) => (
-                          <span
-                            key={idx}
-                            className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-medium-900 border border-amber-500/20 text-amber-300/90 truncate max-w-[105px]"
-                          >
-                            {inf.name.split("·")[0].trim()}
-                          </span>
-                        ))}
-                        {entry.influences.length > 2 && (
-                          <span className="text-[9px] font-mono text-medium-400">
-                            +{entry.influences.length - 2}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-[9px] font-mono text-medium-500 truncate">
-                        {entry.moon_phase || "Registro"}
-                        {entry.moon_sign ? ` · ${entry.moon_sign}` : ""}
-                      </span>
-                    )}
+                  <div className="flex items-center justify-between text-[10px] font-mono text-medium-500 mt-0.5">
+                    <span>{category}</span>
+                    <span>{formatDateBR(entry.date)}</span>
                   </div>
                 </div>
               );
@@ -480,20 +386,14 @@ export function Sidebar({
             {filteredEntries.length > visibleLimit && (
               <button
                 type="button"
-                onClick={() => setVisibleLimit((prev) => prev + 40)}
-                className="w-full py-2 mt-2 rounded-lg bg-medium-850 hover:bg-medium-800 border border-medium-750 text-xs font-mono text-amber-300 transition-colors"
+                onClick={() => setVisibleLimit((prev) => prev + 50)}
+                className="w-full py-1.5 mt-1 text-[11px] font-mono text-medium-400 hover:text-white transition-colors"
               >
-                Carregar mais notas ({filteredEntries.length - visibleLimit} restantes)
+                Mostrar mais ({filteredEntries.length - visibleLimit})
               </button>
             )}
           </>
         )}
-      </div>
-
-      {/* Footer Info */}
-      <div className="p-2.5 border-t border-medium-700 bg-medium-900 text-[10px] font-mono text-medium-400 flex items-center justify-between">
-        <span>Total: {entries.length} notas</span>
-        <span className="text-amber-300/90">Sanctum v4.0</span>
       </div>
     </aside>
   );
